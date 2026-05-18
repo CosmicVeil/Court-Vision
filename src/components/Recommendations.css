@@ -621,45 +621,75 @@
   margin-bottom: 1.5rem;
 }
 
-.spotlight-details {
+.spotlight-stats-list {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 0.6rem;
   background: rgba(0, 0, 0, 0.2);
   border-radius: 12px;
   padding: 1rem;
+  margin-top: auto;
 }
 
-.spotlight-val {
+.spotlight-stat-row {
   display: flex;
-  flex-direction: column;
   align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
 }
 
-.spotlight-val .lbl {
-  font-size: 0.7rem;
-  color: var(--text-secondary, #a0a0a8);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 0.2rem;
+.spotlight-stat-row.highlighted {
+  background: rgba(255, 69, 0, 0.08);
+  border-color: rgba(255, 69, 0, 0.2);
 }
 
-.spotlight-val .val {
+.spotlight-stat-row .stat-label {
   font-family: var(--font-heading, 'Outfit', sans-serif);
-  font-size: 1.3rem;
+  font-size: 0.9rem;
   font-weight: 800;
+  color: var(--text-secondary, #a0a0a8);
+  width: 45px;
+}
+
+.spotlight-stat-row.highlighted .stat-label {
+  color: #ff4500;
+}
+
+.spotlight-stat-comparison {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.spotlight-stat-val {
+  font-family: var(--font-heading, 'Outfit', sans-serif);
+  font-size: 1.1rem;
+  font-weight: 700;
   color: #fff;
+  width: 35px;
+  text-align: center;
 }
 
-.spotlight-arrow {
+.spotlight-stat-arrow {
   color: rgba(255, 255, 255, 0.15);
-  font-size: 1.4rem;
-  font-weight: 300;
+  font-size: 0.9rem;
 }
 
-.spotlight-val.predicted .val {
+.spotlight-stat-val.predicted {
   color: #ff4500;
   text-shadow: 0 0 10px rgba(255, 69, 0, 0.3);
+  font-weight: 800;
+}
+
+.spotlight-stat-growth {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #4caf50;
+  width: 60px;
+  text-align: right;
 }
 
 .spotlight-loader-wrap {

@@ -134,19 +134,30 @@ const Recommendations = () => {
                         <div className="spotlight-team-badge">{player.TEAM} · {player.POSITION}</div>
                         
                         <div className="spotlight-growth-badge">
-                          +{improvement.toFixed(1)}% Growth
+                          +{improvement.toFixed(1)}% {s} Breakout
                         </div>
                         
-                        <div className="spotlight-details">
-                          <div className="spotlight-val">
-                            <span className="lbl">Current</span>
-                            <span className="val">{last.toFixed(1)}</span>
-                          </div>
-                          <div className="spotlight-arrow">→</div>
-                          <div className="spotlight-val predicted">
-                            <span className="lbl">AI Projected</span>
-                            <span className="val">{predicted.toFixed(1)}</span>
-                          </div>
+                        <div className="spotlight-stats-list">
+                          {['PPG', 'APG', 'RPG'].map((statName) => {
+                            const lastVal = player[`${statName}_LAST`] || 0;
+                            const predVal = player[`PREDICTED_${statName}`] || 0;
+                            const impVal = player[`${statName}_IMPROVEMENT`] || 0;
+                            const isMainStat = statName === s;
+                            
+                            return (
+                              <div key={statName} className={`spotlight-stat-row ${isMainStat ? 'highlighted' : ''}`}>
+                                <span className="stat-label">{statName}</span>
+                                <div className="spotlight-stat-comparison">
+                                  <span className="spotlight-stat-val">{lastVal.toFixed(1)}</span>
+                                  <span className="spotlight-stat-arrow">→</span>
+                                  <span className="spotlight-stat-val predicted">{predVal.toFixed(1)}</span>
+                                </div>
+                                <span className="spotlight-stat-growth">
+                                  {impVal >= 0 ? '+' : ''}{impVal.toFixed(1)}%
+                                </span>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     );
