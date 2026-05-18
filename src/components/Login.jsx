@@ -42,7 +42,6 @@ const Login = () => {
     <div className="login-wrapper">
       <div className="login-container">
         <div className="login-header">
-          <span className="basketball-icon">🏀</span>
           <h1 className="login-title">LOGIN</h1>
         </div>
         <form className="login-form" onSubmit={handleSubmit}>

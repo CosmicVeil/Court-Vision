@@ -40,7 +40,6 @@ const Favourites = () => {
       <header className="favourites-header">
         <Link to="/" className="back-link">← Back to Home</Link>
         <h1 className="favourites-title">
-          <span className="title-icon">❤️</span>
           FAVOURITES
         </h1>
         <p className="favourites-subtitle">
@@ -50,10 +49,9 @@ const Favourites = () => {
 
       {favorites.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-icon">⭐</div>
           <h2 className="empty-title">No favorites yet</h2>
           <p className="empty-description">
-            Go to the Stats page and click the star icon to favorite players!
+            Go to the Stats page and add players to favorites!
           </p>
           <Link to="/stats" className="empty-cta">
             Go to Stats →
@@ -63,7 +61,7 @@ const Favourites = () => {
         <div className="favourites-content">
           <div className="favourites-info">
             <p className="info-text">
-              Click the ⭐ icon to remove a player from favorites
+              Click the FAVORITED button to remove a player from favorites
             </p>
           </div>
 
@@ -83,7 +81,7 @@ const Favourites = () => {
                     onClick={() => handleRemoveFavorite(player.id)}
                     title="Remove from favorites"
                   >
-                    ⭐
+                    FAVORITED
                   </button>
                 </div>
                 

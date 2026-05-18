@@ -95,7 +95,6 @@ const SignUp = () => {
     <div className="signup-wrapper">
       <div className="signup-container">
         <div className="signup-header">
-          <span className="basketball-icon">🏀</span>
           <h1 className="signup-title">CREATE ACCOUNT</h1>
         </div>
         <form className="signup-form" onSubmit={handleSubmit}>

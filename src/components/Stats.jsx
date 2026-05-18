@@ -166,7 +166,7 @@ const Stats = () => {
     <div className="stats-container">
       <div className="stats-header">
         <Link to="/" className="back-to-home">← Back to Home</Link>
-        <h1>🏀 NBA Player Statistics</h1>
+        <h1>NBA Player Statistics</h1>
         <p>Browse and analyze NBA player performance data</p>
       </div>
 
@@ -212,13 +212,13 @@ const Stats = () => {
             className={`view-btn ${viewMode === 'table' ? 'active' : ''}`}
             onClick={() => setViewMode('table')}
           >
-            📊 Table View
+            Table View
           </button>
           <button 
             className={`view-btn ${viewMode === 'cards' ? 'active' : ''}`}
             onClick={() => setViewMode('cards')}
           >
-            🃏 Card View
+            Card View
           </button>
         </div>
         
@@ -353,7 +353,7 @@ const Stats = () => {
                         }}
                         title={favorites.has(player.id) ? 'Remove from favorites' : 'Add to favorites'}
                       >
-                        {favorites.has(player.id) ? '⭐' : '☆'}
+                        {favorites.has(player.id) ? 'FAVORITED' : 'ADD FAV'}
                       </button>
                     </td>
                   </tr>
@@ -377,7 +377,7 @@ const Stats = () => {
                     }}
                     title={favorites.has(player.id) ? 'Remove from favorites' : 'Add to favorites'}
                   >
-                    {favorites.has(player.id) ? '⭐' : '☆'}
+                    {favorites.has(player.id) ? 'FAVORITED' : 'ADD FAV'}
                   </button>
                 </div>
                 <div className="player-team-position">

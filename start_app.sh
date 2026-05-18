@@ -1,37 +1,50 @@
 #!/bin/bash
 
-echo "🏀 Starting NBA AI Basketball Website..."
+PROJECT_DIR="/Users/mohandixit/Documents/Programming /Sports-Website-main"
 
-# Function to kill background processes on exit
-cleanup() {
-    echo "Shutting down servers..."
-    kill $BACKEND_PID $FRONTEND_PID 2>/dev/null
-    exit
-}
+echo "🏀 Starting NBA Sports Website..."
+echo ""
 
-# Set up cleanup on script exit
-trap cleanup EXIT INT TERM
+# Install backend dependencies
+echo "📦 Installing backend dependencies..."
+cd "$PROJECT_DIR/Backend"
+pip install -r requirements.txt
+if [ $? -ne 0 ]; then
+    echo "❌ Failed to install backend dependencies"
+    exit 1
+fi
 
-# Start backend API
-echo "Starting backend API server..."
-cd Backend
-python app.py &
-BACKEND_PID=$!
+# Start Flask backend
+echo ""
+echo "🚀 Starting Flask API server..."
+osascript -e "tell app \"Terminal\" to do script \"cd '$PROJECT_DIR/Backend' && python app.py\""
 
-# Wait a moment for backend to start
+# Wait for backend to start
+echo ""
+echo "⏳ Waiting for API server to start..."
 sleep 3
 
-# Start frontend
-echo "Starting frontend development server..."
-cd ..
-npm run dev &
-FRONTEND_PID=$!
-
-echo "✅ Both servers are starting up..."
-echo "Backend API: http://localhost:5000"
-echo "Frontend: http://localhost:5173"
+# Install frontend dependencies
 echo ""
-echo "Press Ctrl+C to stop both servers"
+echo "📦 Installing frontend dependencies..."
+cd "$PROJECT_DIR"
+npm install
+if [ $? -ne 0 ]; then
+    echo "❌ Failed to install frontend dependencies"
+    exit 1
+fi
 
-# Wait for both processes
-wait
+# Start React frontend
+echo ""
+echo "🌐 Starting React frontend..."
+osascript -e "tell app \"Terminal\" to do script \"cd '$PROJECT_DIR' && npm run dev\""
+
+echo ""
+echo "✅ NBA Sports Website started successfully!"
+echo ""
+echo "🌐 Frontend: http://localhost:5173"
+echo "🔧 Backend API: http://localhost:5000"
+echo ""
+echo "Click STATS in the navigation to view NBA players!"
+echo ""
+read -p "Press Enter to exit..."

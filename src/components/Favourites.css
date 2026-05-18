@@ -245,33 +245,32 @@
 }
 
 .favorite-btn-fav {
-  background: transparent;
-  border: 2px solid #ffd700;
-  border-radius: 50%;
-  width: 45px;
-  height: 45px;
-  font-size: 1.5rem;
+  background: rgba(255, 215, 0, 0.15);
+  border: 1px solid rgba(255, 215, 0, 0.35);
+  border-radius: 4px;
   cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #ffd700;
+  padding: 6px 12px;
   transition: all var(--transition-fast, 0.2s);
-  color: rgba(255, 215, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
 }
 
 .favorite-btn-fav:hover {
-  background: rgba(255, 215, 0, 0.1);
-  transform: scale(1.1) rotate(10deg);
-  color: #ffd700;
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+  background: rgba(255, 215, 0, 0.25);
+  transform: scale(1.02);
+  color: #fff;
+  border-color: rgba(255, 215, 0, 0.55);
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
 }
 
 .favorite-btn-fav.favorited {
   background: rgba(255, 215, 0, 0.15);
   color: #ffd700;
-  animation: favoritePulse 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+  border-color: rgba(255, 215, 0, 0.35);
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.15);
 }
 
 @keyframes favoritePulse {
