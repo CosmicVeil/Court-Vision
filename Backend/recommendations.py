@@ -77,13 +77,18 @@ def get_top_by_improvement(stat, limit=LIMIT):
         return None
 
     results = _build_predictions_df()
-    if results is None:
+    if results is None or len(results) == 0:
         return []
 
     pred_col, min_pred = STAT_MIN_PREDICTED[stat]
-    results = results[results[pred_col] > min_pred]
+    filtered_results = results[results[pred_col] > min_pred]
+    
+    # Robust Fallback: If no players meet the strict threshold,
+    # fall back to the full dataset so we still show the best breakout players!
+    if len(filtered_results) == 0:
+        filtered_results = results
 
-    top = results.nlargest(limit, sort_col)
+    top = filtered_results.nlargest(limit, sort_col)
     return _jsonify_records(top.to_dict(orient='records'))
 
 def get_top_performers(stat):
