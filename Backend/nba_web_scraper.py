@@ -282,22 +282,46 @@ class NBAWebScraper:
             return 0
     
     def deduplicate_players(self, players):
-        """Remove duplicate players by keeping the entry with most games played"""
-        import pandas as pd
+        """Keep TOT stats but use most recent team"""
+        tot_rows = {}
+        last_team = {}
         
-        df = pd.DataFrame(players)
+        for player in players:
+            name = player['PLAYER_NAME']
+
+            team = (player.get('TEAM') or '').strip()
+
+            if team and team[0].isdigit():
+                print(name)
+                tot_rows[name] = player
+            else:
+                if team:
+                    last_team[name] = team  # keeps overwriting, last one wins
         
-        # Group by player name and keep the entry with most games played
-        deduplicated = df.loc[df.groupby('PLAYER_NAME')['GAMES_PLAYED_LAST'].idxmax()]
+        result = []
+        for player in players:
+            name = player['PLAYER_NAME']
+            if name in tot_rows:
+                # Only add the TOT row, but with the most recent team
+                if player == tot_rows[name]:
+                    player['TEAM'] = last_team.get(name, player['TEAM'])
+                    result.append(player)
+            else:
+                # Player wasn't traded, no TOT row — add if not already added
+                if name not in [p['PLAYER_NAME'] for p in result]:
+                    result.append(player)
         
-        return deduplicated.to_dict('records')
+        return result
     
     def parse_data_divs(self, divs):
         """Parse data from div elements"""
         try:
+            print("runs here")
             players = []
             
             for div in divs:
+
+                print("runs here #2")
                 # Look for player names and stats in divs
                 player_elements = div.find_all(['span', 'div', 'p'], string=re.compile(r'[A-Z][a-z]+ [A-Z][a-z]+'))
                 
@@ -307,6 +331,7 @@ class NBAWebScraper:
                         # Try to find associated stats
                         parent = element.parent
                         if parent:
+                            print("runs here #3")
                             stats_text = parent.get_text()
                             # Extract numbers that could be stats
                             numbers = re.findall(r'\d+\.?\d*', stats_text)
