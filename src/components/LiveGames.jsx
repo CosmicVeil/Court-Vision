@@ -69,8 +69,8 @@ function BoxScore({ game, onPlayerClick }) {
   const [tab, setTab] = useState("home");
   const isFuture = Number(game.status) === 1;
   const players  = game.players?.[tab] || [];
-  const starters = isFuture ? players.slice(0, 5) : players.filter(p => p.status === "ACTIVE").slice(0, 5);
-  const bench    = isFuture ? players.slice(5)    : players.filter(p => p.status === "ACTIVE").slice(5);
+  const starters = players.slice(0, 5);
+  const bench    = players.slice(5);
 
   return (
     <div className="boxscore">
