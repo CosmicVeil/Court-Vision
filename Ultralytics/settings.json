@@ -1,0 +1,21 @@
+{
+  "settings_version": "0.0.6",
+  "datasets_dir": "/Users/mohandixit/Documents/GitHub/Sports-Website-main/datasets",
+  "weights_dir": "/Users/mohandixit/Documents/GitHub/Sports-Website-main/weights",
+  "runs_dir": "/Users/mohandixit/Documents/GitHub/Sports-Website-main/runs",
+  "uuid": "931db8d9af4c26328e745111031bb92205bc0be2285dc50322f39f34a677a7ca",
+  "sync": true,
+  "api_key": "",
+  "openai_api_key": "",
+  "clearml": true,
+  "comet": true,
+  "dvc": true,
+  "hub": true,
+  "mlflow": true,
+  "neptune": true,
+  "raytune": true,
+  "tensorboard": false,
+  "wandb": false,
+  "vscode_msg": true,
+  "openvino_msg": true
+}

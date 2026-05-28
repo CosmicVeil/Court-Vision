@@ -1,5 +1,5 @@
-# Additional requirements for PyTorch NBA prediction model
-torch>=2.0.0
+# NBA AI model dependencies (XGBoost)
+xgboost>=2.0.0
 scikit-learn>=1.3.0
 pandas>=2.0.0
 numpy>=1.24.0

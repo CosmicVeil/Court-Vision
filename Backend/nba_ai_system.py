@@ -5,56 +5,31 @@ import os
 import json
 from datetime import datetime
 from typing import Dict, List, Optional
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
+from xgboost import XGBRegressor
+from sklearn.multioutput import MultiOutputRegressor
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 
 from nba_web_scraper import NBAWebScraper
 
-STAT_SCALE = 1.1
+STAT_SCALE = 1
 
-class NBADataset(Dataset):
-    def __init__(self, features, targets):
-        self.features = torch.FloatTensor(features)
-        self.targets = torch.FloatTensor(targets)
-    
-    def __len__(self):
-        return len(self.features)
-    
-    def __getitem__(self, idx):
-        return self.features[idx], self.targets[idx]
-
-class NBAPerformancePredictor(nn.Module):
-    def __init__(self, input_size, hidden_sizes=[256, 128, 64], dropout_rate=0.3):
-        super(NBAPerformancePredictor, self).__init__()
-        
-        layers = []
-        prev_size = input_size
-        
-        for hidden_size in hidden_sizes:
-            layers.extend([
-                nn.Linear(prev_size, hidden_size),
-                nn.BatchNorm1d(hidden_size),
-                nn.ReLU(),
-                nn.Dropout(dropout_rate)
-            ])
-            prev_size = hidden_size
-        
-        layers.append(nn.Linear(prev_size, 3))
-        self.network = nn.Sequential(*layers)
-        
-    def forward(self, x):
-        return self.network(x)
+def _build_xgboost_model():
+    return MultiOutputRegressor(XGBRegressor(
+        n_estimators=300,
+        max_depth=6,
+        learning_rate=0.05,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        random_state=42,
+        n_jobs=-1,
+    ))
 
 class NBAAISystem:
     def __init__(self):
         self.scraper = NBAWebScraper()
         self.model = None
         self.scaler = StandardScaler()
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.feature_columns = []
         self.target_columns = ['PPG_NEXT', 'APG_NEXT', 'RPG_NEXT']
         self.data = None
@@ -87,7 +62,7 @@ class NBAAISystem:
         
         self.scraper.save_data(self.data)
         
-        print("🧠 Training PyTorch neural network...")
+        print("🧠 Training XGBoost model...")
         if self.train_model():
             self.save_model()
             self.model_trained = True
@@ -147,77 +122,27 @@ class NBAAISystem:
         
         return X_scaled, y, df
 
-    def train_model(self, epochs=1000, batch_size=32, learning_rate=0.001):
-        X, y, df = self.prepare_data()
+    def train_model(self):
+        X, y, _ = self.prepare_data()
         if X is None:
             return False
-        
+
         X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
-        
-        train_dataset = NBADataset(X_train, y_train)
-        val_dataset = NBADataset(X_val, y_val)
-        
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-        
-        input_size = X.shape[1]
-        self.model = NBAPerformancePredictor(input_size=input_size).to(self.device)
-        
-        optimizer = optim.Adam(self.model.parameters(), lr=learning_rate, weight_decay=1e-5)
-        criterion = nn.MSELoss()
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=10, factor=0.5)
-        
-        print(f"Training PyTorch model on {self.device}...")
-        
-        for epoch in range(epochs):
-            self.model.train()
-            train_loss = 0.0
-            
-            for batch_features, batch_targets in train_loader:
-                batch_features = batch_features.to(self.device)
-                batch_targets = batch_targets.to(self.device)
-                
-                optimizer.zero_grad()
-                outputs = self.model(batch_features)
-                loss = criterion(outputs, batch_targets)
-                loss.backward()
-                optimizer.step()
-                
-                train_loss += loss.item()
-            
-            self.model.eval()
-            val_loss = 0.0
-            
-            with torch.no_grad():
-                for batch_features, batch_targets in val_loader:
-                    batch_features = batch_features.to(self.device)
-                    batch_targets = batch_targets.to(self.device)
-                    
-                    outputs = self.model(batch_features)
-                    loss = criterion(outputs, batch_targets)
-                    val_loss += loss.item()
-            
-            train_loss /= len(train_loader)
-            val_loss /= len(val_loader)
-            
-            scheduler.step(val_loss)
-            
-            if epoch % 20 == 0:
-                print(f'Epoch {epoch}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}')
-        
-        print(f"Training completed! Final validation loss: {val_loss:.4f}")
+
+        print("Training XGBoost model...")
+        self.model = _build_xgboost_model()
+        self.model.fit(X_train, y_train)
+
+        val_pred = self.model.predict(X_val)
+        val_mse = np.mean((val_pred - y_val) ** 2)
+        print(f"Training completed! Validation MSE: {val_mse:.4f}")
         return True
 
     def predict(self, X):
         if self.model is None:
             print("Model not trained!")
             return None
-        
-        self.model.eval()
-        with torch.no_grad():
-            X_tensor = torch.FloatTensor(X).to(self.device)
-            predictions = self.model(X_tensor)
-            return predictions.cpu().numpy()
+        return self.model.predict(X)
 
     def get_top_performers(self, top_n=10):
         if not self.model_trained:
@@ -348,10 +273,11 @@ class NBAAISystem:
             return False
         
         model_data = {
-            'model_state_dict': self.model.state_dict(),
+            'model': self.model,
             'scaler': self.scaler,
             'feature_columns': self.feature_columns,
-            'target_columns': self.target_columns
+            'target_columns': self.target_columns,
+            'model_type': 'xgboost',
         }
         
         filepath = os.path.join(os.path.dirname(__file__), filename)
@@ -365,14 +291,16 @@ class NBAAISystem:
         if os.path.exists(filepath):
             with open(filepath, 'rb') as f:
                 model_data = pickle.load(f)
-            
-            input_size = len(model_data['feature_columns'])
-            self.model = NBAPerformancePredictor(input_size=input_size).to(self.device)
-            self.model.load_state_dict(model_data['model_state_dict'])
+
+            if model_data.get('model_type') != 'xgboost' or 'model' not in model_data:
+                print("Saved model is outdated (YOLO/PyTorch). Retrain with initialize_nba_ai(force_refresh=True).")
+                return False
+
+            self.model = model_data['model']
             self.scaler = model_data['scaler']
             self.feature_columns = model_data['feature_columns']
             self.target_columns = model_data['target_columns']
-            
+
             print(f"Model loaded from {filepath}")
             return True
         return False

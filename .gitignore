@@ -30,6 +30,8 @@ venv/
 cleanenv/
 env/
 ENV/
+Backend/.venv/
+
 
 # Python cache
 __pycache__/
