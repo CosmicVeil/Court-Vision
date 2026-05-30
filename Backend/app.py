@@ -158,8 +158,24 @@ def load_nba_data():
     global nba_data
     try:
         with open('nba_2025_26_data.pkl', 'rb') as f:
-            nba_data = pickle.load(f)
-        print(f"Loaded {len(nba_data)} NBA players from pickle file")
+            seasonal_data = pickle.load(f)
+
+        # Flatten the seasonal data into a single list of players
+        # Use the most recent season's data for each player to avoid duplicates
+        # or combine data from all seasons (we'll use the most recent season)
+        nba_data = []
+        if isinstance(seasonal_data, dict):
+            # Get the most recent season
+            most_recent_season = max(seasonal_data.keys())
+            nba_data = seasonal_data[most_recent_season]
+            print(f"Loaded {len(nba_data)} NBA players from {most_recent_season} season data")
+        elif isinstance(seasonal_data, list):
+            nba_data = seasonal_data
+            print(f"Loaded {len(nba_data)} NBA players from pickle file")
+        else:
+            print(f"Unexpected data format in pickle file: {type(seasonal_data)}")
+            return False
+
         return True
     except FileNotFoundError:
         print("NBA data file 'nba_2025_26_data.pkl' not found.")
