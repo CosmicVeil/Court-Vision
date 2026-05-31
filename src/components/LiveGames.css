@@ -476,7 +476,7 @@
     .team-logo  { width: 42px; height: 42px; }
   }
   
-  /* ── Additions for upcoming game rosters ── */
+  /* ── Roster & Stats Grid for Upcoming Games ── */
   .future-note {
     padding: 0.6rem 1.2rem;
     background: rgba(100,180,255,0.07);

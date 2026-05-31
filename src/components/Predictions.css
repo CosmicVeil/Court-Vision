@@ -52,9 +52,10 @@
 
 /* Filters and Search */
 .filters-section {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 15px;
+  align-items: center;
   margin-bottom: 30px;
   background: rgba(17, 24, 39, 0.6);
   padding: 20px;
@@ -64,8 +65,7 @@
 }
 
 .filter-group {
-  flex: 1;
-  min-width: 200px;
+  width: 100%;
 }
 
 .search-input {
@@ -78,6 +78,7 @@
   font-family: inherit;
   font-size: 0.95rem;
   transition: all 0.3s ease;
+  box-sizing: border-box;
 }
 
 .search-input:focus {
@@ -97,6 +98,7 @@
   font-size: 0.95rem;
   transition: all 0.3s ease;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .filter-select:focus {
@@ -116,6 +118,9 @@
   font-size: 0.95rem;
   cursor: pointer;
   transition: all 0.3s ease;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
 }
 
 .clear-filters-btn:hover {
@@ -182,6 +187,7 @@
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
+  cursor: pointer;
 }
 
 .prediction-card::before {
@@ -469,7 +475,7 @@
     font-size: 2.2rem;
   }
   .filters-section {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
   .filter-group {
     width: 100%;

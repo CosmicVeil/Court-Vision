@@ -172,6 +172,7 @@
   transition: all var(--transition-smooth, 0.4s);
   position: relative;
   overflow: hidden;
+  cursor: pointer;
 }
 
 .favourite-card::before {

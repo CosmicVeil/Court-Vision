@@ -390,7 +390,12 @@ class NBAAISystem:
             self.initialize_system()
             return None
         
-        df = pd.DataFrame(self.data)
+        if isinstance(self.data, dict):
+            most_recent_season = max(self.data.keys())
+            df = pd.DataFrame(self.data[most_recent_season])
+        else:
+            df = pd.DataFrame(self.data)
+            
         player_data = df[df['PLAYER_NAME'].str.contains(player_name, case=False, na=False)]
         
         if player_data.empty:

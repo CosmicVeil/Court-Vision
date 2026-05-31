@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./AIPredictions.css";
 
-const AIPredictions = () => {
+const AIPredictions = ({ onPlayerClick }) => {
   const [predictions, setPredictions] = useState({
     top_scorers: [],
     top_assists: [],
@@ -88,7 +88,7 @@ const AIPredictions = () => {
     const stat = getStatDisplay();
 
     return (
-      <div key={index} className="player-card">
+      <div key={index} className="player-card" onClick={() => onPlayerClick && onPlayerClick(player)} style={{ cursor: 'pointer' }}>
         <div className="player-rank">#{index + 1}</div>
         <div className="player-info">
           <div className="player-name">{player.PLAYER_NAME}</div>

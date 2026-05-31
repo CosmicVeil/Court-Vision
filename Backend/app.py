@@ -46,6 +46,7 @@ active_tokens = {}
 mysql = None
 
 nba_data = None
+multi_season_data = None
 
 def create_token(user_id: int) -> str:
     token = secrets.token_urlsafe(32)
@@ -182,6 +183,22 @@ def load_nba_data():
         return False
     except Exception as e:
         print(f"Error loading NBA data: {e}")
+        return False
+
+def load_multi_season_data():
+    global multi_season_data
+    try:
+        data_file = os.path.join(os.path.dirname(__file__), 'nba_multi_season_data.pkl')
+        if os.path.exists(data_file):
+            with open(data_file, 'rb') as f:
+                multi_season_data = pickle.load(f)
+            print(f"Loaded multi-season data for years: {list(multi_season_data.keys())}")
+            return True
+        else:
+            print("Multi-season data file 'nba_multi_season_data.pkl' not found.")
+            return False
+    except Exception as e:
+        print(f"Error loading multi-season data: {e}")
         return False
 
 def _deterministic_trend(name, stat, scale=3.0):
@@ -374,8 +391,16 @@ def get_all_players():
     position = sanitize_string(request.args.get('position', ''), 10).upper()
     sort_by = request.args.get('sort_by', 'name')
     sort_order = request.args.get('sort_order', 'asc')
+    year_param = request.args.get('year', '')
 
     filtered_players = list(nba_data)
+    if year_param and multi_season_data:
+        try:
+            year_val = int(year_param)
+            if year_val in multi_season_data:
+                filtered_players = list(multi_season_data[year_val])
+        except ValueError:
+            pass
     
     if search:
         filtered_players = [p for p in filtered_players if search in p['PLAYER_NAME'].lower()]
@@ -430,6 +455,100 @@ def get_player_by_id(player_id):
         return jsonify({'error': 'Player not found'}), 404
     
     return jsonify(get_player_stats_summary(player))
+
+@app.route('/api/players/search-all', methods=['GET'])
+def search_players_all():
+    if not nba_data:
+        return jsonify({'error': 'NBA data not loaded'}), 500
+    
+    query = sanitize_string(request.args.get('query', ''), 50).lower()
+    if not query:
+        return jsonify({'players': []})
+    
+    matching_names = set()
+    for player in nba_data:
+        if query in player.get('PLAYER_NAME', '').lower():
+            matching_names.add(player.get('PLAYER_NAME'))
+            
+    if not matching_names and multi_season_data:
+        for season, players in multi_season_data.items():
+            for p in players:
+                if query in p.get('PLAYER_NAME', '').lower():
+                    matching_names.add(p.get('PLAYER_NAME'))
+                    
+    matching_names = sorted(list(matching_names))[:15]
+    
+    results = []
+    for name in matching_names:
+        curr_player = next((p for p in nba_data if p.get('PLAYER_NAME') == name), None)
+        
+        if not curr_player and multi_season_data:
+            for season in sorted(multi_season_data.keys(), reverse=True):
+                curr_player = next((p for p in multi_season_data[season] if p.get('PLAYER_NAME') == name), None)
+                if curr_player:
+                    break
+                    
+        if not curr_player:
+            continue
+            
+        history = {}
+        if multi_season_data:
+            for season in sorted(multi_season_data.keys()):
+                season_player = next((p for p in multi_season_data[season] if p.get('PLAYER_NAME') == name), None)
+                if season_player:
+                    fg_pct = season_player.get('FG_PCT_LAST', 0)
+                    fg3_pct = season_player.get('FG3_PCT_LAST', 0)
+                    ft_pct = season_player.get('FT_PCT_LAST', 0)
+                    history[str(season)] = {
+                        'ppg': round(season_player.get('PPG_LAST', 0), 1),
+                        'apg': round(season_player.get('APG_LAST', 0), 1),
+                        'rpg': round(season_player.get('RPG_LAST', 0), 1),
+                        'spg': round(season_player.get('SPG_LAST', 0), 1),
+                        'bpg': round(season_player.get('BPG_LAST', 0), 1),
+                        'fg_pct': round(fg_pct * (100.0 if fg_pct <= 1.0 else 1.0), 1),
+                        'fg3_pct': round(fg3_pct * (100.0 if fg3_pct <= 1.0 else 1.0), 1),
+                        'ft_pct': round(ft_pct * (100.0 if ft_pct <= 1.0 else 1.0), 1),
+                        'games_played': int(season_player.get('GAMES_PLAYED_LAST', 0) or 0),
+                        'minutes': round(season_player.get('MIN_LAST', 0), 1)
+                    }
+                    
+        ml_stats = None
+        if AI_AVAILABLE:
+            try:
+                pred = get_player_prediction(name)
+                if pred:
+                    ml_stats = {
+                        'predicted_stats': pred.get('predicted_stats'),
+                        'improvements': pred.get('improvements')
+                    }
+            except Exception as e:
+                print(f"Error getting AI prediction for {name}: {e}")
+                
+        fg_pct = curr_player.get('FG_PCT_LAST', 0)
+        fg3_pct = curr_player.get('FG3_PCT_LAST', 0)
+        ft_pct = curr_player.get('FT_PCT_LAST', 0)
+        results.append({
+            'name': name,
+            'team': curr_player.get('TEAM', 'UNK'),
+            'position': curr_player.get('POSITION', 'UNK'),
+            'age': curr_player.get('AGE', 0),
+            'current_stats': {
+                'ppg': round(curr_player.get('PPG_LAST', 0), 1),
+                'apg': round(curr_player.get('APG_LAST', 0), 1),
+                'rpg': round(curr_player.get('RPG_LAST', 0), 1),
+                'spg': round(curr_player.get('SPG_LAST', 0), 1),
+                'bpg': round(curr_player.get('BPG_LAST', 0), 1),
+                'fg_pct': round(fg_pct * (100.0 if fg_pct <= 1.0 else 1.0), 1),
+                'fg3_pct': round(fg3_pct * (100.0 if fg3_pct <= 1.0 else 1.0), 1),
+                'ft_pct': round(ft_pct * (100.0 if ft_pct <= 1.0 else 1.0), 1),
+                'games_played': int(curr_player.get('GAMES_PLAYED_LAST', 0) or 0),
+                'minutes': round(curr_player.get('MIN_LAST', 0), 1)
+            },
+            'ml_stats': ml_stats,
+            'history': history
+        })
+        
+    return jsonify({'players': results})
 
 @app.route('/api/players/search/<string:player_name>', methods=['GET'])
 def search_player(player_name):
@@ -715,6 +834,7 @@ if __name__ == '__main__':
         print("\nLoading NBA data...")
         if load_nba_data():
             print(f"NBA data loaded - {len(nba_data)} players")
+            load_multi_season_data()
             for i, player in enumerate(nba_data[:5]):
                 print(f"  {i+1}. {player['PLAYER_NAME']} ({player['TEAM']}) - {player['PPG_LAST']:.1f} PPG")
         else:

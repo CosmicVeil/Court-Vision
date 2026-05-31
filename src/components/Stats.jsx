@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { isFavorite, toggleFavorite, getFavorites } from '../utils/favorites';
+import { isAuthenticated } from '../utils/auth';
 import './Stats.css';
 
 const Stats = () => {
@@ -19,6 +20,11 @@ const Stats = () => {
   const [sortOrder, setSortOrder] = useState('asc');
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'cards'
   const [favorites, setFavorites] = useState(new Set()); // Track favorites for re-renders
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [modalTab, setModalTab] = useState('current');
+  const [loadingPlayer, setLoadingPlayer] = useState(false);
+  const [selectedYear, setSelectedYear] = useState('');
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   const API_BASE_URL = '/api';
 
@@ -32,9 +38,12 @@ const Stats = () => {
   }, []);
 
   const handleFavoriteToggle = (player) => {
+    if (!isAuthenticated()) {
+      setShowAuthModal(true);
+      return;
+    }
     const wasFavorite = isFavorite(player.id);
     toggleFavorite(player);
-    // Update local state for immediate UI feedback
     const newFavorites = new Set(favorites);
     if (wasFavorite) {
       newFavorites.delete(player.id);
@@ -44,11 +53,60 @@ const Stats = () => {
     setFavorites(newFavorites);
   };
 
+  // Fetch full player details (multi-season + ML) when a row is clicked
+  const handlePlayerClick = async (player) => {
+    setLoadingPlayer(true);
+    setModalTab('current');
+    try {
+      const response = await fetch(`${API_BASE_URL}/players/search-all?query=${encodeURIComponent(player.name)}`);
+      const data = await response.json();
+      const match = (data.players || []).find(p => p.name === player.name);
+      if (match) {
+        setSelectedPlayer(match);
+      } else {
+        // Fallback: build a basic profile from the table data
+        setSelectedPlayer({
+          name: player.name,
+          team: player.team,
+          position: player.position,
+          age: player.age,
+          current_stats: {
+            ppg: player.stats?.ppg_last || 0,
+            apg: player.stats?.apg_last || 0,
+            rpg: player.stats?.rpg_last || 0,
+            spg: player.stats?.spg_last || 0,
+            bpg: player.stats?.bpg_last || 0,
+            fg_pct: player.stats?.fg_pct_last || 0,
+            fg3_pct: player.stats?.fg3_pct_last || 0,
+            ft_pct: player.stats?.ft_pct_last || 0,
+            games_played: player.stats?.games_played || 0,
+            minutes: 0
+          },
+          ml_stats: null,
+          history: {}
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching player details:', err);
+    } finally {
+      setLoadingPlayer(false);
+    }
+  };
+
+  // Dismiss modal on Escape
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setSelectedPlayer(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   useEffect(() => {
     fetchTeams();
     fetchPositions();
     fetchPlayers();
-  }, [currentPage, searchTerm, selectedTeam, selectedPosition, sortBy, sortOrder]);
+  }, [currentPage, searchTerm, selectedTeam, selectedPosition, selectedYear, sortBy, sortOrder]);
 
   const fetchPlayers = async () => {
     try {
@@ -63,6 +121,7 @@ const Stats = () => {
       if (searchTerm) params.append('search', searchTerm);
       if (selectedTeam) params.append('team', selectedTeam);
       if (selectedPosition) params.append('position', selectedPosition);
+      if (selectedYear) params.append('year', selectedYear);
 
       const response = await fetch(`${API_BASE_URL}/players?${params}`);
       if (!response.ok) throw new Error('Failed to fetch players');
@@ -117,10 +176,16 @@ const Stats = () => {
     setCurrentPage(1);
   };
 
+  const handleYearFilter = (e) => {
+    setSelectedYear(e.target.value);
+    setCurrentPage(1);
+  };
+
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedTeam('');
     setSelectedPosition('');
+    setSelectedYear('');
     setCurrentPage(1);
   };
 
@@ -197,6 +262,19 @@ const Stats = () => {
             {positions.map(position => (
               <option key={position} value={position}>{position}</option>
             ))}
+          </select>
+        </div>
+
+        <div className="filter-group">
+          <select value={selectedYear} onChange={handleYearFilter} className="filter-select">
+            <option value="">All Seasons</option>
+            <option value="2026">2025-26 (2026)</option>
+            <option value="2025">2024-25 (2025)</option>
+            <option value="2024">2023-24 (2024)</option>
+            <option value="2023">2022-23 (2023)</option>
+            <option value="2022">2021-22 (2022)</option>
+            <option value="2021">2020-21 (2021)</option>
+            <option value="2020">2019-20 (2020)</option>
           </select>
         </div>
         
@@ -324,7 +402,7 @@ const Stats = () => {
               </thead>
               <tbody>
                 {sortedPlayers.map((player, index) => (
-                  <tr key={player.id || index}>
+                  <tr key={player.id || index} className="stats-row-clickable" onClick={() => handlePlayerClick(player)}>
                     <td className="player-name-cell">
                       <strong>{player.name}</strong>
                     </td>
@@ -365,7 +443,7 @@ const Stats = () => {
       ) : (
         <div className="players-grid">
           {sortedPlayers.map(player => (
-            <div key={player.id} className="player-card">
+            <div key={player.id} className="player-card stats-card-clickable" onClick={() => handlePlayerClick(player)}>
               <div className="player-header">
                 <div className="player-header-top">
                   <h3 className="player-name">{player.name}</h3>
@@ -502,6 +580,157 @@ const Stats = () => {
       {loading && (
         <div className="loading-overlay">
           <div className="loading">Loading more players...</div>
+        </div>
+      )}
+
+      {/* Player Details Popup Modal */}
+      {(selectedPlayer || loadingPlayer) && (
+        <div className="stats-modal-backdrop" onClick={() => { if (!loadingPlayer) setSelectedPlayer(null); }}>
+          <div className="stats-modal-container" onClick={(e) => e.stopPropagation()}>
+            {loadingPlayer && !selectedPlayer ? (
+              <div style={{ padding: '4rem', textAlign: 'center' }}>
+                <div className="search-spinner" style={{ width: 32, height: 32, margin: '0 auto 1rem' }}></div>
+                <p style={{ color: 'var(--text-secondary)' }}>Loading player details...</p>
+              </div>
+            ) : selectedPlayer && (
+              <>
+                <button className="stats-modal-close-btn" onClick={() => setSelectedPlayer(null)}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+                
+                <div className="stats-modal-header">
+                  <div className="stats-modal-player-title-row">
+                    <h2 className="stats-modal-player-name">{selectedPlayer.name}</h2>
+                    <span className="stats-modal-player-team-badge">{selectedPlayer.team}</span>
+                  </div>
+                  <p className="stats-modal-player-meta">
+                    <span><strong>Position:</strong> {selectedPlayer.position}</span>
+                    <span>•</span>
+                    <span><strong>Age:</strong> {selectedPlayer.age}</span>
+                  </p>
+                </div>
+
+                <div className="stats-modal-tabs">
+                  <button className={`stats-modal-tab-btn ${modalTab === 'current' ? 'active' : ''}`} onClick={() => setModalTab('current')}>Current Stats</button>
+                  <button className={`stats-modal-tab-btn ${modalTab === 'predictions' ? 'active' : ''}`} onClick={() => setModalTab('predictions')}>AI Predictions</button>
+                  <button className={`stats-modal-tab-btn ${modalTab === 'history' ? 'active' : ''}`} onClick={() => setModalTab('history')}>Career History</button>
+                </div>
+
+                <div className="stats-modal-body">
+                  {modalTab === 'current' && (
+                    <div>
+                      <div className="stats-grid-container">
+                        <div className="stat-box-card"><div className="stat-box-value highlighted">{selectedPlayer.current_stats.ppg}</div><div className="stat-box-label">PPG</div></div>
+                        <div className="stat-box-card"><div className="stat-box-value">{selectedPlayer.current_stats.apg}</div><div className="stat-box-label">APG</div></div>
+                        <div className="stat-box-card"><div className="stat-box-value">{selectedPlayer.current_stats.rpg}</div><div className="stat-box-label">RPG</div></div>
+                        <div className="stat-box-card"><div className="stat-box-value">{selectedPlayer.current_stats.spg}</div><div className="stat-box-label">SPG</div></div>
+                        <div className="stat-box-card"><div className="stat-box-value">{selectedPlayer.current_stats.bpg}</div><div className="stat-box-label">BPG</div></div>
+                      </div>
+                      <div className="secondary-stats-container">
+                        <h3 className="secondary-stats-title">Shooting & Playing Time</h3>
+                        <div className="percentage-stat-row">
+                          <div className="percentage-stat-header"><span className="percentage-stat-name">Field Goal (FG%)</span><span className="percentage-stat-value">{selectedPlayer.current_stats.fg_pct}%</span></div>
+                          <div className="percentage-stat-track"><div className="percentage-stat-bar" style={{ width: `${selectedPlayer.current_stats.fg_pct}%` }}></div></div>
+                        </div>
+                        <div className="percentage-stat-row">
+                          <div className="percentage-stat-header"><span className="percentage-stat-name">3-Point (3PT%)</span><span className="percentage-stat-value">{selectedPlayer.current_stats.fg3_pct}%</span></div>
+                          <div className="percentage-stat-track"><div className="percentage-stat-bar" style={{ width: `${selectedPlayer.current_stats.fg3_pct}%` }}></div></div>
+                        </div>
+                        <div className="percentage-stat-row">
+                          <div className="percentage-stat-header"><span className="percentage-stat-name">Free Throw (FT%)</span><span className="percentage-stat-value">{selectedPlayer.current_stats.ft_pct}%</span></div>
+                          <div className="percentage-stat-track"><div className="percentage-stat-bar" style={{ width: `${selectedPlayer.current_stats.ft_pct}%` }}></div></div>
+                        </div>
+                        <div className="percentage-stat-row" style={{ marginTop: '1.5rem' }}>
+                          <div className="percentage-stat-header" style={{ marginBottom: 0 }}>
+                            <span className="percentage-stat-name">Games Played / Playing Time</span>
+                            <span className="percentage-stat-value">{selectedPlayer.current_stats.games_played} Games | {selectedPlayer.current_stats.minutes} MPG</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {modalTab === 'predictions' && (
+                    <div>
+                      {selectedPlayer.ml_stats ? (
+                        <div className="ai-pred-cards-grid">
+                          {['ppg', 'apg', 'rpg'].map((stat) => {
+                            const labels = { ppg: 'Points Per Game (PPG)', apg: 'Assists Per Game (APG)', rpg: 'Rebounds Per Game (RPG)' };
+                            const units = { ppg: 'PPG', apg: 'APG', rpg: 'RPG' };
+                            const imp = selectedPlayer.ml_stats.improvements[stat];
+                            return (
+                              <div className="ai-pred-box" key={stat}>
+                                <div className="ai-pred-box-label">{labels[stat]}</div>
+                                <div className="ai-pred-values-flex">
+                                  <span className="ai-pred-num old">{selectedPlayer.current_stats[stat]} <small>{units[stat]}</small></span>
+                                  <span className="ai-pred-arrow">→</span>
+                                  <span className="ai-pred-num new">{selectedPlayer.ml_stats.predicted_stats[stat]} <small>{units[stat]}</small></span>
+                                </div>
+                                <div className={`ai-pred-badge ${imp >= 0 ? 'positive' : 'negative'}`}>{imp >= 0 ? '+' : ''}{imp}%</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>AI Prediction model is currently loading or unavailable for this player.</div>
+                      )}
+                    </div>
+                  )}
+
+                  {modalTab === 'history' && (
+                    <div className="stats-history-table-container">
+                      <div className="stats-history-scroll-box">
+                        <table className="stats-history-table">
+                          <thead>
+                            <tr>
+                              <th>Season</th><th>GP</th><th>MIN</th><th>PPG</th><th>RPG</th><th>APG</th><th>SPG</th><th>BPG</th><th>FG%</th><th>3P%</th><th>FT%</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Object.entries(selectedPlayer.history || {}).reverse().map(([year, stats]) => (
+                              <tr key={year}>
+                                <td><strong>{year}</strong></td>
+                                <td>{stats.games_played}</td>
+                                <td>{stats.minutes}</td>
+                                <td>{stats.ppg}</td>
+                                <td>{stats.rpg}</td>
+                                <td>{stats.apg}</td>
+                                <td>{stats.spg}</td>
+                                <td>{stats.bpg}</td>
+                                <td>{stats.fg_pct}%</td>
+                                <td>{stats.fg3_pct}%</td>
+                                <td>{stats.ft_pct}%</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Custom GUI Authentication Warning Modal */}
+      {showAuthModal && (
+        <div className="stats-modal-backdrop" onClick={() => setShowAuthModal(false)}>
+          <div className="stats-modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '450px', textAlign: 'center', padding: '3rem 2rem' }}>
+            <button className="stats-modal-close-btn" onClick={() => setShowAuthModal(false)}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+            <div style={{ fontSize: '4rem', marginBottom: '1.5rem', filter: 'drop-shadow(0 0 15px rgba(255, 69, 0, 0.4))' }}>🔒</div>
+            <h2 className="empty-title" style={{ fontSize: '1.8rem', marginBottom: '1rem', color: '#fff', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: "'Outfit', sans-serif", fontWeight: 900 }}>Authentication Required</h2>
+            <p className="empty-description" style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', lineHeight: '1.6', marginBottom: '2rem' }}>
+              You must create an account or log in to save your favorite NBA players and customize your analytics tracking!
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <Link to="/login" className="empty-cta" style={{ textDecoration: 'none', padding: '0.8rem 2rem', fontSize: '1rem', textAlign: 'center' }}>Log In</Link>
+              <Link to="/create-account" className="empty-cta" style={{ textDecoration: 'none', padding: '0.8rem 2rem', fontSize: '1rem', background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)', color: '#fff', boxShadow: 'none', textAlign: 'center' }}>Create Account</Link>
+            </div>
+          </div>
         </div>
       )}
     </div>

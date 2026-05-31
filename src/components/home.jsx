@@ -102,10 +102,14 @@ function TrendingGameCard({ game }) {
   );
 }
 
-function PRACard({ player }) {
+function PRACard({ player, onPlayerClick }) {
   if (!player) return null;
   return (
-    <div className="featured-card pra-card">
+    <div 
+      className="featured-card pra-card clickable-pra-card" 
+      onClick={() => onPlayerClick && onPlayerClick(player.name)}
+      style={{ cursor: 'pointer' }}
+    >
       <div className="featured-badge highlight">WEEK'S BEST PRA</div>
       <div className="featured-content">
         <h3 className="pra-name">{player.name}</h3>
@@ -116,15 +120,15 @@ function PRACard({ player }) {
           <div className="pra-stat"><span className="pra-val">{player.apg}</span><span className="pra-lbl">APG</span></div>
           <div className="pra-stat pra-total"><span className="pra-val">{player.pra}</span><span className="pra-lbl">PRA</span></div>
         </div>
-        <Link to={`/stats?search=${encodeURIComponent(player.name)}`} className="featured-link">
-          View Full Stats →
-        </Link>
+        <div className="featured-link">
+          Click for Full Stats →
+        </div>
       </div>
     </div>
   );
 }
 
-function TrendingSection() {
+function TrendingSection({ onPlayerClick }) {
   const [liveGames,   setLiveGames]   = useState([]);
   const [futureGames, setFutureGames] = useState([]);
   const [praPlayer,   setPraPlayer]   = useState(null);
@@ -190,7 +194,7 @@ function TrendingSection() {
   ) : (
     <>
       {liveGames.map(g => <TrendingGameCard key={g.gameId} game={g} />)}
-      <PRACard player={praPlayer} />
+      <PRACard player={praPlayer} onPlayerClick={onPlayerClick} />
     </>
   );
 
@@ -203,6 +207,39 @@ const Home = () => {
   const dropdownRef = useRef(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
+
+  // States for search and popup modal
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [modalTab, setModalTab] = useState("current"); // current, predictions, history
+  const [loadingPlayer, setLoadingPlayer] = useState(false);
+  const searchContainerRef = useRef(null);
+
+  const handlePlayerClick = async (playerName) => {
+    setLoadingPlayer(true);
+    setModalTab('current');
+    try {
+      const response = await fetch(`/api/players/search-all?query=${encodeURIComponent(playerName)}`);
+      const data = await response.json();
+      const match = (data.players || []).find(p => p.name.toLowerCase() === playerName.toLowerCase());
+      if (match) {
+        setSelectedPlayer(match);
+      } else {
+        setSelectedPlayer({
+          name: playerName,
+          current_stats: { ppg: 0, apg: 0, rpg: 0, spg: 0, bpg: 0, fg_pct: 0, fg3_pct: 0, ft_pct: 0, games_played: 0, minutes: 0 },
+          ml_stats: null,
+          history: {}
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching player details:', err);
+    } finally {
+      setLoadingPlayer(false);
+    }
+  };
 
   useEffect(() => {
     const authenticated = isAuthenticated();
@@ -218,6 +255,51 @@ const Home = () => {
     if (isDropdownOpen) document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [isDropdownOpen]);
+
+  // Click outside to dismiss search results
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setSearchResults([]);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Keyboard handlers for Esc key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setSelectedPlayer(null);
+        setSearchResults([]);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Autocomplete fetch logic
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (searchQuery.trim().length >= 2) {
+        setIsSearching(true);
+        try {
+          const response = await fetch(`/api/players/search-all?query=${encodeURIComponent(searchQuery)}`);
+          const data = await response.json();
+          setSearchResults(data.players || []);
+        } catch (error) {
+          console.error("Error searching players:", error);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSearchResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
 
   const handleLogout = async () => {
     await logout();
@@ -276,6 +358,56 @@ const Home = () => {
             <span className="highlight">COURT</span> VISION
           </h1>
           <p className="hero-subtitle">Your Ultimate Destination for Basketball Insights, Stats, and AI-Powered Predictions</p>
+          
+          {/* Custom Search Bar with Autocomplete suggestions */}
+          <div className="hero-search-wrapper" ref={searchContainerRef}>
+            <div className="search-bar-container">
+              <svg className="search-icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input
+                type="text"
+                className="search-input-field"
+                placeholder="Search NBA player (e.g. LeBron James, Stephen Curry)..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {isSearching && <div className="search-spinner"></div>}
+              {searchQuery && (
+                <button className="clear-search-btn" onClick={() => setSearchQuery("")}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              )}
+            </div>
+            
+            {searchResults.length > 0 && (
+              <div className="search-results-dropdown">
+                {searchResults.map((player) => (
+                  <div 
+                    key={player.name} 
+                    className="search-result-item"
+                    onClick={() => {
+                      setSelectedPlayer(player);
+                      setModalTab("current");
+                      setSearchResults([]);
+                      setSearchQuery("");
+                    }}
+                  >
+                    <div className="search-result-player-info">
+                      <span className="search-result-player-name">{player.name}</span>
+                      <span className="search-result-player-meta">{player.position} · Age {player.age}</span>
+                    </div>
+                    <span className="search-result-player-team">{player.team}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {searchQuery.trim().length >= 2 && !isSearching && searchResults.length === 0 && (
+              <div className="search-results-dropdown">
+                <div className="search-dropdown-no-results">No players found matching "{searchQuery}"</div>
+              </div>
+            )}
+          </div>
+
           <div className="hero-cta">
             <Link to="/stats" className="cta-button primary">Explore Stats</Link>
             <Link to="/recommendations" className="cta-button secondary">Get Recommendations</Link>
@@ -287,7 +419,7 @@ const Home = () => {
         <div className="featured-container">
           <h2 className="section-title">Trending Now</h2>
           <p className="section-description">Live scores, upcoming matchups, and this week's standout performer</p>
-          <TrendingSection />
+          <TrendingSection onPlayerClick={handlePlayerClick} />
         </div>
       </section>
 
@@ -318,7 +450,7 @@ const Home = () => {
         <div className="ai-content">
           <h2 className="section-title">AI Predictions</h2>
           <p className="section-description">Get ahead of the game with our cutting-edge AI predictions powered by advanced analytics</p>
-          <AIPredictions />
+          <AIPredictions onPlayerClick={(p) => handlePlayerClick(p.PLAYER_NAME || p.name)} />
         </div>
       </section>
 
@@ -332,7 +464,215 @@ const Home = () => {
           </div>
         </div>
       </section>
+
+      {/* Interactive Glassmorphic Stats Popup Modal */}
+      {(selectedPlayer || loadingPlayer) && (
+        <div className="stats-modal-backdrop" onClick={() => { if (!loadingPlayer) setSelectedPlayer(null); }}>
+          <div className="stats-modal-container" onClick={(e) => e.stopPropagation()}>
+            {loadingPlayer && !selectedPlayer ? (
+              <div style={{ padding: '4rem', textAlign: 'center' }}>
+                <div className="search-spinner" style={{ width: 32, height: 32, margin: '0 auto 1rem' }}></div>
+                <p style={{ color: 'var(--text-secondary)' }}>Loading player details...</p>
+              </div>
+            ) : selectedPlayer && (
+              <>
+                <button className="stats-modal-close-btn" onClick={() => setSelectedPlayer(null)}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            
+            <div className="stats-modal-header">
+              <div className="stats-modal-player-title-row">
+                <h2 className="stats-modal-player-name">{selectedPlayer.name}</h2>
+                <span className="stats-modal-player-team-badge">{selectedPlayer.team}</span>
+              </div>
+              <p className="stats-modal-player-meta">
+                <span><strong>Position:</strong> {selectedPlayer.position}</span>
+                <span>•</span>
+                <span><strong>Age:</strong> {selectedPlayer.age}</span>
+              </p>
+            </div>
+
+            <div className="stats-modal-tabs">
+              <button 
+                className={`stats-modal-tab-btn ${modalTab === "current" ? "active" : ""}`}
+                onClick={() => setModalTab("current")}
+              >
+                Current Stats
+              </button>
+              <button 
+                className={`stats-modal-tab-btn ${modalTab === "predictions" ? "active" : ""}`}
+                onClick={() => setModalTab("predictions")}
+              >
+                AI Predictions
+              </button>
+              <button 
+                className={`stats-modal-tab-btn ${modalTab === "history" ? "active" : ""}`}
+                onClick={() => setModalTab("history")}
+              >
+                Career History
+              </button>
+            </div>
+
+            <div className="stats-modal-body">
+              {modalTab === "current" && (
+                <div>
+                  <div className="stats-grid-container">
+                    <div className="stat-box-card">
+                      <div className="stat-box-value highlighted">{selectedPlayer.current_stats.ppg}</div>
+                      <div className="stat-box-label">PPG</div>
+                    </div>
+                    <div className="stat-box-card">
+                      <div className="stat-box-value">{selectedPlayer.current_stats.apg}</div>
+                      <div className="stat-box-label">APG</div>
+                    </div>
+                    <div className="stat-box-card">
+                      <div className="stat-box-value">{selectedPlayer.current_stats.rpg}</div>
+                      <div className="stat-box-label">RPG</div>
+                    </div>
+                    <div className="stat-box-card">
+                      <div className="stat-box-value">{selectedPlayer.current_stats.spg}</div>
+                      <div className="stat-box-label">SPG</div>
+                    </div>
+                    <div className="stat-box-card">
+                      <div className="stat-box-value">{selectedPlayer.current_stats.bpg}</div>
+                      <div className="stat-box-label">BPG</div>
+                    </div>
+                  </div>
+
+                  <div className="secondary-stats-container">
+                    <h3 className="secondary-stats-title">Shooting & Playing Time</h3>
+                    <div className="percentage-stat-row">
+                      <div className="percentage-stat-header">
+                        <span className="percentage-stat-name">Field Goal (FG%)</span>
+                        <span className="percentage-stat-value">{selectedPlayer.current_stats.fg_pct}%</span>
+                      </div>
+                      <div className="percentage-stat-track">
+                        <div className="percentage-stat-bar" style={{ width: `${selectedPlayer.current_stats.fg_pct}%` }}></div>
+                      </div>
+                    </div>
+                    <div className="percentage-stat-row">
+                      <div className="percentage-stat-header">
+                        <span className="percentage-stat-name">3-Point (3PT%)</span>
+                        <span className="percentage-stat-value">{selectedPlayer.current_stats.fg3_pct}%</span>
+                      </div>
+                      <div className="percentage-stat-track">
+                        <div className="percentage-stat-bar" style={{ width: `${selectedPlayer.current_stats.fg3_pct}%` }}></div>
+                      </div>
+                    </div>
+                    <div className="percentage-stat-row">
+                      <div className="percentage-stat-header">
+                        <span className="percentage-stat-name">Free Throw (FT%)</span>
+                        <span className="percentage-stat-value">{selectedPlayer.current_stats.ft_pct}%</span>
+                      </div>
+                      <div className="percentage-stat-track">
+                        <div className="percentage-stat-bar" style={{ width: `${selectedPlayer.current_stats.ft_pct}%` }}></div>
+                      </div>
+                    </div>
+                    <div className="percentage-stat-row" style={{ marginTop: "1.5rem" }}>
+                      <div className="percentage-stat-header" style={{ marginBottom: 0 }}>
+                        <span className="percentage-stat-name">Games Played / Playing Time</span>
+                        <span className="percentage-stat-value">{selectedPlayer.current_stats.games_played} Games | {selectedPlayer.current_stats.minutes} MPG</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {modalTab === "predictions" && (
+                <div>
+                  {selectedPlayer.ml_stats ? (
+                    <div className="ai-pred-cards-grid">
+                      <div className="ai-pred-box">
+                        <div className="ai-pred-box-label">Points Per Game (PPG)</div>
+                        <div className="ai-pred-values-flex">
+                          <span className="ai-pred-num old">{selectedPlayer.current_stats.ppg} <small>PPG</small></span>
+                          <span className="ai-pred-arrow">→</span>
+                          <span className="ai-pred-num new">{selectedPlayer.ml_stats.predicted_stats.ppg} <small>PPG</small></span>
+                        </div>
+                        <div className={`ai-pred-badge ${selectedPlayer.ml_stats.improvements.ppg >= 0 ? "positive" : "negative"}`}>
+                          {selectedPlayer.ml_stats.improvements.ppg >= 0 ? "+" : ""}{selectedPlayer.ml_stats.improvements.ppg}%
+                        </div>
+                      </div>
+
+                      <div className="ai-pred-box">
+                        <div className="ai-pred-box-label">Assists Per Game (APG)</div>
+                        <div className="ai-pred-values-flex">
+                          <span className="ai-pred-num old">{selectedPlayer.current_stats.apg} <small>APG</small></span>
+                          <span className="ai-pred-arrow">→</span>
+                          <span className="ai-pred-num new">{selectedPlayer.ml_stats.predicted_stats.apg} <small>APG</small></span>
+                        </div>
+                        <div className={`ai-pred-badge ${selectedPlayer.ml_stats.improvements.apg >= 0 ? "positive" : "negative"}`}>
+                          {selectedPlayer.ml_stats.improvements.apg >= 0 ? "+" : ""}{selectedPlayer.ml_stats.improvements.apg}%
+                        </div>
+                      </div>
+
+                      <div className="ai-pred-box">
+                        <div className="ai-pred-box-label">Rebounds Per Game (RPG)</div>
+                        <div className="ai-pred-values-flex">
+                          <span className="ai-pred-num old">{selectedPlayer.current_stats.rpg} <small>RPG</small></span>
+                          <span className="ai-pred-arrow">→</span>
+                          <span className="ai-pred-num new">{selectedPlayer.ml_stats.predicted_stats.rpg} <small>RPG</small></span>
+                        </div>
+                        <div className={`ai-pred-badge ${selectedPlayer.ml_stats.improvements.rpg >= 0 ? "positive" : "negative"}`}>
+                          {selectedPlayer.ml_stats.improvements.rpg >= 0 ? "+" : ""}{selectedPlayer.ml_stats.improvements.rpg}%
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-secondary)" }}>
+                      AI Prediction model is currently loading or unavailable for this player.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {modalTab === "history" && (
+                <div className="stats-history-table-container">
+                  <div className="stats-history-scroll-box">
+                    <table className="stats-history-table">
+                      <thead>
+                        <tr>
+                          <th>Season</th>
+                          <th>GP</th>
+                          <th>MIN</th>
+                          <th>PPG</th>
+                          <th>RPG</th>
+                          <th>APG</th>
+                          <th>SPG</th>
+                          <th>BPG</th>
+                          <th>FG%</th>
+                          <th>3P%</th>
+                          <th>FT%</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(selectedPlayer.history || {}).reverse().map(([year, stats]) => (
+                          <tr key={year}>
+                            <td><strong>{year}</strong></td>
+                            <td>{stats.games_played}</td>
+                            <td>{stats.minutes}</td>
+                            <td>{stats.ppg}</td>
+                            <td>{stats.rpg}</td>
+                            <td>{stats.apg}</td>
+                            <td>{stats.spg}</td>
+                            <td>{stats.bpg}</td>
+                            <td>{stats.fg_pct}%</td>
+                            <td>{stats.fg3_pct}%</td>
+                            <td>{stats.ft_pct}%</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
     </div>
+  )}
+</div>
   );
 };
 
