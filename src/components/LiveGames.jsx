@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./LiveGames.css";
 
-const API = "http://localhost:5000";
+const API = "";
 const STATUS_LIVE  = 2;
 const STATUS_FINAL = 3;
 
