@@ -3,6 +3,6 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "env": {
-    "VITE_API_URL": "YOUR_RENDER_URL_HERE"
+    "VITE_API_URL": "https://courtvision-ulq3.onrender.com"
   }
 }
