@@ -1,32 +1,17 @@
 """
-live_games.py  —  NBA live game data via stats.nba.com (SportRadar-backed)
+live_games.py — NBA game data via ESPN's public API
 
-WHAT CHANGED vs original:
-  - cdn.nba.com was returning SSL cert errors + 403s. Dropped entirely.
-  - Uses stats.nba.com endpoints which are the same data, more stable, and
-    don't require Playwright or browser fingerprinting.
-  - scoreboard:  /stats/scoreboardv3         (replaces todaysScoreboard CDN)
-  - boxscore:    /stats/boxscoretraditionalv3 (replaces CDN boxscore JSON)
-  - schedule:    /stats/scheduleleaguev2      (replaces CDN schedule JSON)
-  - All three endpoints need the same nba-stats headers (Origin + Referer +
-    x-nba-stats-token). Without them you get 403s, same as before.
-  - Public interface (_fmt_player_live, get_todays_games, get_upcoming_games,
-    get_top_pra_player, _roster_from_pkl) is 100% unchanged so callers don't
-    need to be updated.
+Switched from stats.nba.com (blocked on cloud servers) to ESPN's public API
+which works reliably from any hosting platform including Render.
 
-SportRadar boxscore shape (what we actually receive):
-  {
-    "player_stats": {
-      "SAS": [ { "name": "...", "position": "G", "stats": { "points": 6, "rebounds": 1, ... } }, ... ],
-      "OKC": [ ... ]
-    },
-    "home": "SAS",
-    "away": "OKC",
-    ...
-  }
-  Fields inside stats{}: points, rebounds, assists, steals, blocks,
-  field_goals_made/att, three_points_made/att, free_throws_made/att,
-  turnovers, pls_min  (NOT reboundsTotal, NOT minutesCalculated, etc.)
+Endpoints used:
+  Scoreboard: site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard
+  Summary:    site.api.espn.com/apis/site/v2/sports/basketball/nba/summary
+
+Public interface is identical to the original:
+  get_todays_games(nba_data)      -> List[Dict]
+  get_upcoming_games(days, nba_data) -> List[Dict]
+  get_top_pra_player(nba_data)    -> Optional[Dict]
 """
 
 import requests
@@ -35,8 +20,16 @@ from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Any
 
 # ---------------------------------------------------------------------------
-# Constants
+# ESPN API endpoints
 # ---------------------------------------------------------------------------
+_ESPN_BASE  = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba"
+_SCOREBOARD = f"{_ESPN_BASE}/scoreboard"
+_SUMMARY    = f"{_ESPN_BASE}/summary"
+
+# ESPN sometimes uses shortened abbreviations — map them to standard tricodes
+ESPN_TO_TRICODE = {
+    "GS": "GSW", "SA": "SAS", "NO": "NOP", "NY": "NYK", "WSH": "WAS",
+}
 
 TEAM_IDS = {
     "ATL":1610612737,"BOS":1610612738,"BKN":1610612751,"CHA":1610612766,
@@ -54,45 +47,9 @@ TEAM_LOGOS = {
     for t, tid in TEAM_IDS.items()
 }
 
-# stats.nba.com endpoints  (no CDN, no SSL issues)
-_BASE        = "https://stats.nba.com/stats"
-_SCOREBOARD  = f"{_BASE}/scoreboardv3"
-_BOXSCORE    = f"{_BASE}/boxscoretraditionalv3"
-_SCHEDULE    = f"{_BASE}/scheduleleaguev2"
-
 # ---------------------------------------------------------------------------
-# HTTP session — must send these headers or stats.nba.com returns 403
+# Simple TTL cache
 # ---------------------------------------------------------------------------
-
-def _make_session() -> requests.Session:
-    s = requests.Session()
-    s.headers.update({
-        "Host":               "stats.nba.com",
-        "User-Agent":         (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/124.0.0.0 Safari/537.36"
-        ),
-        "Accept":             "application/json, text/plain, */*",
-        "Accept-Language":    "en-US,en;q=0.9",
-        "Accept-Encoding":    "gzip, deflate, br",
-        "x-nba-stats-origin": "stats",
-        "x-nba-stats-token":  "true",
-        "Origin":             "https://www.nba.com",
-        "Referer":            "https://www.nba.com/",
-        "Connection":         "keep-alive",
-        "Sec-Fetch-Dest":     "empty",
-        "Sec-Fetch-Mode":     "cors",
-        "Sec-Fetch-Site":     "same-site",
-    })
-    return s
-
-_SESSION = _make_session()
-
-# ---------------------------------------------------------------------------
-# Simple TTL cache (same contract as original _cache)
-# ---------------------------------------------------------------------------
-
 _cache: Dict[str, Dict] = {}
 CACHE_TTL = 30  # seconds
 
@@ -104,7 +61,7 @@ def _get(url: str, params: Optional[Dict] = None) -> Optional[Any]:
     if cache_key in _cache and now - _cache[cache_key]["ts"] < CACHE_TTL:
         return _cache[cache_key]["data"]
     try:
-        r = _SESSION.get(url, params=params, timeout=10)
+        r = requests.get(url, params=params, timeout=10)
         r.raise_for_status()
         data = r.json()
         _cache[cache_key] = {"data": data, "ts": now}
@@ -115,170 +72,191 @@ def _get(url: str, params: Optional[Dict] = None) -> Optional[Any]:
 
 
 # ---------------------------------------------------------------------------
-# scoreboardv3 helpers
+# Helpers
 # ---------------------------------------------------------------------------
 
-def _parse_scoreboard_game(g: Dict) -> Dict:
-    """
-    scoreboardv3 game object → our internal game dict.
-    Mirrors the structure the original code produced from the CDN payload.
-    """
-    game_id     = g.get("gameId", "")
-    status_num  = g.get("gameStatus", 1)
-    status_text = g.get("gameStatusText", "").strip()
-    period      = g.get("period", 0)
-    game_clock  = g.get("gameClock", "")
-    arena       = g.get("arenaName", "")
-    game_time   = g.get("gameTimeEst", g.get("gameEt", ""))
+def _normalize_tricode(espn_abbr: str) -> str:
+    """Convert ESPN abbreviation to our standard tricode."""
+    return ESPN_TO_TRICODE.get(espn_abbr, espn_abbr)
 
-    def _team(key: str) -> Dict:
-        t = g.get(key, {})
-        tri = t.get("teamTricode", "")
-        wins   = t.get("wins",   t.get("record", {}).get("wins",   0))
-        losses = t.get("losses", t.get("record", {}).get("losses", 0))
-        periods = t.get("periods", [])
-        quarters = [
-            {"q": p.get("period", i + 1), "score": p.get("score", 0)}
-            for i, p in enumerate(periods)
-        ]
+
+def _parse_espn_game(event: Dict) -> Optional[Dict]:
+    """Convert an ESPN event object to our internal game dict."""
+    try:
+        game_id    = event.get("id", "")
+        competition = (event.get("competitions") or [{}])[0]
+
+        status_obj  = event.get("status", {})
+        status_type = status_obj.get("type", {})
+        state       = status_type.get("state", "pre")   # pre | in | post
+
+        if state == "in":
+            status_num = 2
+        elif state == "post":
+            status_num = 3
+        else:
+            status_num = 1
+
+        period      = status_obj.get("period", 0)
+        clock       = status_obj.get("displayClock", "")
+        status_text = status_type.get("shortDetail", status_type.get("description", ""))
+
+        competitors = competition.get("competitors", [])
+        home_comp   = next((c for c in competitors if c.get("homeAway") == "home"), {})
+        away_comp   = next((c for c in competitors if c.get("homeAway") == "away"), {})
+
+        def _parse_team(comp: Dict) -> Dict:
+            team    = comp.get("team", {})
+            tri     = _normalize_tricode(team.get("abbreviation", ""))
+            score   = int(comp.get("score", 0) or 0)
+            records = comp.get("records", [])
+            record  = records[0].get("summary", "") if records else ""
+
+            linescores = comp.get("linescores", [])
+            quarters   = [
+                {"q": i + 1, "score": int(ls.get("value", 0) or 0)}
+                for i, ls in enumerate(linescores)
+            ]
+
+            # Prefer NBA CDN logo (more consistent quality)
+            logo = TEAM_LOGOS.get(tri) or team.get("logo", "")
+
+            return {
+                "tricode":  tri,
+                "name":     team.get("shortDisplayName", team.get("name", "")),
+                "city":     team.get("location", ""),
+                "score":    score,
+                "logo":     logo,
+                "quarters": quarters,
+                "record":   record,
+            }
+
+        venue = competition.get("venue", {})
+        arena = venue.get("fullName", "")
+
         return {
-            "tricode":  tri,
-            "name":     t.get("teamName", ""),
-            "city":     t.get("teamCity", ""),
-            "score":    t.get("score", 0),
-            "logo":     TEAM_LOGOS.get(tri, ""),
-            "quarters": quarters,
-            "record":   f"{wins}-{losses}",
+            "gameId":     game_id,
+            "status":     status_num,
+            "statusText": status_text,
+            "gameTime":   event.get("date", ""),
+            "arena":      arena,
+            "home":       _parse_team(home_comp),
+            "away":       _parse_team(away_comp),
+            "period":     period,
+            "gameClock":  clock if status_num == 2 else "",
+            "players":    {"home": [], "away": []},
         }
-
-    return {
-        "gameId":     game_id,
-        "status":     status_num,
-        "statusText": status_text,
-        "gameTime":   game_time,
-        "arena":      arena,
-        "home":       _team("homeTeam"),
-        "away":       _team("awayTeam"),
-        "period":     period,
-        "gameClock":  game_clock,
-        "players":    {"home": [], "away": []},
-    }
+    except Exception as e:
+        print(f"[live_games] Error parsing ESPN event: {e}")
+        return None
 
 
-def _todays_date_str() -> str:
-    """Return today's date in MM/DD/YYYY format (ET assumed)."""
-    return datetime.now(timezone(timedelta(hours=-4))).strftime("%m/%d/%Y")
-
-
-def _fetch_scoreboard() -> List[Dict]:
-    """Call scoreboardv3 for today and return raw game list."""
-    data = _get(_SCOREBOARD, params={
-        "GameDate":  _todays_date_str(),
-        "LeagueID":  "00",
-        "DayOffset": "0",
-    })
+def _fetch_boxscore(game_id: str, home_tri: str, away_tri: str) -> Dict[str, List]:
+    """Fetch and parse player stats from ESPN summary endpoint."""
+    data = _get(_SUMMARY, params={"event": game_id})
     if not data:
-        return []
-    # v3 nests under scoreboard → games
-    return data.get("scoreboard", {}).get("games", [])
+        return {"home": [], "away": []}
 
+    home_players: List[Dict] = []
+    away_players: List[Dict] = []
 
-# ---------------------------------------------------------------------------
-# boxscoretraditionalv3 helpers
-# ---------------------------------------------------------------------------
+    # ESPN stat label order: MIN PTS FG 3PT FT REB AST TO STL BLK +/- ...
+    LABEL_ORDER = ["MIN", "PTS", "FG", "3PT", "FT", "REB", "AST", "TO", "STL", "BLK"]
 
-def _fmt_player_live(p: Dict) -> Dict:
-    """
-    Format a player entry from the SportRadar boxscore → our internal format.
+    try:
+        teams_data = data.get("boxscore", {}).get("players", [])
 
-    SportRadar nests stats under p['stats'] (not p['statistics']), and uses
-    snake_case field names that differ from the old NBA CDN format:
-      rebounds        (not reboundsTotal)
-      field_goals_made/att  (not fieldGoalsMade/Attempted)
-      three_points_made/att (not threePointersMade/Attempted)
-      free_throws_made/att  (not freeThrowsMade/Attempted)
-      pls_min               (plus/minus, not plusMinusPoints)
-    Minutes are not provided; we leave as "–".
-    """
-    s = p.get("stats", {})
-    return {
-        "personId":  p.get("personId"),
-        "name":      p.get("name", ""),
-        "jerseyNum": p.get("jerseyNum", ""),
-        "position":  p.get("position", ""),
-        "status":    p.get("status", "ACTIVE"),
-        "oncourt":   p.get("oncourt", False),
-        "pts":       s.get("points", 0),
-        "reb":       s.get("rebounds", 0),
-        "ast":       s.get("assists", 0),
-        "stl":       s.get("steals", 0),
-        "blk":       s.get("blocks", 0),
-        "fgm":       s.get("field_goals_made", 0),
-        "fga":       s.get("field_goals_att", 0),
-        "fg3m":      s.get("three_points_made", 0),
-        "fg3a":      s.get("three_points_att", 0),
-        "ftm":       s.get("free_throws_made", 0),
-        "fta":       s.get("free_throws_att", 0),
-        "tov":       s.get("turnovers", 0),
-        "min":       "–",
-        "plusMinus": s.get("pls_min", 0),
-    }
+        for team_obj in teams_data:
+            team_info = team_obj.get("team", {})
+            tri       = _normalize_tricode(team_info.get("abbreviation", ""))
+            is_home   = (tri == home_tri)
 
+            stat_groups = team_obj.get("statistics", [{}])
+            stat_group  = stat_groups[0] if stat_groups else {}
+            labels      = stat_group.get("labels", [])   # list of strings
+            athletes    = stat_group.get("athletes", [])
 
-def _fetch_boxscore(game_id: str) -> Optional[Dict]:
-    """
-    Fetch boxscore for game_id from stats.nba.com/stats/boxscoretraditionalv3.
+            def _idx(label: str) -> int:
+                try:
+                    return labels.index(label)
+                except ValueError:
+                    return -1
 
-    The response will be parsed by _players_from_boxscore which handles
-    both this shape AND the SportRadar shape (player_stats keyed by tricode)
-    so that get_todays_games works whether we hit the API or use cached data.
-    """
-    return _get(_BOXSCORE, params={
-        "GameID":      game_id,
-        "StartPeriod": 0,
-        "EndPeriod":   10,
-        "RangeType":   0,
-        "StartRange":  0,
-        "EndRange":    0,
-    })
+            def _val(stats: List, label: str) -> str:
+                i = _idx(label)
+                return stats[i] if i >= 0 and i < len(stats) else "0"
 
+            def _int_val(stats: List, label: str) -> int:
+                try:
+                    return int(float(_val(stats, label)))
+                except:
+                    return 0
 
-def _players_from_boxscore(box: Dict, home_tri: str, away_tri: str) -> Dict[str, List[Dict]]:
-    """
-    Extract formatted home/away player lists from a boxscore response.
+            def _split_made_att(raw: str):
+                try:
+                    parts = raw.split("-")
+                    return int(parts[0]), int(parts[1])
+                except:
+                    return 0, 0
 
-    Handles two shapes:
-    1. SportRadar shape (what fetch_sports_data returns):
-         { "player_stats": { "SAS": [...], "OKC": [...] }, "home": "SAS", "away": "OKC" }
-    2. boxscoretraditionalv3 shape (from stats.nba.com):
-         { "game": { "homeTeam": { "players": [...] }, "awayTeam": { "players": [...] } } }
-    """
-    # Shape 1: SportRadar — keyed by team tricode under "player_stats"
-    if "player_stats" in box:
-        ps = box["player_stats"]
-        return {
-            "home": [_fmt_player_live(p) for p in ps.get(home_tri, [])],
-            "away": [_fmt_player_live(p) for p in ps.get(away_tri, [])],
-        }
+            team_players = []
+            for ath_obj in athletes:
+                ath         = ath_obj.get("athlete", {})
+                did_not_play = ath_obj.get("didNotPlay", False)
+                stats       = ath_obj.get("stats", [])
 
-    # Shape 2: boxscoretraditionalv3 — nested under game.homeTeam/awayTeam
-    game = box.get("game", {})
-    return {
-        "home": [_fmt_player_live(p) for p in game.get("homeTeam", {}).get("players", [])],
-        "away": [_fmt_player_live(p) for p in game.get("awayTeam", {}).get("players", [])],
-    }
+                fgm, fga   = _split_made_att(_val(stats, "FG"))
+                fg3m, fg3a = _split_made_att(_val(stats, "3PT"))
+                ftm, fta   = _split_made_att(_val(stats, "FT"))
 
+                pos_obj  = ath.get("position", {})
+                position = pos_obj.get("abbreviation", "") if isinstance(pos_obj, dict) else ""
 
-# ---------------------------------------------------------------------------
-# Roster from pkl (unchanged logic, same signature)
-# ---------------------------------------------------------------------------
+                # ESPN doesn't directly expose plus/minus in simple labels;
+                # look for "+/-" label variant
+                pm_val = 0
+                for pm_label in ["+/-", "PLUSMINUS", "PM"]:
+                    if pm_label in labels:
+                        pm_val = _int_val(stats, pm_label)
+                        break
+
+                team_players.append({
+                    "personId":  int(ath.get("id", 0) or 0),
+                    "name":      ath.get("displayName", ""),
+                    "jerseyNum": ath.get("jersey", ""),
+                    "position":  position,
+                    "status":    "DNP" if did_not_play else "ACTIVE",
+                    "oncourt":   False,
+                    "pts":       _int_val(stats, "PTS"),
+                    "reb":       _int_val(stats, "REB"),
+                    "ast":       _int_val(stats, "AST"),
+                    "stl":       _int_val(stats, "STL"),
+                    "blk":       _int_val(stats, "BLK"),
+                    "fgm": fgm, "fga": fga,
+                    "fg3m": fg3m, "fg3a": fg3a,
+                    "ftm": ftm, "fta": fta,
+                    "tov":       _int_val(stats, "TO"),
+                    "min":       _val(stats, "MIN"),
+                    "plusMinus": pm_val,
+                })
+
+            if is_home:
+                home_players = team_players
+            else:
+                away_players = team_players
+
+    except Exception as e:
+        print(f"[live_games] Boxscore parse error: {e}")
+
+    return {"home": home_players, "away": away_players}
+
 
 def _roster_from_pkl(tricode: str, nba_data: Optional[List[Dict]]) -> List[Dict]:
     """Build a zeroed-out game roster from pkl season data for a given team."""
     if not nba_data:
         return []
     players = [p for p in nba_data if p.get("TEAM") == tricode]
-    result = []
+    result  = []
     for p in players:
         name = p.get("PLAYER_NAME", "")
         result.append({
@@ -299,108 +277,85 @@ def _roster_from_pkl(tricode: str, nba_data: Optional[List[Dict]]) -> List[Dict]
     return result
 
 
+def _todays_date_str() -> str:
+    """Return today's date in YYYYMMDD format (Eastern Time)."""
+    return datetime.now(timezone(timedelta(hours=-4))).strftime("%Y%m%d")
+
+
+def _current_season() -> str:
+    """Return the current NBA season string, e.g. '2024-25'."""
+    now  = datetime.now()
+    year = now.year
+    if now.month < 10:
+        return f"{year - 1}-{str(year)[2:]}"
+    return f"{year}-{str(year + 1)[2:]}"
+
+
 # ---------------------------------------------------------------------------
 # Public API (identical signatures to original)
 # ---------------------------------------------------------------------------
 
 def get_todays_games(nba_data: Optional[List[Dict]] = None) -> List[Dict]:
     """Return today's games with live scores and player stats where available."""
-    raw_games = _fetch_scoreboard()
-    if not raw_games:
+    data = _get(_SCOREBOARD, params={"dates": _todays_date_str()})
+    if not data:
         return []
 
     result = []
-    for g in raw_games:
-        game_obj = _parse_scoreboard_game(g)
-        status   = game_obj["status"]
-        game_id  = game_obj["gameId"]
+    for event in data.get("events", []):
+        game = _parse_espn_game(event)
+        if not game:
+            continue
 
-        home_tri = game_obj["home"]["tricode"]
-        away_tri = game_obj["away"]["tricode"]
+        home_tri = game["home"]["tricode"]
+        away_tri = game["away"]["tricode"]
 
-        if status in (2, 3):
-            # Live or final: try real boxscore, fall back to season roster
-            box = _fetch_boxscore(game_id)
-            if box:
-                game_obj["players"] = _players_from_boxscore(box, home_tri, away_tri)
-            # If boxscore fetch failed or returned empty, fall back to pkl
-            if not game_obj["players"]["home"] and not game_obj["players"]["away"]:
-                game_obj["players"]["home"] = _roster_from_pkl(home_tri, nba_data)
-                game_obj["players"]["away"] = _roster_from_pkl(away_tri, nba_data)
+        if game["status"] in (2, 3):
+            # Live or final — fetch real boxscore
+            players = _fetch_boxscore(game["gameId"], home_tri, away_tri)
+            if players["home"] or players["away"]:
+                game["players"] = players
+            else:
+                # Fall back to season rosters if boxscore is empty
+                game["players"]["home"] = _roster_from_pkl(home_tri, nba_data)
+                game["players"]["away"] = _roster_from_pkl(away_tri, nba_data)
         else:
-            # Scheduled later today: show season rosters
-            game_obj["players"]["home"] = _roster_from_pkl(home_tri, nba_data)
-            game_obj["players"]["away"] = _roster_from_pkl(away_tri, nba_data)
+            # Scheduled later today — show season rosters
+            game["players"]["home"] = _roster_from_pkl(home_tri, nba_data)
+            game["players"]["away"] = _roster_from_pkl(away_tri, nba_data)
 
-        result.append(game_obj)
+        result.append(game)
 
     return result
 
 
 def get_upcoming_games(days: int = 7, nba_data: Optional[List[Dict]] = None) -> List[Dict]:
     """Return scheduled games in the next *days* days with season roster context."""
-    data = _get(_SCHEDULE, params={
-        "LeagueID": "00",
-        "Season":   _current_season(),
-    })
-    if not data:
-        return []
-
-    today    = datetime.now(timezone.utc).date()
+    today    = datetime.now(timezone(timedelta(hours=-4))).date()
     upcoming = []
 
-    # scheduleleaguev2 nests under leagueSchedule → gameDates
-    game_dates = data.get("leagueSchedule", {}).get("gameDates", [])
-    for gd in game_dates:
-        try:
-            date_str = gd.get("gameDate", "")[:10]
-            sep      = "/" if "/" in date_str else "-"
-            fmt      = "%m/%d/%Y" if sep == "/" else "%Y-%m-%d"
-            game_date = datetime.strptime(date_str, fmt).date()
-        except Exception:
+    for delta in range(1, min(days + 1, 8)):
+        check_date = today + timedelta(days=delta)
+        date_str   = check_date.strftime("%Y%m%d")
+
+        data = _get(_SCOREBOARD, params={"dates": date_str})
+        if not data:
             continue
 
-        delta = (game_date - today).days
-        if delta <= 0 or delta > days:
-            continue
+        for event in data.get("events", []):
+            game = _parse_espn_game(event)
+            if not game:
+                continue
 
-        for g in gd.get("games", []):
-            home = g.get("homeTeam", {})
-            away = g.get("awayTeam", {})
-            home_tri = home.get("teamTricode", "")
-            away_tri = away.get("teamTricode", "")
+            home_tri = game["home"]["tricode"]
+            away_tri = game["away"]["tricode"]
+            game["statusText"]      = check_date.strftime("%b %d")
+            game["players"]["home"] = _roster_from_pkl(home_tri, nba_data)
+            game["players"]["away"] = _roster_from_pkl(away_tri, nba_data)
+            upcoming.append(game)
 
-            upcoming.append({
-                "gameId":     g.get("gameId", ""),
-                "status":     1,
-                "statusText": game_date.strftime("%b %d"),
-                "gameTime":   g.get("gameDateTimeEst", ""),
-                "arena":      g.get("arenaName", ""),
-                "home": {
-                    "tricode":  home_tri,
-                    "name":     home.get("teamName", ""),
-                    "city":     home.get("teamCity", ""),
-                    "score":    0,
-                    "logo":     TEAM_LOGOS.get(home_tri, ""),
-                    "quarters": [],
-                    "record":   "",
-                },
-                "away": {
-                    "tricode":  away_tri,
-                    "name":     away.get("teamName", ""),
-                    "city":     away.get("teamCity", ""),
-                    "score":    0,
-                    "logo":     TEAM_LOGOS.get(away_tri, ""),
-                    "quarters": [],
-                    "record":   "",
-                },
-                "period":    0,
-                "gameClock": "",
-                "players": {
-                    "home": _roster_from_pkl(home_tri, nba_data),
-                    "away": _roster_from_pkl(away_tri, nba_data),
-                },
-            })
+        if len(upcoming) >= 20:
+            break
 
     return upcoming[:20]
 
@@ -437,36 +392,20 @@ def get_top_pra_player(
 
 
 # ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
-
-def _current_season() -> str:
-    """Return the current NBA season string, e.g. '2024-25'."""
-    now = datetime.now()
-    year = now.year
-    # NBA season starts in October; before October we're still in the prior season
-    if now.month < 10:
-        return f"{year - 1}-{str(year)[2:]}"
-    return f"{year}-{str(year + 1)[2:]}"
-
-
-# ---------------------------------------------------------------------------
 # Quick smoke test
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    print("🏀 Testing live_games.py …\n")
-
+    print("Testing live_games.py with ESPN API...\n")
     games = get_todays_games()
     if games:
         print(f"Today's games ({len(games)}):")
         for g in games:
             h, a = g["home"], g["away"]
-            status = g["statusText"]
-            print(f"  {a['tricode']} {a['score']}  @  {h['tricode']} {h['score']}  [{status}]")
-            n_players = len(g["players"]["home"]) + len(g["players"]["away"])
-            print(f"    Player entries: {n_players}")
+            print(f"  {a['tricode']} {a['score']}  @  {h['tricode']} {h['score']}  [{g['statusText']}]")
+            n = len(g["players"]["home"]) + len(g["players"]["away"])
+            print(f"    Player entries: {n}")
     else:
-        print("No games today (or API blocked in this environment).")
+        print("No games today.")
 
     print(f"\nCurrent season: {_current_season()}")
