@@ -41,10 +41,10 @@ __pycache__/
 .Python
 
 # Large ML models and data
-*.pkl
-*.h5
-*.pt
-*.pth
+# *.pkl (Removed so Render gets the database)
+# *.h5
+# *.pt
+# *.pth
 
 # IDE
 .vscode/
