@@ -363,11 +363,38 @@ def get_upcoming_games(days: int = 7, nba_data: Optional[List[Dict]] = None) -> 
 def get_top_pra_player(
     nba_data: List[Dict], days: int = 7
 ) -> Optional[Dict]:
-    """Return the player with highest PPG+RPG+APG from pkl season data."""
+    """Return the highest PRA player from teams active in the next 'days'."""
     if not nba_data:
         return None
+
+    # Find which teams are playing today or in the next 'days'
+    active_teams = set()
+    today = datetime.now(timezone(timedelta(hours=-4))).date()
+    
+    for delta in range(days):
+        check_date = today + timedelta(days=delta)
+        date_str = check_date.strftime("%Y%m%d")
+        data = _get(_SCOREBOARD, params={"dates": date_str})
+        if data:
+            for event in data.get("events", []):
+                competition = (event.get("competitions") or [{}])[0]
+                competitors = competition.get("competitors", [])
+                for comp in competitors:
+                    team = comp.get("team", {})
+                    tri = _normalize_tricode(team.get("abbreviation", ""))
+                    if tri:
+                        active_teams.add(tri)
+    
+    # Filter players to only those whose team is active (prevents eliminated players)
+    if active_teams:
+        eligible_players = [p for p in nba_data if p.get("TEAM") in active_teams]
+        if not eligible_players:
+            eligible_players = nba_data
+    else:
+        eligible_players = nba_data
+
     best = max(
-        nba_data,
+        eligible_players,
         key=lambda p: (
             (p.get("PPG_LAST") or 0)
             + (p.get("RPG_LAST") or 0)
