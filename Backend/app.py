@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from functools import wraps
 from db import init_db, create_user_from_json, authenticate_user_from_json, get_user_by_id, get_saved_players, save_player, remove_saved_player
-from live_games import get_todays_games, get_upcoming_games
+from live_games import get_todays_games, get_upcoming_games, get_top_pra_player
 from recommendations import get_top_performers
 
 
@@ -787,6 +787,14 @@ def recommendations(stat):
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+
+# Load data globally for production (Gunicorn)
+print("Loading NBA data for production...")
+try:
+    load_nba_data()
+    load_multi_season_data()
+except Exception as e:
+    print(f"Error loading data: {e}")
 
 if __name__ == '__main__':
     frontend_process = None
