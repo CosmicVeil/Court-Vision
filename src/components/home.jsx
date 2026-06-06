@@ -4,7 +4,7 @@ import "./home.css";
 import AIPredictions from "./AIPredictions";
 import { isAuthenticated, getUser, logout } from "../utils/auth";
 
-const API = "http://localhost:5000";
+const API = "";
 
 const BasketballAnimation = () => {
   const canvasRef = useRef(null);
