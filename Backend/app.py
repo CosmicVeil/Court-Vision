@@ -19,7 +19,7 @@ from recommendations import get_top_performers
 
 
 try:
-    from nba_ai_system import get_top_scorers, get_top_assists, get_top_rebounders, get_breakout_players, get_player_prediction, initialize_nba_ai, nba_ai_system
+    from nba_ai_system import get_top_scorers, get_top_assists, get_top_rebounders, get_breakout_players, get_player_prediction, initialize_nba_ai, nba_ai_system, STAT_SCALE
     AI_AVAILABLE = True
 except ImportError as e:
     print(f"AI predictions module not available: {e}")
@@ -644,16 +644,15 @@ def get_all_predictions_paginated():
             return jsonify({'error': 'Failed to generate predictions'}), 500
         
         results = []
-        for i, row in df.iterrows():
+        for pos, (_, row) in enumerate(df.iterrows()):
             player_name = row['PLAYER_NAME']
             ppg_last = row.get('PPG_LAST', 0)
             apg_last = row.get('APG_LAST', 0)
             rpg_last = row.get('RPG_LAST', 0)
             
-            # Apply 1.1x multiplier
-            predicted_ppg = float(predictions[i, 0] * 1.1)
-            predicted_apg = float(predictions[i, 1] * 1.1)
-            predicted_rpg = float(predictions[i, 2] * 1.1)
+            predicted_ppg = float(predictions[pos, 0] * STAT_SCALE)
+            predicted_apg = float(predictions[pos, 1] * STAT_SCALE)
+            predicted_rpg = float(predictions[pos, 2] * STAT_SCALE)
             
             results.append({
                 'id': int(row.get('PLAYER_ID', abs(hash(player_name)) % (10**9))),
