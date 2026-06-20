@@ -35,6 +35,10 @@ class NBAAISystem:
         self.target_columns = ['PPG_NEXT', 'APG_NEXT', 'RPG_NEXT']
         self.data = None
         self.model_trained = False
+        self._predictions_df = None
+
+    def clear_predictions_cache(self):
+        self._predictions_df = None
 
     def prepare_combined_data(self):
         """Prepare combined training data from multiple consecutive seasons"""
@@ -137,6 +141,9 @@ class NBAAISystem:
         return X_scaled, y, None  # Return None for df since we don't need it in combined approach
         
     def initialize_system(self, force_refresh=False):
+        if force_refresh:
+            self.clear_predictions_cache()
+
         print("Initializing NBA AI System...")
 
         data_file = os.path.join(os.path.dirname(__file__), 'nba_multi_season_data.pkl')
@@ -190,12 +197,9 @@ class NBAAISystem:
 
         # Handle multi-season data format (dictionary with seasons as keys)
         if isinstance(self.data, dict):
-            # Use the most recent season's data for predictions
             most_recent_season = max(self.data.keys())
             df = pd.DataFrame(self.data[most_recent_season])
-            print(f"Using data from {most_recent_season} season ({len(df)} players) for predictions")
         else:
-            # Handle single season data format (list of player dictionaries)
             df = pd.DataFrame(self.data)
 
         df = df.fillna(0)
@@ -262,9 +266,96 @@ class NBAAISystem:
 
         X = df[self.feature_columns].values
         y = df[self.target_columns].values
-        X_scaled = self.scaler.fit_transform(X)
+        if self.model_trained:
+            X_scaled = self.scaler.transform(X)
+        else:
+            X_scaled = self.scaler.fit_transform(X)
 
         return X_scaled, y, df
+
+    def build_predictions_df(self):
+        """Run inference once and cache the full predictions dataframe."""
+        if self._predictions_df is not None:
+            return self._predictions_df
+
+        if not self.model_trained:
+            self.initialize_system()
+        if not self.model_trained:
+            return None
+
+        X, _, df = self.prepare_data()
+        predictions = self.predict(X)
+        if predictions is None:
+            return None
+
+        results = df[['PLAYER_NAME', 'TEAM', 'POSITION', 'AGE', 'PPG_LAST', 'APG_LAST', 'RPG_LAST']].copy()
+        if 'PLAYER_ID' in df.columns:
+            results['PLAYER_ID'] = df['PLAYER_ID']
+
+        results['PREDICTED_PPG'] = predictions[:, 0] * STAT_SCALE
+        results['PREDICTED_APG'] = predictions[:, 1] * STAT_SCALE
+        results['PREDICTED_RPG'] = predictions[:, 2] * STAT_SCALE
+
+        for last_col, pred_col, imp_col in (
+            ('PPG_LAST', 'PREDICTED_PPG', 'PPG_IMPROVEMENT'),
+            ('APG_LAST', 'PREDICTED_APG', 'APG_IMPROVEMENT'),
+            ('RPG_LAST', 'PREDICTED_RPG', 'RPG_IMPROVEMENT'),
+        ):
+            results[imp_col] = np.where(
+                results[last_col] > 0,
+                (results[pred_col] - results[last_col]) / results[last_col] * 100,
+                0,
+            )
+
+        results['PPG_INCREASE'] = results['PREDICTED_PPG'] - results['PPG_LAST']
+        results['APG_INCREASE'] = results['PREDICTED_APG'] - results['APG_LAST']
+        results['RPG_INCREASE'] = results['PREDICTED_RPG'] - results['RPG_LAST']
+        results['PRA_LAST'] = results['PPG_LAST'] + results['APG_LAST'] + results['RPG_LAST']
+        results['PREDICTED_PRA'] = results['PREDICTED_PPG'] + results['PREDICTED_APG'] + results['PREDICTED_RPG']
+        results['PRA_IMPROVEMENT'] = np.where(
+            results['PRA_LAST'] > 0,
+            (results['PREDICTED_PRA'] - results['PRA_LAST']) / results['PRA_LAST'] * 100,
+            0,
+        )
+
+        self._predictions_df = results
+        return self._predictions_df
+
+    def get_ai_predictions_bundle(self, top_n=10, breakout_threshold=5.0):
+        results = self.build_predictions_df()
+        if results is None or len(results) == 0:
+            return {
+                'top_scorers': [],
+                'top_assists': [],
+                'top_rebounders': [],
+                'breakout_players': [],
+            }
+
+        overperformers = results[
+            (results['PPG_IMPROVEMENT'] > breakout_threshold)
+            | (results['APG_IMPROVEMENT'] > breakout_threshold)
+            | (results['RPG_IMPROVEMENT'] > breakout_threshold)
+        ].copy()
+        overperformers['TOTAL_STAT_INCREASE'] = (
+            overperformers['PPG_INCREASE']
+            + overperformers['APG_INCREASE']
+            + overperformers['RPG_INCREASE']
+        )
+        overperformers['TOTAL_IMPROVEMENT'] = np.clip(
+            overperformers['PPG_IMPROVEMENT']
+            + overperformers['APG_IMPROVEMENT']
+            + overperformers['RPG_IMPROVEMENT'],
+            -1000,
+            1000,
+        )
+        overperformers = overperformers.sort_values('TOTAL_STAT_INCREASE', ascending=False)
+
+        return {
+            'top_scorers': results.nlargest(top_n, 'PREDICTED_PPG').to_dict('records'),
+            'top_assists': results.nlargest(top_n, 'PREDICTED_APG').to_dict('records'),
+            'top_rebounders': results.nlargest(top_n, 'PREDICTED_RPG').to_dict('records'),
+            'breakout_players': overperformers.head(top_n).to_dict('records'),
+        }
 
     def train_model(self, combined_data):
         if combined_data is None:
@@ -307,83 +398,42 @@ class NBAAISystem:
         return self.model.predict(X)
 
     def get_top_performers(self, top_n=10):
-        if not self.model_trained:
-            self.initialize_system()
+        results = self.build_predictions_df()
+        if results is None:
             return None
-        
-        X, _, df = self.prepare_data()
-        predictions = self.predict(X)
-        
-        if predictions is None:
-            return None
-        
-        results = df[['PLAYER_NAME', 'TEAM', 'POSITION', 'AGE']].copy()
-        # Apply 1.1x multiplier to all predicted stats
-        results['PREDICTED_PPG'] = predictions[:, 0] * STAT_SCALE
-        results['PREDICTED_APG'] = predictions[:, 1] * STAT_SCALE
-        results['PREDICTED_RPG'] = predictions[:, 2] * STAT_SCALE
-        
-        if 'PPG_LAST' in df.columns:
-            results['PPG_LAST'] = df['PPG_LAST']
-        if 'APG_LAST' in df.columns:
-            results['APG_LAST'] = df['APG_LAST']
-        if 'RPG_LAST' in df.columns:
-            results['RPG_LAST'] = df['RPG_LAST']
-        
-        top_performers = {
+
+        return {
             'PPG': results.nlargest(top_n, 'PREDICTED_PPG'),
             'APG': results.nlargest(top_n, 'PREDICTED_APG'),
-            'RPG': results.nlargest(top_n, 'PREDICTED_RPG')
+            'RPG': results.nlargest(top_n, 'PREDICTED_RPG'),
         }
-        
-        return top_performers
 
     def get_breakout_players(self, threshold=5.0, top_n=15):
-        if not self.model_trained:
-            self.initialize_system()
+        results = self.build_predictions_df()
+        if results is None:
             return None
-        
-        X, _, df = self.prepare_data()
-        predictions = self.predict(X)
-        
-        if predictions is None:
-            return None
-        
-        results = df[['PLAYER_NAME', 'TEAM', 'POSITION', 'AGE', 'PPG_LAST', 'APG_LAST', 'RPG_LAST']].copy()
-        # Apply 1.1x multiplier to all predicted stats
-        results['PREDICTED_PPG'] = predictions[:, 0] * STAT_SCALE
-        results['PREDICTED_APG'] = predictions[:, 1] * STAT_SCALE
-        results['PREDICTED_RPG'] = predictions[:, 2] * STAT_SCALE
-        
-        results['PPG_INCREASE'] = results['PREDICTED_PPG'] - results['PPG_LAST']
-        results['APG_INCREASE'] = results['PREDICTED_APG'] - results['APG_LAST']
-        results['RPG_INCREASE'] = results['PREDICTED_RPG'] - results['RPG_LAST']
-        
-        results['PPG_IMPROVEMENT'] = np.where(results['PPG_LAST'] > 0, (results['PREDICTED_PPG'] - results['PPG_LAST']) / results['PPG_LAST'] * 100, 0)
-        results['APG_IMPROVEMENT'] = np.where(results['APG_LAST'] > 0, (results['PREDICTED_APG'] - results['APG_LAST']) / results['APG_LAST'] * 100, 0)
-        results['RPG_IMPROVEMENT'] = np.where(results['RPG_LAST'] > 0, (results['PREDICTED_RPG'] - results['RPG_LAST']) / results['RPG_LAST'] * 100, 0)
-        
+
         overperformers = results[
-            (results['PPG_IMPROVEMENT'] > threshold) |
-            (results['APG_IMPROVEMENT'] > threshold) |
-            (results['RPG_IMPROVEMENT'] > threshold)
+            (results['PPG_IMPROVEMENT'] > threshold)
+            | (results['APG_IMPROVEMENT'] > threshold)
+            | (results['RPG_IMPROVEMENT'] > threshold)
         ].copy()
-        
+
         overperformers['TOTAL_STAT_INCREASE'] = (
-            overperformers['PPG_INCREASE'] + 
-            overperformers['APG_INCREASE'] + 
-            overperformers['RPG_INCREASE']
+            overperformers['PPG_INCREASE']
+            + overperformers['APG_INCREASE']
+            + overperformers['RPG_INCREASE']
         )
-        
+
         overperformers['TOTAL_IMPROVEMENT'] = np.clip(
-            overperformers['PPG_IMPROVEMENT'] + 
-            overperformers['APG_IMPROVEMENT'] + 
-            overperformers['RPG_IMPROVEMENT'],
-            -1000, 1000
+            overperformers['PPG_IMPROVEMENT']
+            + overperformers['APG_IMPROVEMENT']
+            + overperformers['RPG_IMPROVEMENT'],
+            -1000,
+            1000,
         )
-        
-        overperformers = overperformers.sort_values('TOTAL_STAT_INCREASE', ascending=False)
-        return overperformers.head(top_n)
+
+        return overperformers.sort_values('TOTAL_STAT_INCREASE', ascending=False).head(top_n)
 
     def get_player_prediction(self, player_name):
         if not self.model_trained:
@@ -479,28 +529,28 @@ def initialize_nba_ai(force_refresh=False):
     return nba_ai_system.initialize_system(force_refresh)
 
 def get_top_scorers(limit=10):
-    top_performers = nba_ai_system.get_top_performers(limit)
-    if top_performers and 'PPG' in top_performers:
-        return top_performers['PPG'].to_dict('records')
-    return []
+    bundle = nba_ai_system.get_ai_predictions_bundle(limit)
+    return bundle['top_scorers']
 
 def get_top_assists(limit=10):
-    top_performers = nba_ai_system.get_top_performers(limit)
-    if top_performers and 'APG' in top_performers:
-        return top_performers['APG'].to_dict('records')
-    return []
+    bundle = nba_ai_system.get_ai_predictions_bundle(limit)
+    return bundle['top_assists']
 
 def get_top_rebounders(limit=10):
-    top_performers = nba_ai_system.get_top_performers(limit)
-    if top_performers and 'RPG' in top_performers:
-        return top_performers['RPG'].to_dict('records')
-    return []
+    bundle = nba_ai_system.get_ai_predictions_bundle(limit)
+    return bundle['top_rebounders']
 
 def get_breakout_players(limit=10, threshold=5.0):
-    breakouts = nba_ai_system.get_breakout_players(threshold, limit)
-    if breakouts is not None and len(breakouts) > 0:
-        return breakouts.to_dict('records')
-    return []
+    bundle = nba_ai_system.get_ai_predictions_bundle(limit, threshold)
+    return bundle['breakout_players']
+
+def get_ai_predictions_bundle(limit=10, threshold=5.0):
+    return nba_ai_system.get_ai_predictions_bundle(limit, threshold)
+
+def warm_predictions_cache():
+    """Pre-compute predictions at startup so the first page load is instant."""
+    if nba_ai_system.model_trained or initialize_nba_ai():
+        nba_ai_system.build_predictions_df()
 
 def get_player_prediction(player_name):
     return nba_ai_system.get_player_prediction(player_name)

@@ -1,5 +1,5 @@
 import numpy as np
-from nba_ai_system import STAT_SCALE, initialize_nba_ai, nba_ai_system
+from nba_ai_system import initialize_nba_ai, nba_ai_system
 
 LIMIT = 20
 
@@ -40,35 +40,7 @@ def _jsonify_records(records):
 def _build_predictions_df():
     """All players with predicted stats and % improvement per category."""
     _ensure_ai()
-    X, _, df = nba_ai_system.prepare_data()
-    preds = nba_ai_system.predict(X)
-    if preds is None:
-        return None
-
-    results = df[['PLAYER_NAME', 'TEAM', 'POSITION', 'AGE', 'PPG_LAST', 'APG_LAST', 'RPG_LAST']].copy()
-    results['PREDICTED_PPG'] = preds[:, 0] * STAT_SCALE
-    results['PREDICTED_APG'] = preds[:, 1] * STAT_SCALE
-    results['PREDICTED_RPG'] = preds[:, 2] * STAT_SCALE
-
-    for last_col, pred_col, imp_col in (
-        ('PPG_LAST', 'PREDICTED_PPG', 'PPG_IMPROVEMENT'),
-        ('APG_LAST', 'PREDICTED_APG', 'APG_IMPROVEMENT'),
-        ('RPG_LAST', 'PREDICTED_RPG', 'RPG_IMPROVEMENT'),
-    ):
-        results[imp_col] = np.where(
-            results[last_col] > 0,
-            (results[pred_col] - results[last_col]) / results[last_col] * 100,
-            0,
-        )
-
-    results['PRA_LAST'] = results['PPG_LAST'] + results['APG_LAST'] + results['RPG_LAST']
-    results['PREDICTED_PRA'] = results['PREDICTED_PPG'] + results['PREDICTED_APG'] + results['PREDICTED_RPG']
-    results['PRA_IMPROVEMENT'] = np.where(
-        results['PRA_LAST'] > 0,
-        (results['PREDICTED_PRA'] - results['PRA_LAST']) / results['PRA_LAST'] * 100,
-        0,
-    )
-    return results
+    return nba_ai_system.build_predictions_df()
 
 def get_top_by_improvement(stat, limit=LIMIT):
     stat = stat.upper()

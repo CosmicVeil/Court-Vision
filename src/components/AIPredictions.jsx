@@ -1,42 +1,73 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import "./AIPredictions.css";
 
-const AIPredictions = ({ onPlayerClick }) => {
-  const [predictions, setPredictions] = useState({
-    top_scorers: [],
-    top_assists: [],
-    top_rebounders: [],
-    breakout_players: []
-  });
-  const [loading, setLoading] = useState(true);
+const EMPTY_PREDICTIONS = {
+  top_scorers: [],
+  top_assists: [],
+  top_rebounders: [],
+  breakout_players: []
+};
+
+const AIPredictions = ({ onPlayerClick, lazy = true }) => {
+  const containerRef = useRef(null);
+  const [shouldLoad, setShouldLoad] = useState(!lazy);
+  const [predictions, setPredictions] = useState(EMPTY_PREDICTIONS);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('scorers');
 
   useEffect(() => {
-    const API_URL = "/api/ai-predictions";
+    if (!lazy) return;
+
+    const element = containerRef.current;
+    if (!element) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShouldLoad(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "250px" }
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [lazy]);
+
+  useEffect(() => {
+    if (!shouldLoad) return;
+
+    let cancelled = false;
     const fetchPredictions = async () => {
+      setLoading(true);
       try {
-        const response = await fetch(API_URL);
+        const response = await fetch("/api/ai-predictions");
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        setPredictions(data?.predictions ?? {
-          top_scorers: [],
-          top_assists: [],
-          top_rebounders: [],
-          breakout_players: []
-        });
+        if (!cancelled) {
+          setPredictions(data?.predictions ?? EMPTY_PREDICTIONS);
+        }
       } catch (err) {
         console.error("Failed to fetch predictions:", err);
-        setError("Failed to connect to AI server. Make sure the backend is running.");
+        if (!cancelled) {
+          setError("Failed to connect to AI server. Make sure the backend is running.");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchPredictions();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [shouldLoad]);
 
   const formatStat = (value) => {
     if (typeof value === 'number') {
@@ -138,22 +169,6 @@ const AIPredictions = ({ onPlayerClick }) => {
     );
   };
 
-  if (loading) {
-    return (
-      <div className="ai-predictions-container">
-        <div className="loading">Loading AI predictions...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="ai-predictions-container">
-        <div className="error">{error}</div>
-      </div>
-    );
-  }
-
   const tabs = [
     { id: 'scorers', label: 'Top Scorers', data: predictions.top_scorers },
     { id: 'assists', label: 'Top Assists', data: predictions.top_assists },
@@ -162,9 +177,10 @@ const AIPredictions = ({ onPlayerClick }) => {
   ];
 
   const activeTabData = tabs.find(tab => tab.id === activeTab);
+  const waitingToLoad = lazy && !shouldLoad;
 
   return (
-    <div className="ai-predictions-container">
+    <div className="ai-predictions-container" ref={containerRef}>
       <div className="predictions-tabs">
         {tabs.map(tab => (
           <button
@@ -178,9 +194,13 @@ const AIPredictions = ({ onPlayerClick }) => {
       </div>
 
       <div className="predictions-content">
-        {activeTabData && activeTabData.data && activeTabData.data.length > 0 ? (
+        {waitingToLoad || loading ? (
+          <div className="loading">Loading AI predictions...</div>
+        ) : error ? (
+          <div className="error">{error}</div>
+        ) : activeTabData && activeTabData.data && activeTabData.data.length > 0 ? (
           <div className="players-grid">
-            {activeTabData.data.slice(0, 10).map((player, index) => 
+            {activeTabData.data.slice(0, 10).map((player, index) =>
               renderPlayerCard(player, index, activeTab)
             )}
           </div>

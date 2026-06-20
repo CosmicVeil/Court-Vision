@@ -23,7 +23,7 @@ from recommendations import get_top_performers
 
 
 try:
-   from nba_ai_system import get_top_scorers, get_top_assists, get_top_rebounders, get_breakout_players, get_player_prediction, initialize_nba_ai, nba_ai_system, STAT_SCALE
+   from nba_ai_system import get_ai_predictions_bundle, get_player_prediction, initialize_nba_ai, nba_ai_system, STAT_SCALE, warm_predictions_cache
    AI_AVAILABLE = True
 except ImportError as e:
    print(f"AI predictions module not available: {e}")
@@ -632,24 +632,8 @@ def get_ai_predictions():
   
    try:
        initialize_nba_ai()
-      
-       predictions = {
-           'top_scorers': get_top_scorers(10),
-           'top_assists': get_top_assists(10),
-           'top_rebounders': get_top_rebounders(10),
-           'breakout_players': get_breakout_players(10)
-       }
-      
-       if nba_data:
-           for category in ['top_scorers', 'top_assists', 'top_rebounders']:
-               for player in predictions[category]:
-                   player_name = player['PLAYER_NAME']
-                   matching_player = next((p for p in nba_data if p['PLAYER_NAME'] == player_name), None)
-                   if matching_player:
-                       player['PPG_LAST'] = matching_player.get('PPG_LAST', 0)
-                       player['APG_LAST'] = matching_player.get('APG_LAST', 0)
-                       player['RPG_LAST'] = matching_player.get('RPG_LAST', 0)
-      
+       predictions = get_ai_predictions_bundle(10)
+
        return jsonify({
            'predictions': predictions,
            'ai_available': True
@@ -675,36 +659,26 @@ def get_all_predictions_paginated():
   
    try:
        initialize_nba_ai()
-       X, _, df = nba_ai_system.prepare_data()
-       predictions = nba_ai_system.predict(X)
-      
-       if predictions is None:
+       predictions_df = nba_ai_system.build_predictions_df()
+
+       if predictions_df is None:
            return jsonify({'error': 'Failed to generate predictions'}), 500
-      
+
        results = []
-       for pos, (_, row) in enumerate(df.iterrows()):
+       for _, row in predictions_df.iterrows():
            player_name = row['PLAYER_NAME']
-           ppg_last = row.get('PPG_LAST', 0)
-           apg_last = row.get('APG_LAST', 0)
-           rpg_last = row.get('RPG_LAST', 0)
-          
-           # Apply 1.1x multiplier
-           predicted_ppg = float(predictions[i, 0] * 1.1)
-           predicted_apg = float(predictions[i, 1] * 1.1)
-           predicted_rpg = float(predictions[i, 2] * 1.1)
-          
            results.append({
                'id': int(row.get('PLAYER_ID', abs(hash(player_name)) % (10**9))),
                'name': player_name,
                'team': row.get('TEAM', 'UNK'),
                'position': row.get('POSITION', 'UNK'),
                'age': int(row.get('AGE', 0)),
-               'ppg_last': round(float(ppg_last), 1),
-               'apg_last': round(float(apg_last), 1),
-               'rpg_last': round(float(rpg_last), 1),
-               'predicted_ppg': round(predicted_ppg, 1),
-               'predicted_apg': round(predicted_apg, 1),
-               'predicted_rpg': round(predicted_rpg, 1),
+               'ppg_last': round(float(row.get('PPG_LAST', 0)), 1),
+               'apg_last': round(float(row.get('APG_LAST', 0)), 1),
+               'rpg_last': round(float(row.get('RPG_LAST', 0)), 1),
+               'predicted_ppg': round(float(row['PREDICTED_PPG']), 1),
+               'predicted_apg': round(float(row['PREDICTED_APG']), 1),
+               'predicted_rpg': round(float(row['PREDICTED_RPG']), 1),
            })
           
        search = sanitize_string(request.args.get('search', ''), 50).lower()
@@ -934,7 +908,8 @@ if __name__ == '__main__':
            try:
                print("Initializing AI system...")
                initialize_nba_ai()
-               print("AI system initialized")
+               warm_predictions_cache()
+               print("AI system initialized and predictions cached")
            except Exception as e:
                print(f"AI initialization failed: {e}")
       
