@@ -12,14 +12,14 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from functools import wraps
 from db import init_db, create_user_from_json, authenticate_user_from_json, get_user_by_id, get_saved_players, save_player, remove_saved_player
-from live_games import get_todays_games, get_upcoming_games
+from live_games import get_todays_games, get_upcoming_games, get_top_pra_player
 from recommendations import get_top_performers
 
 
 
 
 try:
-    from nba_ai_system import get_top_scorers, get_top_assists, get_top_rebounders, get_breakout_players, get_player_prediction, initialize_nba_ai, nba_ai_system, STAT_SCALE
+    from nba_ai_system import get_top_scorers, get_top_assists, get_top_rebounders, get_breakout_players, get_player_prediction, initialize_nba_ai, nba_ai_system
     AI_AVAILABLE = True
 except ImportError as e:
     print(f"AI predictions module not available: {e}")
@@ -644,15 +644,16 @@ def get_all_predictions_paginated():
             return jsonify({'error': 'Failed to generate predictions'}), 500
         
         results = []
-        for pos, (_, row) in enumerate(df.iterrows()):
+        for i, row in df.iterrows():
             player_name = row['PLAYER_NAME']
             ppg_last = row.get('PPG_LAST', 0)
             apg_last = row.get('APG_LAST', 0)
             rpg_last = row.get('RPG_LAST', 0)
             
-            predicted_ppg = float(predictions[pos, 0] * STAT_SCALE)
-            predicted_apg = float(predictions[pos, 1] * STAT_SCALE)
-            predicted_rpg = float(predictions[pos, 2] * STAT_SCALE)
+            # Apply 1.1x multiplier
+            predicted_ppg = float(predictions[i, 0] * 1.1)
+            predicted_apg = float(predictions[i, 1] * 1.1)
+            predicted_rpg = float(predictions[i, 2] * 1.1)
             
             results.append({
                 'id': int(row.get('PLAYER_ID', abs(hash(player_name)) % (10**9))),
@@ -786,6 +787,14 @@ def recommendations(stat):
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+
+# Load data globally for production (Gunicorn)
+print("Loading NBA data for production...")
+try:
+    load_nba_data()
+    load_multi_season_data()
+except Exception as e:
+    print(f"Error loading data: {e}")
 
 if __name__ == '__main__':
     frontend_process = None
