@@ -255,6 +255,10 @@ def get_stat_leaders():
 
 
 
+# Load NBA player data on module import (required for WSGI servers like Gunicorn on Render)
+print("Loading NBA data on module import...")
+load_nba_data()
+
 if __name__ == '__main__':
     try:
         # Load NBA data on startup
