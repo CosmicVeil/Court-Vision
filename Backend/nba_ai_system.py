@@ -506,20 +506,24 @@ class NBAAISystem:
     def load_model(self, filename='nba_ai_model.pkl'):
         filepath = os.path.join(os.path.dirname(__file__), filename)
         if os.path.exists(filepath):
-            with open(filepath, 'rb') as f:
-                model_data = pickle.load(f)
+            try:
+                with open(filepath, 'rb') as f:
+                    model_data = pickle.load(f)
 
-            if model_data.get('model_type') != 'xgboost' or 'model' not in model_data:
-                print("Saved model is outdated (YOLO/PyTorch). Retrain with initialize_nba_ai(force_refresh=True).")
+                if not isinstance(model_data, dict) or model_data.get('model_type') != 'xgboost' or 'model' not in model_data:
+                    print("Saved model is outdated (YOLO/PyTorch). Retrain with initialize_nba_ai(force_refresh=True).")
+                    return False
+
+                self.model = model_data['model']
+                self.scaler = model_data['scaler']
+                self.feature_columns = model_data['feature_columns']
+                self.target_columns = model_data['target_columns']
+
+                print(f"Model loaded from {filepath}")
+                return True
+            except Exception as e:
+                print(f"Error loading model from {filepath}: {e}")
                 return False
-
-            self.model = model_data['model']
-            self.scaler = model_data['scaler']
-            self.feature_columns = model_data['feature_columns']
-            self.target_columns = model_data['target_columns']
-
-            print(f"Model loaded from {filepath}")
-            return True
         return False
 
 # Global instance

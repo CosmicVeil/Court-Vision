@@ -181,7 +181,8 @@ def validate_pagination(page: any, limit: any) -> tuple:
 def load_nba_data():
    global nba_data
    try:
-       with open('nba_2025_26_data.pkl', 'rb') as f:
+       filepath = os.path.join(os.path.dirname(__file__), 'nba_2025_26_data.pkl')
+       with open(filepath, 'rb') as f:
            seasonal_data = pickle.load(f)
 
 

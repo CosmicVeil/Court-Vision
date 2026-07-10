@@ -30,7 +30,8 @@ def load_nba_data():
     """Load NBA player data from pickle file"""
     global nba_data
     try:
-        with open('nba_2025_26_data.pkl', 'rb') as f:
+        filepath = os.path.join(os.path.dirname(__file__), 'nba_2025_26_data.pkl')
+        with open(filepath, 'rb') as f:
             nba_data = pickle.load(f)
         print(f"✅ Loaded {len(nba_data)} NBA players from pickle file")
         return True
