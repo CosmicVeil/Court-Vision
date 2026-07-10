@@ -234,11 +234,16 @@ const Predictions = () => {
       {loading && predictions.length === 0 ? (
         <div className="loading">Generating NBA predictions...</div>
       ) : error ? (
-        <div className="error">
-          Error: {error}
-          <br />
-          Make sure the Flask API server is running on http://localhost:5000
-        </div>
+        (() => {
+          const serverUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+          return (
+            <div className="error">
+              Error: {error}
+              <br />
+              Make sure the Flask API server is running on {serverUrl}
+            </div>
+          );
+        })()
       ) : predictions.length === 0 ? (
         <div className="no-results">No player predictions matched your search criteria.</div>
       ) : (

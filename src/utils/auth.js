@@ -64,9 +64,10 @@ export const login = async (email, password) => {
   } catch (error) {
     console.error('Login error:', error);
     if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      const serverUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       return { 
         success: false, 
-        message: 'Cannot connect to server. Please make sure the backend server is running on http://localhost:5000' 
+        message: `Cannot connect to server. Please make sure the backend server is running on ${serverUrl}` 
       };
     }
     return { success: false, message: `Network error: ${error.message}` };
@@ -114,9 +115,10 @@ export const signup = async (firstName, lastName, email, password) => {
   } catch (error) {
     console.error('Signup error:', error);
     if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      const serverUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       return { 
         success: false, 
-        message: 'Cannot connect to server. Please make sure the backend server is running on http://localhost:5000' 
+        message: `Cannot connect to server. Please make sure the backend server is running on ${serverUrl}` 
       };
     }
     return { success: false, message: `Network error: ${error.message}` };

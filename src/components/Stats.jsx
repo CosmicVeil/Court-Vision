@@ -216,12 +216,13 @@ const Stats = () => {
   }
 
   if (error) {
+    const serverUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
     return (
       <div className="stats-container">
         <div className="error">
           Error: {error}
           <br />
-          Make sure the Flask API server is running on http://localhost:5000
+          Make sure the Flask API server is running on {serverUrl}
         </div>
       </div>
     );
