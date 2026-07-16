@@ -1,0 +1,468 @@
+.contact-page {
+  --contact-panel: rgba(19, 19, 24, 0.74);
+  --contact-muted: #9696a1;
+  min-height: 100vh;
+  overflow: hidden;
+  position: relative;
+  background: #09090b;
+  color: #f6f6f8;
+  font-family: var(--font-body);
+  isolation: isolate;
+}
+
+.contact-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: linear-gradient(to bottom, black, transparent 68%);
+  pointer-events: none;
+}
+
+.contact-ambient {
+  position: absolute;
+  z-index: -2;
+  border-radius: 999px;
+  filter: blur(3px);
+  pointer-events: none;
+}
+
+.contact-ambient-one {
+  width: min(52vw, 760px);
+  aspect-ratio: 1;
+  top: -22vw;
+  right: -13vw;
+  background: radial-gradient(circle, rgba(255, 69, 0, 0.22), transparent 68%);
+}
+
+.contact-ambient-two {
+  width: min(44vw, 650px);
+  aspect-ratio: 1;
+  top: 35%;
+  left: -25vw;
+  background: radial-gradient(circle, rgba(229, 57, 53, 0.13), transparent 70%);
+}
+
+.contact-header,
+.contact-hero,
+.contact-project-card,
+.contact-team,
+.contact-footer {
+  width: min(1160px, calc(100% - 3rem));
+  margin-inline: auto;
+}
+
+.contact-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: 1.6rem;
+}
+
+.contact-brand,
+.contact-back,
+.team-linkedin,
+.contact-domain {
+  text-decoration: none;
+}
+
+.contact-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #fff;
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+}
+
+.contact-brand-mark {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border: 1px solid rgba(255, 103, 48, 0.52);
+  border-radius: 0.65rem;
+  background: linear-gradient(145deg, rgba(255, 69, 0, 0.28), rgba(229, 57, 53, 0.06));
+  box-shadow: inset 0 0 16px rgba(255, 69, 0, 0.14), 0 0 20px rgba(255, 69, 0, 0.12);
+  color: #ff723e;
+  font-size: 0.78rem;
+  letter-spacing: 0;
+}
+
+.contact-back {
+  color: var(--contact-muted);
+  font-size: 0.9rem;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.contact-back:hover {
+  color: #fff;
+  transform: translateX(-3px);
+}
+
+.contact-hero {
+  max-width: 850px;
+  margin-top: clamp(4rem, 10vw, 9rem);
+  margin-bottom: clamp(3.5rem, 8vw, 6.5rem);
+  text-align: center;
+}
+
+.contact-eyebrow,
+.contact-label {
+  margin: 0;
+  color: #ff6c38;
+  font-family: var(--font-heading);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+}
+
+.contact-hero h1,
+.contact-section-heading h2,
+.contact-project-card h2,
+.team-card h3 {
+  font-family: var(--font-heading);
+}
+
+.contact-hero h1 {
+  max-width: 780px;
+  margin: 1rem auto 1.4rem;
+  font-size: clamp(2.9rem, 6vw, 5.4rem);
+  line-height: 0.99;
+  letter-spacing: -0.055em;
+}
+
+.contact-intro {
+  max-width: 670px;
+  margin: 0 auto;
+  color: #b0b0ba;
+  font-size: clamp(1rem, 1.8vw, 1.15rem);
+  line-height: 1.75;
+}
+
+.contact-project-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(1.35rem, 4vw, 3.2rem);
+  box-sizing: border-box;
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.4rem;
+  background: linear-gradient(105deg, rgba(255, 84, 25, 0.12), rgba(18, 18, 23, 0.84) 42%, rgba(255, 255, 255, 0.025));
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.24), inset 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.contact-project-orb {
+  display: grid;
+  width: 3.2rem;
+  height: 3.2rem;
+  place-items: center;
+  border-radius: 50%;
+  background: #ff4b14;
+  box-shadow: 0 0 32px rgba(255, 69, 0, 0.45);
+  color: #190b05;
+  font-size: 1.15rem;
+}
+
+.contact-project-card h2 {
+  margin: 0.3rem 0 0.35rem;
+  font-size: clamp(1.45rem, 2.5vw, 2rem);
+  letter-spacing: -0.025em;
+}
+
+.contact-project-card p:not(.contact-label) {
+  margin: 0;
+  color: #aaaab2;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.contact-domain {
+  display: flex;
+  min-width: 174px;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.9rem 1.05rem;
+  border: 1px solid rgba(255, 106, 53, 0.42);
+  border-radius: 0.75rem;
+  background: rgba(0, 0, 0, 0.18);
+  color: #fff;
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  font-weight: 700;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.contact-domain small {
+  color: #bcbcc4;
+  font-family: var(--font-body);
+  font-size: 0.73rem;
+  font-weight: 500;
+}
+
+.contact-domain:hover {
+  border-color: #ff6a35;
+  background: rgba(255, 69, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.contact-team {
+  padding-block: clamp(5rem, 10vw, 8rem);
+}
+
+.contact-section-heading {
+  max-width: 530px;
+  margin-bottom: 2.2rem;
+}
+
+.contact-section-heading h2 {
+  margin: 0.55rem 0 0;
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  line-height: 1.05;
+  letter-spacing: -0.045em;
+}
+
+.contact-team-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.team-card {
+  display: flex;
+  min-height: 430px;
+  flex-direction: column;
+  padding: clamp(1.5rem, 3vw, 2.2rem);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 1.25rem;
+  background: var(--contact-panel);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(16px);
+  transition: transform 0.25s ease, border-color 0.25s ease;
+}
+
+.team-card:hover {
+  transform: translateY(-5px);
+}
+
+.team-card-featured:hover {
+  border-color: rgba(255, 95, 43, 0.44);
+}
+
+.team-card-pending:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.team-card-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.team-initials {
+  display: grid;
+  width: 3.4rem;
+  height: 3.4rem;
+  place-items: center;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #f04b1e, #9e231f);
+  box-shadow: 0 8px 22px rgba(229, 57, 53, 0.22);
+  color: #fff;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.team-initials-muted {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #c9c9d0;
+  box-shadow: none;
+}
+
+.team-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  color: #a7ddb0;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.team-status i {
+  width: 0.43rem;
+  height: 0.43rem;
+  border-radius: 50%;
+  background: #66c376;
+  box-shadow: 0 0 10px #66c376;
+}
+
+.team-status-muted {
+  color: #9999a3;
+}
+
+.team-card-content {
+  margin-top: auto;
+  padding-top: 2.6rem;
+}
+
+.team-card h3 {
+  margin: 0.35rem 0 0.2rem;
+  font-size: clamp(1.8rem, 3.4vw, 2.45rem);
+  letter-spacing: -0.045em;
+}
+
+.team-role {
+  margin: 0;
+  color: #dbdbe1;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.team-bio {
+  max-width: 465px;
+  margin: 1.25rem 0 0;
+  color: #a7a7b0;
+  font-size: 0.93rem;
+  line-height: 1.7;
+}
+
+.team-bio-pending {
+  color: #7f7f89;
+}
+
+.team-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.team-skills span {
+  padding: 0.4rem 0.65rem;
+  border: 1px solid rgba(255, 105, 55, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 69, 0, 0.08);
+  color: #ff9d78;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.team-linkedin {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: fit-content;
+  margin-top: 2rem;
+  color: #f5f5f7;
+  font-size: 0.88rem;
+  font-weight: 700;
+  transition: color 0.2s ease;
+}
+
+.team-linkedin svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  color: #72a7ff;
+}
+
+.team-linkedin:hover {
+  color: #ff7b4e;
+}
+
+.team-linkedin-pending {
+  color: #70707a;
+  cursor: default;
+}
+
+.team-linkedin-pending:hover {
+  color: #70707a;
+}
+
+.contact-footer {
+  display: flex;
+  justify-content: space-between;
+  padding-block: 1.5rem 2.2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: #777780;
+  font-size: 0.77rem;
+  letter-spacing: 0.045em;
+}
+
+.contact-footer span:first-child {
+  color: #b6b6bf;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  letter-spacing: 0.11em;
+}
+
+@media (max-width: 720px) {
+  .contact-header,
+  .contact-hero,
+  .contact-project-card,
+  .contact-team,
+  .contact-footer {
+    width: min(calc(100% - 2rem), 1160px);
+  }
+
+  .contact-header {
+    padding-block: 1.1rem;
+  }
+
+  .contact-brand {
+    font-size: 0.76rem;
+  }
+
+  .contact-back {
+    font-size: 0.78rem;
+  }
+
+  .contact-hero {
+    margin-top: 4.6rem;
+  }
+
+  .contact-project-card {
+    grid-template-columns: auto 1fr;
+  }
+
+  .contact-domain {
+    grid-column: 1 / -1;
+  }
+
+  .contact-team-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .team-card {
+    min-height: 365px;
+  }
+}
+
+@media (max-width: 440px) {
+  .contact-brand > span:last-child {
+    display: none;
+  }
+
+  .contact-project-orb {
+    width: 2.7rem;
+    height: 2.7rem;
+  }
+
+  .contact-project-card {
+    gap: 1rem;
+  }
+
+  .contact-footer {
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+}

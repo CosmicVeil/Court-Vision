@@ -8,6 +8,7 @@ import SignUp from "./components/SignUp.jsx";
 import LiveGames from "./components/LiveGames.jsx"; // adjust path
 import RecommendationChart from "./components/RecommendationChart.jsx";
 import Predictions from "./components/Predictions.jsx";
+import Contact from "./components/Contact.jsx";
 
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
         <Route path="/create-account" element={<SignUp/>} />
         <Route path="/games" element={<LiveGames />} />
         <Route path="/predictions" element={<Predictions />} />
+        <Route path="/contact" element={<Contact />} />
         <Route
           path="/recommendations/:stat"
           element={<RecommendationChart />}
