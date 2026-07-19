@@ -572,6 +572,8 @@ def search_players_all():
                'rpg': round(curr_player.get('RPG_LAST', 0), 1),
                'spg': round(curr_player.get('SPG_LAST', 0), 1),
                'bpg': round(curr_player.get('BPG_LAST', 0), 1),
+               'tov': round(curr_player.get('TOV_LAST', 0), 1),
+               'mpg': round(curr_player.get('MIN_LAST', 0), 1),
                'fg_pct': round(fg_pct * (100.0 if fg_pct <= 1.0 else 1.0), 1),
                'fg3_pct': round(fg3_pct * (100.0 if fg3_pct <= 1.0 else 1.0), 1),
                'ft_pct': round(ft_pct * (100.0 if ft_pct <= 1.0 else 1.0), 1),
@@ -668,19 +670,26 @@ def get_all_predictions_paginated():
        results = []
        for _, row in predictions_df.iterrows():
            player_name = row['PLAYER_NAME']
-           results.append({
+           result = {
                'id': int(row.get('PLAYER_ID', abs(hash(player_name)) % (10**9))),
                'name': player_name,
                'team': row.get('TEAM', 'UNK'),
                'position': row.get('POSITION', 'UNK'),
                'age': int(row.get('AGE', 0)),
-               'ppg_last': round(float(row.get('PPG_LAST', 0)), 1),
-               'apg_last': round(float(row.get('APG_LAST', 0)), 1),
-               'rpg_last': round(float(row.get('RPG_LAST', 0)), 1),
-               'predicted_ppg': round(float(row['PREDICTED_PPG']), 1),
-               'predicted_apg': round(float(row['PREDICTED_APG']), 1),
-               'predicted_rpg': round(float(row['PREDICTED_RPG']), 1),
-           })
+           }
+           for key in ('ppg', 'apg', 'rpg', 'spg', 'bpg', 'tov'):
+               result[f'{key}_last'] = round(float(row.get(f'{key.upper()}_LAST', 0)), 1)
+               result[f'predicted_{key}'] = round(float(row.get(f'PREDICTED_{key.upper()}', 0)), 1)
+           result['mpg_last'] = round(float(row.get('MIN_LAST', 0)), 1)
+           result['predicted_mpg'] = round(float(row.get('PREDICTED_MPG', 0)), 1)
+           for key, column in (
+               ('fg_pct', 'FG_PCT'),
+               ('fg3_pct', 'FG3_PCT'),
+               ('ft_pct', 'FT_PCT'),
+           ):
+               result[f'{key}_last'] = round(float(row.get(f'{column}_LAST', 0)) * 100, 1)
+               result[f'predicted_{key}'] = round(float(row.get(f'PREDICTED_{column}', 0)) * 100, 1)
+           results.append(result)
           
        search = sanitize_string(request.args.get('search', ''), 50).lower()
        team = sanitize_string(request.args.get('team', ''), 10).upper()
@@ -697,20 +706,17 @@ def get_all_predictions_paginated():
            filtered = [p for p in filtered if p['position'] == position]
           
        reverse = (sort_order == 'desc')
-       if sort_by == 'name':
-           filtered.sort(key=lambda p: p['name'].lower(), reverse=reverse)
-       elif sort_by == 'team':
-           filtered.sort(key=lambda p: p['team'].lower(), reverse=reverse)
-       elif sort_by == 'position':
-           filtered.sort(key=lambda p: p['position'].lower(), reverse=reverse)
-       elif sort_by == 'ppg_last':
-           filtered.sort(key=lambda p: p['ppg_last'], reverse=reverse)
-       elif sort_by == 'predicted_ppg':
-           filtered.sort(key=lambda p: p['predicted_ppg'], reverse=reverse)
-       elif sort_by == 'predicted_apg':
-           filtered.sort(key=lambda p: p['predicted_apg'], reverse=reverse)
-       elif sort_by == 'predicted_rpg':
-           filtered.sort(key=lambda p: p['predicted_rpg'], reverse=reverse)
+       text_sort_keys = {'name', 'team', 'position'}
+       numeric_sort_keys = {
+           'ppg_last',
+           'predicted_ppg', 'predicted_apg', 'predicted_rpg',
+           'predicted_spg', 'predicted_bpg', 'predicted_tov', 'predicted_mpg',
+           'predicted_fg_pct', 'predicted_fg3_pct', 'predicted_ft_pct',
+       }
+       if sort_by in text_sort_keys:
+           filtered.sort(key=lambda p: p[sort_by].lower(), reverse=reverse)
+       elif sort_by in numeric_sort_keys:
+           filtered.sort(key=lambda p: p[sort_by], reverse=reverse)
        else:
            filtered.sort(key=lambda p: p['name'].lower(), reverse=reverse)
           
@@ -938,4 +944,3 @@ if __name__ == '__main__':
    except Exception as e:
        print(f"Server error: {e}")
        cleanup_processes()
-

@@ -302,28 +302,28 @@ class NBAAISystem:
         if predictions is None:
             return None
 
-        results = df[['PLAYER_NAME', 'TEAM', 'POSITION', 'AGE', 'PPG_LAST', 'APG_LAST', 'RPG_LAST']].copy()
+        identity_columns = ['PLAYER_NAME', 'TEAM', 'POSITION', 'AGE']
+        current_columns = [spec['last_column'] for spec in TARGET_SPECS]
+        results = df[identity_columns + current_columns].copy()
         if 'PLAYER_ID' in df.columns:
             results['PLAYER_ID'] = df['PLAYER_ID']
 
-        results['PREDICTED_PPG'] = predictions[:, 0] * STAT_SCALE
-        results['PREDICTED_APG'] = predictions[:, 1] * STAT_SCALE
-        results['PREDICTED_RPG'] = predictions[:, 2] * STAT_SCALE
-
-        for last_col, pred_col, imp_col in (
-            ('PPG_LAST', 'PREDICTED_PPG', 'PPG_IMPROVEMENT'),
-            ('APG_LAST', 'PREDICTED_APG', 'APG_IMPROVEMENT'),
-            ('RPG_LAST', 'PREDICTED_RPG', 'RPG_IMPROVEMENT'),
-        ):
-            results[imp_col] = np.where(
-                results[last_col] > 0,
-                (results[pred_col] - results[last_col]) / results[last_col] * 100,
-                0,
-            )
-
-        results['PPG_INCREASE'] = results['PREDICTED_PPG'] - results['PPG_LAST']
-        results['APG_INCREASE'] = results['PREDICTED_APG'] - results['APG_LAST']
-        results['RPG_INCREASE'] = results['PREDICTED_RPG'] - results['RPG_LAST']
+        for index, spec in enumerate(TARGET_SPECS):
+            predicted_column = spec['predicted_column']
+            last_column = spec['last_column']
+            stat_prefix = predicted_column.removeprefix('PREDICTED_')
+            results[predicted_column] = predictions[:, index] * STAT_SCALE
+            results[f'{stat_prefix}_INCREASE'] = results[predicted_column] - results[last_column]
+            if spec['kind'] == 'percentage':
+                results[f'{stat_prefix}_IMPROVEMENT'] = (
+                    results[predicted_column] - results[last_column]
+                ) * 100
+            else:
+                results[f'{stat_prefix}_IMPROVEMENT'] = np.where(
+                    results[last_column] > 0,
+                    (results[predicted_column] - results[last_column]) / results[last_column] * 100,
+                    0,
+                )
         results['PRA_LAST'] = results['PPG_LAST'] + results['APG_LAST'] + results['RPG_LAST']
         results['PREDICTED_PRA'] = results['PREDICTED_PPG'] + results['PREDICTED_APG'] + results['PREDICTED_RPG']
         results['PRA_IMPROVEMENT'] = np.where(
@@ -342,6 +342,8 @@ class NBAAISystem:
                 'top_scorers': [],
                 'top_assists': [],
                 'top_rebounders': [],
+                'top_steals': [],
+                'top_blocks': [],
                 'breakout_players': [],
             }
 
@@ -368,6 +370,8 @@ class NBAAISystem:
             'top_scorers': results.nlargest(top_n, 'PREDICTED_PPG').to_dict('records'),
             'top_assists': results.nlargest(top_n, 'PREDICTED_APG').to_dict('records'),
             'top_rebounders': results.nlargest(top_n, 'PREDICTED_RPG').to_dict('records'),
+            'top_steals': results.nlargest(top_n, 'PREDICTED_SPG').to_dict('records'),
+            'top_blocks': results.nlargest(top_n, 'PREDICTED_BPG').to_dict('records'),
             'breakout_players': overperformers.head(top_n).to_dict('records'),
         }
 
@@ -455,8 +459,8 @@ class NBAAISystem:
 
     def get_player_prediction(self, player_name):
         if not self.model_trained:
-            self.initialize_system()
-            return None
+            if not self.initialize_system():
+                return None
         
         if isinstance(self.data, dict):
             most_recent_season = max(self.data.keys())
@@ -480,26 +484,32 @@ class NBAAISystem:
         # Apply 1.1x multiplier
         prediction = raw_prediction * STAT_SCALE
         
+        current_stats = {}
+        predicted_stats = {}
+        improvements = {}
+        for index, spec in enumerate(TARGET_SPECS):
+            current_value = float(player.get(spec['last_column'], 0) or 0)
+            predicted_value = float(prediction[index])
+            if spec['kind'] == 'percentage':
+                current_stats[spec['key']] = round(current_value * 100, 1)
+                predicted_stats[spec['key']] = round(predicted_value * 100, 1)
+                improvements[spec['key']] = round((predicted_value - current_value) * 100, 1)
+            else:
+                current_stats[spec['key']] = round(current_value, 1)
+                predicted_stats[spec['key']] = round(predicted_value, 1)
+                improvements[spec['key']] = round(
+                    (predicted_value - current_value) / current_value * 100,
+                    1,
+                ) if current_value else 0
+
         return {
             'name': player['PLAYER_NAME'],
             'team': player['TEAM'],
             'position': player['POSITION'],
             'age': player['AGE'],
-            'current_stats': {
-                'ppg': round(float(player['PPG_LAST']), 1),
-                'apg': round(float(player['APG_LAST']), 1),
-                'rpg': round(float(player['RPG_LAST']), 1)
-            },
-            'predicted_stats': {
-                'ppg': round(float(prediction[0]), 1),
-                'apg': round(float(prediction[1]), 1),
-                'rpg': round(float(prediction[2]), 1)
-            },
-            'improvements': {
-                'ppg': round(((prediction[0] - player['PPG_LAST']) / player['PPG_LAST'] * 100), 1) if player['PPG_LAST'] else 0,
-                'apg': round(((prediction[1] - player['APG_LAST']) / player['APG_LAST'] * 100), 1) if player['APG_LAST'] else 0,
-                'rpg': round(((prediction[2] - player['RPG_LAST']) / player['RPG_LAST'] * 100), 1) if player['RPG_LAST'] else 0,
-            }
+            'current_stats': current_stats,
+            'predicted_stats': predicted_stats,
+            'improvements': improvements,
         }
 
     def save_model(self, filename='nba_ai_model.pkl'):

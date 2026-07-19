@@ -67,5 +67,52 @@ class ExpandedPredictionInferenceTests(unittest.TestCase):
             self.assertFalse(self.system.load_model(str(path)))
 
 
+class ExpandedPredictionPayloadTests(unittest.TestCase):
+    def setUp(self):
+        self.system = NBAAISystem()
+
+    def _prediction_frame_for_two_players(self):
+        shared = {
+            "TEAM": "TST", "POSITION": "G", "AGE": 25,
+            "PPG_LAST": 10.0, "APG_LAST": 3.0, "RPG_LAST": 5.0,
+            "SPG_LAST": 1.0, "BPG_LAST": 1.0, "TOV_LAST": 2.0,
+            "MIN_LAST": 28.0, "FG_PCT_LAST": 0.45,
+            "FG3_PCT_LAST": 0.35, "FT_PCT_LAST": 0.80,
+            "PREDICTED_PPG": 11.0, "PREDICTED_APG": 3.2,
+            "PREDICTED_RPG": 5.2, "PREDICTED_TOV": 2.1,
+            "PREDICTED_MPG": 29.0, "PREDICTED_FG_PCT": 0.47,
+            "PREDICTED_FG3_PCT": 0.36, "PREDICTED_FT_PCT": 0.81,
+            "PPG_IMPROVEMENT": 10.0, "APG_IMPROVEMENT": 6.7,
+            "RPG_IMPROVEMENT": 4.0, "PPG_INCREASE": 1.0,
+            "APG_INCREASE": 0.2, "RPG_INCREASE": 0.2,
+        }
+        return pd.DataFrame([
+            {**shared, "PLAYER_NAME": "Steals Leader", "PREDICTED_SPG": 3.0, "PREDICTED_BPG": 1.2},
+            {**shared, "PLAYER_NAME": "Blocks Leader", "PREDICTED_SPG": 1.5, "PREDICTED_BPG": 4.0},
+        ])
+
+    def test_player_prediction_contains_all_ten_metrics(self):
+        self.system.model_trained = True
+        self.system.data = {2025: [{
+            "PLAYER_NAME": "Test Player", "TEAM": "TST", "POSITION": "G", "AGE": 25,
+            "PPG_LAST": 10, "APG_LAST": 2, "RPG_LAST": 4, "SPG_LAST": 1,
+            "BPG_LAST": 0.5, "TOV_LAST": 1.5, "MIN_LAST": 25,
+            "FG_PCT_LAST": 0.45, "FG3_PCT_LAST": 0.35, "FT_PCT_LAST": 0.8,
+        }]}
+        self.system.prepare_data = Mock(return_value=(np.zeros((1, len(FEATURE_COLUMNS))), None, None))
+        self.system.predict = Mock(return_value=np.array([[11, 3, 5, 1.2, 0.7, 1.7, 27, 0.48, 0.37, 0.82]]))
+        payload = self.system.get_player_prediction("Test Player")
+        self.assertEqual(set(payload["predicted_stats"]), {spec["key"] for spec in TARGET_SPECS})
+        self.assertEqual(payload["predicted_stats"]["fg_pct"], 48.0)
+        self.assertEqual(payload["improvements"]["fg_pct"], 3.0)
+
+    def test_bundle_includes_top_steals_and_blocks(self):
+        frame = self._prediction_frame_for_two_players()
+        self.system.build_predictions_df = Mock(return_value=frame)
+        bundle = self.system.get_ai_predictions_bundle(top_n=1)
+        self.assertEqual(bundle["top_steals"][0]["PLAYER_NAME"], "Steals Leader")
+        self.assertEqual(bundle["top_blocks"][0]["PLAYER_NAME"], "Blocks Leader")
+
+
 if __name__ == "__main__":
     unittest.main()
