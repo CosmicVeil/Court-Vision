@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import PlayerPredictionGrid from "./PlayerPredictionGrid";
 import "./LiveGames.css";
 
 const API = "";
@@ -226,6 +227,7 @@ export default function LiveGames() {
             apg: player.ast || 0,
             spg: player.stl || 0,
             bpg: player.blk || 0,
+            tov: player.tov || 0, mpg: player.min || 0,
             fg_pct: 0, fg3_pct: 0, ft_pct: 0, games_played: 0, minutes: 0
           },
           ml_stats: null,
@@ -371,24 +373,11 @@ export default function LiveGames() {
                   {modalTab === 'predictions' && (
                     <div>
                       {selectedPlayer.ml_stats ? (
-                        <div className="ai-pred-cards-grid">
-                          {['ppg', 'apg', 'rpg'].map((stat) => {
-                            const labels = { ppg: 'Points Per Game (PPG)', apg: 'Assists Per Game (APG)', rpg: 'Rebounds Per Game (RPG)' };
-                            const units = { ppg: 'PPG', apg: 'APG', rpg: 'RPG' };
-                            const imp = selectedPlayer.ml_stats.improvements[stat];
-                            return (
-                              <div className="ai-pred-box" key={stat}>
-                                <div className="ai-pred-box-label">{labels[stat]}</div>
-                                <div className="ai-pred-values-flex">
-                                  <span className="ai-pred-num old">{selectedPlayer.current_stats[stat]} <small>{units[stat]}</small></span>
-                                  <span className="ai-pred-arrow">→</span>
-                                  <span className="ai-pred-num new">{selectedPlayer.ml_stats.predicted_stats[stat]} <small>{units[stat]}</small></span>
-                                </div>
-                                <div className={`ai-pred-badge ${imp >= 0 ? 'positive' : 'negative'}`}>{imp >= 0 ? '+' : ''}{imp}%</div>
-                              </div>
-                            );
-                          })}
-                        </div>
+                        <PlayerPredictionGrid
+                          currentStats={selectedPlayer.current_stats}
+                          predictionStats={selectedPlayer.ml_stats.predicted_stats}
+                          improvements={selectedPlayer.ml_stats.improvements}
+                        />
                       ) : (
                         <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>AI Prediction model is currently loading or unavailable for this player.</div>
                       )}

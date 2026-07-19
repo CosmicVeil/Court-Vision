@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import PlayerPredictionGrid from './PlayerPredictionGrid';
+import { PREDICTION_STATS, toPredictionPageStats } from '../config/predictionStats';
 import './Predictions.css';
 
 const Predictions = () => {
@@ -47,7 +49,10 @@ const Predictions = () => {
             ppg: player.ppg_last || 0,
             rpg: player.rpg_last || 0,
             apg: player.apg_last || 0,
-            spg: 0, bpg: 0, fg_pct: 0, fg3_pct: 0, ft_pct: 0, games_played: 0, minutes: 0
+            spg: player.spg_last || 0, bpg: player.bpg_last || 0,
+            tov: player.tov_last || 0, mpg: player.mpg_last || 0,
+            fg_pct: player.fg_pct_last || 0, fg3_pct: player.fg3_pct_last || 0,
+            ft_pct: player.ft_pct_last || 0, games_played: 0, minutes: player.mpg_last || 0
           },
           ml_stats: null,
           history: {}
@@ -155,12 +160,6 @@ const Predictions = () => {
     setCurrentPage(1);
   };
 
-  const formatPercentage = (past, predicted) => {
-    if (!past) return '+100%';
-    const pct = ((predicted - past) / past) * 100;
-    return `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
-  };
-
   return (
     <div className="predictions-container">
       <div className="predictions-header">
@@ -211,23 +210,22 @@ const Predictions = () => {
         >
           Name {sortBy === 'name' && (sortOrder === 'asc' ? 'Asc' : 'Desc')}
         </button>
-        <button 
-          className={`sort-btn ${sortBy === 'predicted_ppg' ? 'active' : ''}`}
-          onClick={() => handleSort('predicted_ppg')}
+        <select
+          className="filter-select prediction-sort-select"
+          value={sortBy === 'name' ? '' : sortBy}
+          onChange={(event) => {
+            setSortBy(event.target.value);
+            setSortOrder('desc');
+            setCurrentPage(1);
+          }}
         >
-          Predicted PPG {sortBy === 'predicted_ppg' && (sortOrder === 'asc' ? 'Asc' : 'Desc')}
-        </button>
-        <button 
-          className={`sort-btn ${sortBy === 'predicted_apg' ? 'active' : ''}`}
-          onClick={() => handleSort('predicted_apg')}
-        >
-          Predicted APG {sortBy === 'predicted_apg' && (sortOrder === 'asc' ? 'Asc' : 'Desc')}
-        </button>
-        <button 
-          className={`sort-btn ${sortBy === 'predicted_rpg' ? 'active' : ''}`}
-          onClick={() => handleSort('predicted_rpg')}
-        >
-          Predicted RPG {sortBy === 'predicted_rpg' && (sortOrder === 'asc' ? 'Asc' : 'Desc')}
+          <option value="" disabled>Predicted metric</option>
+          {PREDICTION_STATS.map((stat) => (
+            <option value={stat.predictedField} key={stat.key}>Predicted {stat.unit}</option>
+          ))}
+        </select>
+        <button className="sort-btn" onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}>
+          {sortOrder === 'asc' ? 'Lowest first' : 'Highest first'}
         </button>
       </div>
 
@@ -268,59 +266,7 @@ const Predictions = () => {
                 </div>
 
                 <div className="card-body">
-                  <div className="stat-comparison-row">
-                    <div className="stat-type">PPG</div>
-                    <div className="stat-values">
-                      <div className="val-block">
-                        <span className="val-lbl">Current</span>
-                        <span className="val-num">{player.ppg_last.toFixed(1)}</span>
-                      </div>
-                      <div className="val-arrow">→</div>
-                      <div className="val-block predicted">
-                        <span className="val-lbl">Predicted</span>
-                        <span className="val-num highlight">{player.predicted_ppg.toFixed(1)}</span>
-                      </div>
-                    </div>
-                    <div className={`growth-badge ${player.predicted_ppg >= player.ppg_last ? 'positive' : 'negative'}`}>
-                      {formatPercentage(player.ppg_last, player.predicted_ppg)}
-                    </div>
-                  </div>
-
-                  <div className="stat-comparison-row">
-                    <div className="stat-type">APG</div>
-                    <div className="stat-values">
-                      <div className="val-block">
-                        <span className="val-lbl">Current</span>
-                        <span className="val-num">{player.apg_last.toFixed(1)}</span>
-                      </div>
-                      <div className="val-arrow">→</div>
-                      <div className="val-block predicted">
-                        <span className="val-lbl">Predicted</span>
-                        <span className="val-num highlight">{player.predicted_apg.toFixed(1)}</span>
-                      </div>
-                    </div>
-                    <div className={`growth-badge ${player.predicted_apg >= player.apg_last ? 'positive' : 'negative'}`}>
-                      {formatPercentage(player.apg_last, player.predicted_apg)}
-                    </div>
-                  </div>
-
-                  <div className="stat-comparison-row">
-                    <div className="stat-type">RPG</div>
-                    <div className="stat-values">
-                      <div className="val-block">
-                        <span className="val-lbl">Current</span>
-                        <span className="val-num">{player.rpg_last.toFixed(1)}</span>
-                      </div>
-                      <div className="val-arrow">→</div>
-                      <div className="val-block predicted">
-                        <span className="val-lbl">Predicted</span>
-                        <span className="val-num highlight">{player.predicted_rpg.toFixed(1)}</span>
-                      </div>
-                    </div>
-                    <div className={`growth-badge ${player.predicted_rpg >= player.rpg_last ? 'positive' : 'negative'}`}>
-                      {formatPercentage(player.rpg_last, player.predicted_rpg)}
-                    </div>
-                  </div>
+                  <PlayerPredictionGrid {...toPredictionPageStats(player)} />
                 </div>
               </div>
             ))}
@@ -436,24 +382,11 @@ const Predictions = () => {
                   {modalTab === 'predictions' && (
                     <div>
                       {selectedPlayer.ml_stats ? (
-                        <div className="ai-pred-cards-grid">
-                          {['ppg', 'apg', 'rpg'].map((stat) => {
-                            const labels = { ppg: 'Points Per Game (PPG)', apg: 'Assists Per Game (APG)', rpg: 'Rebounds Per Game (RPG)' };
-                            const units = { ppg: 'PPG', apg: 'APG', rpg: 'RPG' };
-                            const imp = selectedPlayer.ml_stats.improvements[stat];
-                            return (
-                              <div className="ai-pred-box" key={stat}>
-                                <div className="ai-pred-box-label">{labels[stat]}</div>
-                                <div className="ai-pred-values-flex">
-                                  <span className="ai-pred-num old">{selectedPlayer.current_stats[stat]} <small>{units[stat]}</small></span>
-                                  <span className="ai-pred-arrow">→</span>
-                                  <span className="ai-pred-num new">{selectedPlayer.ml_stats.predicted_stats[stat]} <small>{units[stat]}</small></span>
-                                </div>
-                                <div className={`ai-pred-badge ${imp >= 0 ? 'positive' : 'negative'}`}>{imp >= 0 ? '+' : ''}{imp}%</div>
-                              </div>
-                            );
-                          })}
-                        </div>
+                        <PlayerPredictionGrid
+                          currentStats={selectedPlayer.current_stats}
+                          predictionStats={selectedPlayer.ml_stats.predicted_stats}
+                          improvements={selectedPlayer.ml_stats.improvements}
+                        />
                       ) : (
                         <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>AI Prediction model is currently loading or unavailable for this player.</div>
                       )}

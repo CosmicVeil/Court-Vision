@@ -1,0 +1,37 @@
+.player-prediction-groups {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.player-prediction-group {
+  min-width: 0;
+}
+
+.player-prediction-group-title {
+  margin: 0 0 0.75rem;
+  color: var(--text-secondary, #a0a0a8);
+  font-family: var(--font-heading, 'Outfit', sans-serif);
+  font-size: 0.82rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.player-prediction-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.player-prediction-card {
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .player-prediction-grid {
+    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  }
+
+  .player-prediction-card .ai-pred-values-flex {
+    gap: 0.35rem;
+  }
+}

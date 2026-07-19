@@ -5,6 +5,8 @@ const EMPTY_PREDICTIONS = {
   top_scorers: [],
   top_assists: [],
   top_rebounders: [],
+  top_steals: [],
+  top_blocks: [],
   breakout_players: []
 };
 
@@ -97,6 +99,18 @@ const AIPredictions = ({ onPlayerClick, lazy = true }) => {
             current: formatStat(player.PREDICTED_RPG),
             label: 'RPG'
           };
+        case 'steals':
+          return {
+            past: formatStat(player.SPG_LAST || 0),
+            current: formatStat(player.PREDICTED_SPG),
+            label: 'SPG'
+          };
+        case 'blocks':
+          return {
+            past: formatStat(player.BPG_LAST || 0),
+            current: formatStat(player.PREDICTED_BPG),
+            label: 'BPG'
+          };
         case 'breakout':
           return {
             past: formatStat(player.PPG_LAST || 0),
@@ -173,6 +187,8 @@ const AIPredictions = ({ onPlayerClick, lazy = true }) => {
     { id: 'scorers', label: 'Top Scorers', data: predictions.top_scorers },
     { id: 'assists', label: 'Top Assists', data: predictions.top_assists },
     { id: 'rebounders', label: 'Top Rebounders', data: predictions.top_rebounders },
+    { id: 'steals', label: 'Top Steals', data: predictions.top_steals },
+    { id: 'blocks', label: 'Top Blocks', data: predictions.top_blocks },
     { id: 'breakout', label: 'Breakout Players', data: predictions.breakout_players }
   ];
 

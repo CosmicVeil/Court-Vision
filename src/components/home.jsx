@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./home.css";
 import AIPredictions from "./AIPredictions";
+import PlayerPredictionGrid from "./PlayerPredictionGrid";
 import { isAuthenticated, getUser, logout } from "../utils/auth";
 
 const API = "";
@@ -229,7 +230,7 @@ const Home = () => {
       } else {
         setSelectedPlayer({
           name: playerName,
-          current_stats: { ppg: 0, apg: 0, rpg: 0, spg: 0, bpg: 0, fg_pct: 0, fg3_pct: 0, ft_pct: 0, games_played: 0, minutes: 0 },
+          current_stats: { ppg: 0, apg: 0, rpg: 0, spg: 0, bpg: 0, tov: 0, mpg: 0, fg_pct: 0, fg3_pct: 0, ft_pct: 0, games_played: 0, minutes: 0 },
           ml_stats: null,
           history: {}
         });
@@ -582,43 +583,11 @@ const Home = () => {
               {modalTab === "predictions" && (
                 <div>
                   {selectedPlayer.ml_stats ? (
-                    <div className="ai-pred-cards-grid">
-                      <div className="ai-pred-box">
-                        <div className="ai-pred-box-label">Points Per Game (PPG)</div>
-                        <div className="ai-pred-values-flex">
-                          <span className="ai-pred-num old">{selectedPlayer.current_stats.ppg} <small>PPG</small></span>
-                          <span className="ai-pred-arrow">→</span>
-                          <span className="ai-pred-num new">{selectedPlayer.ml_stats.predicted_stats.ppg} <small>PPG</small></span>
-                        </div>
-                        <div className={`ai-pred-badge ${selectedPlayer.ml_stats.improvements.ppg >= 0 ? "positive" : "negative"}`}>
-                          {selectedPlayer.ml_stats.improvements.ppg >= 0 ? "+" : ""}{selectedPlayer.ml_stats.improvements.ppg}%
-                        </div>
-                      </div>
-
-                      <div className="ai-pred-box">
-                        <div className="ai-pred-box-label">Assists Per Game (APG)</div>
-                        <div className="ai-pred-values-flex">
-                          <span className="ai-pred-num old">{selectedPlayer.current_stats.apg} <small>APG</small></span>
-                          <span className="ai-pred-arrow">→</span>
-                          <span className="ai-pred-num new">{selectedPlayer.ml_stats.predicted_stats.apg} <small>APG</small></span>
-                        </div>
-                        <div className={`ai-pred-badge ${selectedPlayer.ml_stats.improvements.apg >= 0 ? "positive" : "negative"}`}>
-                          {selectedPlayer.ml_stats.improvements.apg >= 0 ? "+" : ""}{selectedPlayer.ml_stats.improvements.apg}%
-                        </div>
-                      </div>
-
-                      <div className="ai-pred-box">
-                        <div className="ai-pred-box-label">Rebounds Per Game (RPG)</div>
-                        <div className="ai-pred-values-flex">
-                          <span className="ai-pred-num old">{selectedPlayer.current_stats.rpg} <small>RPG</small></span>
-                          <span className="ai-pred-arrow">→</span>
-                          <span className="ai-pred-num new">{selectedPlayer.ml_stats.predicted_stats.rpg} <small>RPG</small></span>
-                        </div>
-                        <div className={`ai-pred-badge ${selectedPlayer.ml_stats.improvements.rpg >= 0 ? "positive" : "negative"}`}>
-                          {selectedPlayer.ml_stats.improvements.rpg >= 0 ? "+" : ""}{selectedPlayer.ml_stats.improvements.rpg}%
-                        </div>
-                      </div>
-                    </div>
+                    <PlayerPredictionGrid
+                      currentStats={selectedPlayer.current_stats}
+                      predictionStats={selectedPlayer.ml_stats.predicted_stats}
+                      improvements={selectedPlayer.ml_stats.improvements}
+                    />
                   ) : (
                     <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-secondary)" }}>
                       AI Prediction model is currently loading or unavailable for this player.
