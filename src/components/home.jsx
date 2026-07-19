@@ -456,16 +456,18 @@ const Home = () => {
         </div>
       </section>
 
-      <section className="cta-section">
-        <div className="cta-container">
-          <h2 className="cta-title">Ready to Elevate Your Basketball Experience?</h2>
-          <p className="cta-description">Join thousands of basketball enthusiasts and get access to exclusive insights, predictions, and more.</p>
-          <div className="cta-buttons">
-            <Link to="/login" className="cta-button primary large">Get Started</Link>
-            <Link to="/create-account" className="cta-button secondary large">Create Account</Link>
+      {!isLoggedIn && (
+        <section className="cta-section">
+          <div className="cta-container">
+            <h2 className="cta-title">Ready to Elevate Your Basketball Experience?</h2>
+            <p className="cta-description">Join thousands of basketball enthusiasts and get access to exclusive insights, predictions, and more.</p>
+            <div className="cta-buttons">
+              <Link to="/login" className="cta-button primary large">Get Started</Link>
+              <Link to="/create-account" className="cta-button secondary large">Create Account</Link>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Interactive Glassmorphic Stats Popup Modal */}
       {(selectedPlayer || loadingPlayer) && (
