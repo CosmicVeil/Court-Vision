@@ -927,15 +927,15 @@ if __name__ == '__main__':
       
        print("\n" + "="*50)
        print("Starting NBA API server...")
-       print("Backend: http://localhost:5000")
+       print("Backend: http://localhost:5001")
        print("Frontend: http://localhost:5173")
-       print("Health: http://localhost:5000/api/health")
+       print("Health: http://localhost:5001/api/health")
        print("="*50)
        print("Press Ctrl+C to stop")
        print("="*50 + "\n")
       
        init_db()
-       app.run(debug=False, host='0.0.0.0', port=5000, threaded=True)
+       app.run(debug=False, host='0.0.0.0', port=5001, threaded=True)
       
    except KeyboardInterrupt:
        print("\nShutting down servers...")

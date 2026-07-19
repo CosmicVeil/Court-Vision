@@ -233,7 +233,7 @@ const Predictions = () => {
         <div className="loading">Generating NBA predictions...</div>
       ) : error ? (
         (() => {
-          const serverUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+          const serverUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
           return (
             <div className="error">
               Error: {error}

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { API_ENDPOINTS } from "../config/api";
 import "./AIPredictions.css";
 
 const EMPTY_PREDICTIONS = {
@@ -45,7 +46,7 @@ const AIPredictions = ({ onPlayerClick, lazy = true }) => {
     const fetchPredictions = async () => {
       setLoading(true);
       try {
-        const response = await fetch("/api/ai-predictions");
+        const response = await fetch(API_ENDPOINTS.aiPredictions);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }

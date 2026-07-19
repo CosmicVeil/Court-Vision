@@ -333,14 +333,14 @@ if __name__ == '__main__':
         
         print("\n" + "="*50)
         print("Starting NBA API server...")
-        print("Server URL: http://localhost:5000")
-        print("Health Check: http://localhost:5000/api/health")
-        print("Players API: http://localhost:5000/api/players")
+        print("Server URL: http://localhost:5001")
+        print("Health Check: http://localhost:5001/api/health")
+        print("Players API: http://localhost:5001/api/players")
         print("="*50)
         print(" Press Ctrl+C to stop the server")
         print("="*50 + "\n")
         
-        app.run(debug=False, host='127.0.0.1', port=5000, threaded=True)
+        app.run(debug=False, host='127.0.0.1', port=5001, threaded=True)
         
     except KeyboardInterrupt:
         print("\n Server stopped by user")

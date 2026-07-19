@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
+import { API_ENDPOINTS, buildApiUrl } from "../config/api";
 
 const endpoints = [
-  { label: "Health (app.py)", url: "http://127.0.0.1:5000/api/health" },
-  { label: "AI Predictions (app.py)", url: "http://127.0.0.1:5000/api/ai-predictions" },
-  { label: "Predictions (api.py)", url: "http://127.0.0.1:5000/api/predictions" },
+  { label: "Health (app.py)", url: API_ENDPOINTS.health },
+  { label: "AI Predictions (app.py)", url: API_ENDPOINTS.aiPredictions },
+  { label: "Predictions (api.py)", url: buildApiUrl("predictions") },
 ];
 
 export default function DebugPanel() {
@@ -47,5 +48,4 @@ export default function DebugPanel() {
     </div>
   );
 }
-
 

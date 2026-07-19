@@ -40,7 +40,7 @@ export const buildApiUrl = (endpoint) => {
   }
   
   // Development mode - return relative URL that works with Vite proxy
-  // The proxy in vite.config.js forwards /api/* to http://localhost:5000
+  // The proxy in vite.config.js forwards /api/* to http://localhost:5001
   return `/api/${cleanEndpoint}`;
 };
 
@@ -52,4 +52,3 @@ export const API_ENDPOINTS = {
   aiPredictions: buildApiUrl('ai-predictions'),
   health: buildApiUrl('health'),
 };
-
