@@ -74,3 +74,8 @@ test("prediction shooting and favourite controls are styled responsively", () =>
   assert.match(css, /\.prediction-shooting-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
   assert.match(css, /@media \(max-width: 768px\)[\s\S]*\.prediction-card\s*\{[^}]*padding:\s*20px/s);
 });
+
+test("prediction identity overrides the global flex card-header alignment", () => {
+  const css = readComponent("Predictions.css");
+  assert.match(css, /\.prediction-card \.card-header\s*\{[^}]*display:\s*block/s);
+});

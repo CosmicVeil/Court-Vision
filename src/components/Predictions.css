@@ -246,6 +246,7 @@
 }
 
 .prediction-card .card-header {
+  display: block;
   position: relative;
   padding-top: 38px;
   margin-bottom: 24px;
