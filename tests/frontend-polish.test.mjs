@@ -47,3 +47,21 @@ test("AI prediction card identity and badges are centered", () => {
   assert.match(css, /\.prediction-card \.player-badges\s*\{[^}]*justify-content:\s*center/s);
   assert.match(css, /\.team-badge,\s*\.position-badge,\s*\.age-badge\s*\{[^}]*align-items:\s*center[^}]*justify-content:\s*center/s);
 });
+
+test("AI predictions use one unified sort field with contextual direction labels", () => {
+  const source = readComponent("Predictions.jsx");
+  assert.match(source, /<option value="name">Name<\/option>/);
+  assert.match(source, /const isNameSort = sortBy === 'name'/);
+  assert.match(source, /isNameSort \? 'A to Z' : 'Lowest to Highest'/);
+  assert.match(source, /isNameSort \? 'Z to A' : 'Highest to Lowest'/);
+  assert.match(source, /setSortOrder\(nextSortBy === 'name' \? 'asc' : 'desc'\)/);
+  assert.match(source, /const handleSortDirectionChange/);
+  assert.doesNotMatch(source, /onClick=\{\(\) => handleSort\('name'\)\}/);
+});
+
+test("professional sort styling groups both controls and provides focus states", () => {
+  const css = readComponent("Predictions.css");
+  assert.match(css, /\.sort-control-group\s*\{/);
+  assert.match(css, /\.sort-direction-btn:focus-visible\s*\{/);
+  assert.match(css, /@media \(max-width: 768px\)[\s\S]*\.sort-control-group/);
+});

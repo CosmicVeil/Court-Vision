@@ -149,15 +149,22 @@ const Predictions = () => {
     setCurrentPage(1);
   };
 
-  const handleSort = (newSortBy) => {
-    if (sortBy === newSortBy) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(newSortBy);
-      setSortOrder('desc'); // Default to highest predictions/values first
-    }
+  const handleSortFieldChange = (event) => {
+    const nextSortBy = event.target.value;
+    setSortBy(nextSortBy);
+    setSortOrder(nextSortBy === 'name' ? 'asc' : 'desc');
     setCurrentPage(1);
   };
+
+  const handleSortDirectionChange = () => {
+    setSortOrder((currentOrder) => currentOrder === 'asc' ? 'desc' : 'asc');
+    setCurrentPage(1);
+  };
+
+  const isNameSort = sortBy === 'name';
+  const sortDirectionLabel = sortOrder === 'asc'
+    ? (isNameSort ? 'A to Z' : 'Lowest to Highest')
+    : (isNameSort ? 'Z to A' : 'Highest to Lowest');
 
   const clearFilters = () => {
     setSearchTerm('');
@@ -209,30 +216,29 @@ const Predictions = () => {
       </div>
 
       <div className="sorting-section">
-        <span className="sort-label">Sort by:</span>
-        <button 
-          className={`sort-btn ${sortBy === 'name' ? 'active' : ''}`}
-          onClick={() => handleSort('name')}
-        >
-          Name {sortBy === 'name' && (sortOrder === 'asc' ? 'Asc' : 'Desc')}
-        </button>
-        <select
-          className="filter-select prediction-sort-select"
-          value={sortBy === 'name' ? '' : sortBy}
-          onChange={(event) => {
-            setSortBy(event.target.value);
-            setSortOrder('desc');
-            setCurrentPage(1);
-          }}
-        >
-          <option value="" disabled>Predicted metric</option>
-          {PREDICTION_STATS.map((stat) => (
-            <option value={stat.predictedField} key={stat.key}>Predicted {stat.unit}</option>
-          ))}
-        </select>
-        <button className="sort-btn" onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}>
-          {sortOrder === 'asc' ? 'Lowest first' : 'Highest first'}
-        </button>
+        <div className="sort-control-group">
+          <label className="sort-label" htmlFor="prediction-sort-field">Sort by</label>
+          <select
+            id="prediction-sort-field"
+            className="prediction-sort-select"
+            value={sortBy}
+            onChange={handleSortFieldChange}
+          >
+            <option value="name">Name</option>
+            {PREDICTION_STATS.map((stat) => (
+              <option value={stat.predictedField} key={stat.key}>Predicted {stat.unit}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="sort-direction-btn"
+            onClick={handleSortDirectionChange}
+            aria-label={`Change sort direction. Current order: ${sortDirectionLabel}`}
+          >
+            <span className="sort-direction-icon" aria-hidden="true">{sortOrder === 'asc' ? '↑' : '↓'}</span>
+            <span>{sortDirectionLabel}</span>
+          </button>
+        </div>
       </div>
 
       {loading && predictions.length === 0 ? (
