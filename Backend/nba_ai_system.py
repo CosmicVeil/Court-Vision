@@ -14,12 +14,38 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from nba_web_scraper import NBAWebScraper
 
 STAT_SCALE = 1.0
+MODEL_SCHEMA_VERSION = 2
+
+FEATURE_COLUMNS = (
+    'HEIGHT', 'WEIGHT', 'AGE',
+    'PPG_LAST', 'APG_LAST', 'RPG_LAST', 'SPG_LAST', 'BPG_LAST',
+    'TOV_LAST', 'FG_PCT_LAST', 'FG3_PCT_LAST', 'FT_PCT_LAST', 'MIN_LAST',
+    'GAMES_PLAYED_LAST', 'PPG_PREV', 'APG_PREV', 'RPG_PREV',
+    'SPG_PREV', 'BPG_PREV', 'TOV_PREV', 'FG_PCT_PREV', 'FG3_PCT_PREV',
+    'FT_PCT_PREV', 'MIN_PREV', 'GAMES_PLAYED_PREV',
+    'PPG_LAST_10', 'APG_LAST_10', 'RPG_LAST_10', 'FG_PCT_LAST_10',
+    'PPG_TREND', 'APG_TREND', 'RPG_TREND',
+    'PPG_STD', 'APG_STD', 'RPG_STD', 'CONSISTENCY_SCORE',
+)
+
+TARGET_SPECS = (
+    {'key': 'ppg', 'last_column': 'PPG_LAST', 'target_column': 'PPG_NEXT', 'predicted_column': 'PREDICTED_PPG', 'kind': 'rate', 'minimum': 0.0, 'maximum': None},
+    {'key': 'apg', 'last_column': 'APG_LAST', 'target_column': 'APG_NEXT', 'predicted_column': 'PREDICTED_APG', 'kind': 'rate', 'minimum': 0.0, 'maximum': None},
+    {'key': 'rpg', 'last_column': 'RPG_LAST', 'target_column': 'RPG_NEXT', 'predicted_column': 'PREDICTED_RPG', 'kind': 'rate', 'minimum': 0.0, 'maximum': None},
+    {'key': 'spg', 'last_column': 'SPG_LAST', 'target_column': 'SPG_NEXT', 'predicted_column': 'PREDICTED_SPG', 'kind': 'rate', 'minimum': 0.0, 'maximum': None},
+    {'key': 'bpg', 'last_column': 'BPG_LAST', 'target_column': 'BPG_NEXT', 'predicted_column': 'PREDICTED_BPG', 'kind': 'rate', 'minimum': 0.0, 'maximum': None},
+    {'key': 'tov', 'last_column': 'TOV_LAST', 'target_column': 'TOV_NEXT', 'predicted_column': 'PREDICTED_TOV', 'kind': 'rate', 'minimum': 0.0, 'maximum': None},
+    {'key': 'mpg', 'last_column': 'MIN_LAST', 'target_column': 'MIN_NEXT', 'predicted_column': 'PREDICTED_MPG', 'kind': 'minutes', 'minimum': 0.0, 'maximum': 48.0},
+    {'key': 'fg_pct', 'last_column': 'FG_PCT_LAST', 'target_column': 'FG_PCT_NEXT', 'predicted_column': 'PREDICTED_FG_PCT', 'kind': 'percentage', 'minimum': 0.0, 'maximum': 1.0},
+    {'key': 'fg3_pct', 'last_column': 'FG3_PCT_LAST', 'target_column': 'FG3_PCT_NEXT', 'predicted_column': 'PREDICTED_FG3_PCT', 'kind': 'percentage', 'minimum': 0.0, 'maximum': 1.0},
+    {'key': 'ft_pct', 'last_column': 'FT_PCT_LAST', 'target_column': 'FT_PCT_NEXT', 'predicted_column': 'PREDICTED_FT_PCT', 'kind': 'percentage', 'minimum': 0.0, 'maximum': 1.0},
+)
 
 def _build_xgboost_model():
     return MultiOutputRegressor(XGBRegressor(
-        n_estimators=300,
-        max_depth=6,
-        learning_rate=0.1,
+        n_estimators=1000,
+        max_depth=10,
+        learning_rate=0.01,
         subsample=0.8,
         colsample_bytree=0.8,
         random_state=42,
@@ -31,10 +57,11 @@ class NBAAISystem:
         self.scraper = NBAWebScraper()
         self.model = None
         self.scaler = StandardScaler()
-        self.feature_columns = []
-        self.target_columns = ['PPG_NEXT', 'APG_NEXT', 'RPG_NEXT']
+        self.feature_columns = list(FEATURE_COLUMNS)
+        self.target_columns = [spec['target_column'] for spec in TARGET_SPECS]
         self.data = None
         self.model_trained = False
+        self.validation_metrics = {}
         self._predictions_df = None
 
     def clear_predictions_cache(self):
@@ -60,19 +87,6 @@ class NBAAISystem:
         if sample_season is None:
             print("No valid data found in any season!")
             return None, None, None
-
-        # Define feature columns (same as original prepare_data)
-        self.feature_columns = [
-            'HEIGHT', 'WEIGHT', 'AGE',
-            'PPG_LAST', 'APG_LAST', 'RPG_LAST', 'SPG_LAST', 'BPG_LAST',
-            'TOV_LAST', 'FG_PCT_LAST', 'FG3_PCT_LAST', 'FT_PCT_LAST', 'MIN_LAST',
-            'GAMES_PLAYED_LAST', 'PPG_PREV', 'APG_PREV', 'RPG_PREV',
-            'SPG_PREV', 'BPG_PREV', 'TOV_PREV', 'FG_PCT_PREV', 'FG3_PCT_PREV',
-            'FT_PCT_PREV', 'MIN_PREV', 'GAMES_PLAYED_PREV',
-            'PPG_LAST_10', 'APG_LAST_10', 'RPG_LAST_10', 'FG_PCT_LAST_10',
-            'PPG_TREND', 'APG_TREND', 'RPG_TREND',
-            'PPG_STD', 'APG_STD', 'RPG_STD', 'CONSISTENCY_SCORE'
-        ]
 
         # Process each consecutive season pair
         sorted_seasons = sorted(self.data.keys())
@@ -117,15 +131,16 @@ class NBAAISystem:
                 # In our data structure, each season's data contains that season's stats with _LAST suffix
                 # So for predicting next season performance, we use the next season's _LAST stats as target
                 try:
-                    ppg_next = float(next_player.get('PPG_LAST', 0))
-                    apg_next = float(next_player.get('APG_LAST', 0))
-                    rpg_next = float(next_player.get('RPG_LAST', 0))
+                    target_vector = [
+                        float(next_player.get(spec['last_column'], 0))
+                        for spec in TARGET_SPECS
+                    ]
                 except (ValueError, TypeError):
                     # If conversion fails, skip this player
                     continue
 
                 X_list.append(feature_vector)
-                y_list.append([ppg_next, apg_next, rpg_next])
+                y_list.append(target_vector)
 
         if not X_list:
             print("No valid player transitions found for training!")
@@ -157,9 +172,8 @@ class NBAAISystem:
             if self.data and self.load_model():
                 self.model_trained = True
                 return True
-            else:
-                print("❌ Failed to load model or data")
-                return False
+            print("Saved model schema is incompatible; retraining from cached data.")
+            return self.retrain_from_cache()
         else:
             print("No existing data or model found, proceeding to train.")
 
@@ -190,6 +204,31 @@ class NBAAISystem:
             print("Failed to train model")
         return False
 
+    def retrain_from_cache(self):
+        """Retrain the configured model using the cached multi-season dataset."""
+        data_file = os.path.join(os.path.dirname(__file__), 'nba_multi_season_data.pkl')
+        if not os.path.exists(data_file):
+            print(f"Cached training data not found at {data_file}")
+            return False
+
+        try:
+            with open(data_file, 'rb') as f:
+                self.data = pickle.load(f)
+        except Exception as exc:
+            print(f"Error loading cached training data: {exc}")
+            return False
+
+        combined_data = self.prepare_combined_data()
+        if combined_data is None or not self.train_model(combined_data):
+            return False
+
+        if not self.save_model():
+            return False
+
+        self.model_trained = True
+        self.clear_predictions_cache()
+        return True
+
     def prepare_data(self):
         if not self.data:
             print("No data available!")
@@ -204,18 +243,7 @@ class NBAAISystem:
 
         df = df.fillna(0)
 
-        # Define feature columns (same as used in training)
-        self.feature_columns = [
-            'HEIGHT', 'WEIGHT', 'AGE',
-            'PPG_LAST', 'APG_LAST', 'RPG_LAST', 'SPG_LAST', 'BPG_LAST',
-            'TOV_LAST', 'FG_PCT_LAST', 'FG3_PCT_LAST', 'FT_PCT_LAST', 'MIN_LAST',
-            'GAMES_PLAYED_LAST', 'PPG_PREV', 'APG_PREV', 'RPG_PREV',
-            'SPG_PREV', 'BPG_PREV', 'TOV_PREV', 'FG_PCT_PREV', 'FG3_PCT_PREV',
-            'FT_PCT_PREV', 'MIN_PREV', 'GAMES_PLAYED_PREV',
-            'PPG_LAST_10', 'APG_LAST_10', 'RPG_LAST_10', 'FG_PCT_LAST_10',
-            'PPG_TREND', 'APG_TREND', 'RPG_TREND',
-            'PPG_STD', 'APG_STD', 'RPG_STD', 'CONSISTENCY_SCORE'
-        ]
+        self.feature_columns = list(FEATURE_COLUMNS)
 
         # Add missing columns with default values
         for col in self.feature_columns:
@@ -246,23 +274,9 @@ class NBAAISystem:
 
         self.feature_columns = [col for col in self.feature_columns if col in df.columns]
 
-        # Use actual next-season data if available; otherwise use last season as placeholder (to be replaced with real next-season data)
-        if 'PPG_NEXT' in df.columns:
-            # Use actual next-season PPG data
-            pass  # df['PPG_NEXT'] already contains the correct values
-        else:
-            # Placeholder: use last season's PPG as next-season PPG (will be replaced with real data)
-            df['PPG_NEXT'] = df['PPG_LAST']
-        if 'APG_NEXT' in df.columns:
-            # Use actual next-season APG data
-            pass
-        else:
-            df['APG_NEXT'] = df['APG_LAST']
-        if 'RPG_NEXT' in df.columns:
-            # Use actual next-season RPG data
-            pass
-        else:
-            df['RPG_NEXT'] = df['RPG_LAST']
+        for spec in TARGET_SPECS:
+            if spec['target_column'] not in df.columns:
+                df[spec['target_column']] = df[spec['last_column']]
 
         X = df[self.feature_columns].values
         y = df[self.target_columns].values
@@ -374,28 +388,32 @@ class NBAAISystem:
 
         val_pred = self.model.predict(X_val)
 
-        # Calculate metrics for each target
-        val_mse = np.mean((val_pred - y_val) ** 2)
-        val_mae = np.mean(np.abs(val_pred - y_val))
-
-        # Calculate R2 for each target separately
-        ppg_r2 = r2_score(y_val[:, 0], val_pred[:, 0]) if len(y_val) > 0 else 0
-        apg_r2 = r2_score(y_val[:, 1], val_pred[:, 1]) if len(y_val) > 0 else 0
-        rpg_r2 = r2_score(y_val[:, 2], val_pred[:, 2]) if len(y_val) > 0 else 0
-
-        print(f"Training completed! Validation Metrics:")
-        print(f"  MSE: {val_mse:.4f}")
-        print(f"  MAE: {val_mae:.4f}")
-        print(f"  PPG R²: {ppg_r2:.4f}")
-        print(f"  APG R²: {apg_r2:.4f}")
-        print(f"  RPG R²: {rpg_r2:.4f}")
+        self.validation_metrics = {}
+        print("Training completed! Per-target validation metrics:")
+        for index, spec in enumerate(TARGET_SPECS):
+            metrics = {
+                'mae': float(mean_absolute_error(y_val[:, index], val_pred[:, index])),
+                'r2': float(r2_score(y_val[:, index], val_pred[:, index])),
+            }
+            self.validation_metrics[spec['key']] = metrics
+            print(f"  {spec['key'].upper()}: MAE {metrics['mae']:.4f}, R² {metrics['r2']:.4f}")
         return True
+
+    def _clamp_predictions(self, predictions):
+        clamped = np.asarray(predictions, dtype=float).copy()
+        for index, spec in enumerate(TARGET_SPECS):
+            clamped[:, index] = np.clip(
+                clamped[:, index],
+                spec['minimum'],
+                spec['maximum'],
+            )
+        return clamped
 
     def predict(self, X):
         if self.model is None:
             print("Model not trained!")
             return None
-        return self.model.predict(X)
+        return self._clamp_predictions(self.model.predict(X))
 
     def get_top_performers(self, top_n=10):
         results = self.build_predictions_df()
@@ -495,29 +513,40 @@ class NBAAISystem:
             'feature_columns': self.feature_columns,
             'target_columns': self.target_columns,
             'model_type': 'xgboost',
+            'schema_version': MODEL_SCHEMA_VERSION,
+            'validation_metrics': self.validation_metrics,
         }
         
-        filepath = os.path.join(os.path.dirname(__file__), filename)
+        filepath = filename if os.path.isabs(filename) else os.path.join(os.path.dirname(__file__), filename)
         with open(filepath, 'wb') as f:
             pickle.dump(model_data, f)
         print(f"Model saved to {filepath}")
         return True
     
     def load_model(self, filename='nba_ai_model.pkl'):
-        filepath = os.path.join(os.path.dirname(__file__), filename)
+        filepath = filename if os.path.isabs(filename) else os.path.join(os.path.dirname(__file__), filename)
         if os.path.exists(filepath):
             try:
                 with open(filepath, 'rb') as f:
                     model_data = pickle.load(f)
 
-                if not isinstance(model_data, dict) or model_data.get('model_type') != 'xgboost' or 'model' not in model_data:
-                    print("Saved model is outdated (YOLO/PyTorch). Retrain with initialize_nba_ai(force_refresh=True).")
+                expected_targets = [spec['target_column'] for spec in TARGET_SPECS]
+                if (
+                    not isinstance(model_data, dict)
+                    or model_data.get('model_type') != 'xgboost'
+                    or model_data.get('schema_version') != MODEL_SCHEMA_VERSION
+                    or model_data.get('target_columns') != expected_targets
+                    or model_data.get('feature_columns') != list(FEATURE_COLUMNS)
+                    or 'model' not in model_data
+                ):
+                    print("Saved model schema is outdated. Retrain with retrain_nba_ai.py.")
                     return False
 
                 self.model = model_data['model']
                 self.scaler = model_data['scaler']
                 self.feature_columns = model_data['feature_columns']
                 self.target_columns = model_data['target_columns']
+                self.validation_metrics = model_data.get('validation_metrics', {})
 
                 print(f"Model loaded from {filepath}")
                 return True
