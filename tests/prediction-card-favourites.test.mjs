@@ -63,3 +63,14 @@ test("Favourites empty state names both places where players can be saved", () =
   const source = readComponent("Favourites.jsx");
   assert.match(source, /Stats or AI Predictions/);
 });
+
+test("prediction shooting and favourite controls are styled responsively", () => {
+  const css = readComponent("Predictions.css");
+
+  assert.match(css, /\.prediction-card \.card-header\s*\{[^}]*position:\s*relative[^}]*padding-top:\s*38px/s);
+  assert.match(css, /\.prediction-favorite-btn\s*\{/);
+  assert.match(css, /\.prediction-favorite-btn\.favorited\s*\{/);
+  assert.match(css, /\.prediction-favorite-btn:focus-visible\s*\{/);
+  assert.match(css, /\.prediction-shooting-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
+  assert.match(css, /@media \(max-width: 768px\)[\s\S]*\.prediction-card\s*\{[^}]*padding:\s*20px/s);
+});

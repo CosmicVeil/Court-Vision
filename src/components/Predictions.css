@@ -246,7 +246,44 @@
 }
 
 .prediction-card .card-header {
+  position: relative;
+  padding-top: 38px;
   margin-bottom: 24px;
+}
+
+.prediction-favorite-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-height: 30px;
+  padding: 6px 11px;
+  border: 1px solid rgba(255, 69, 0, 0.4);
+  border-radius: 8px;
+  background: rgba(255, 69, 0, 0.1);
+  color: #ff7043;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.prediction-favorite-btn:hover {
+  background: rgba(255, 69, 0, 0.2);
+  border-color: #ff5722;
+  color: #fff;
+}
+
+.prediction-favorite-btn.favorited {
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(52, 211, 153, 0.45);
+  color: #34d399;
+}
+
+.prediction-favorite-btn:focus-visible {
+  outline: 2px solid #ff4500;
+  outline-offset: 2px;
 }
 
 .prediction-card .player-meta {
@@ -337,6 +374,79 @@
   font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
+}
+
+.prediction-card-shooting {
+  margin-top: 16px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.prediction-shooting-heading {
+  display: block;
+  margin-bottom: 10px;
+  color: #9ca3af;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.prediction-shooting-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.prediction-shooting-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  padding: 9px 6px;
+  border-radius: 9px;
+  background: rgba(17, 24, 39, 0.35);
+  text-align: center;
+}
+
+.prediction-shooting-value {
+  color: #f3f4f6;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.prediction-shooting-label {
+  margin-top: 2px;
+  color: #9ca3af;
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.prediction-auth-icon {
+  margin-bottom: 1.5rem;
+  color: #ff4500;
+  font-size: 4rem;
+  filter: drop-shadow(0 0 15px rgba(255, 69, 0, 0.4));
+}
+
+.prediction-auth-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.prediction-auth-actions .empty-cta {
+  padding: 0.8rem 2rem;
+  text-align: center;
+  text-decoration: none;
+}
+
+.prediction-auth-secondary {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  box-shadow: none;
 }
 
 /* Stat Comparisons */
@@ -564,6 +674,16 @@
   }
   .predictions-grid {
     grid-template-columns: 1fr;
+  }
+  .prediction-card {
+    padding: 20px;
+  }
+  .prediction-card-main-stats {
+    gap: 8px;
+  }
+  .prediction-main-stat {
+    min-height: 82px;
+    padding: 12px 6px;
   }
   .sorting-section {
     justify-content: stretch;
