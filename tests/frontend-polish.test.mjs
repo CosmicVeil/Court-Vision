@@ -43,7 +43,7 @@ test("AI prediction list cards show the three main predicted stats", () => {
 
 test("AI prediction card identity and badges are centered", () => {
   const css = readComponent("Predictions.css");
-  assert.match(css, /\.prediction-card \.player-meta\s*\{[^}]*text-align:\s*center/s);
+  assert.match(css, /\.prediction-card \.player-meta\s*\{[^}]*flex-direction:\s*column[^}]*align-items:\s*center[^}]*text-align:\s*center/s);
   assert.match(css, /\.prediction-card \.player-badges\s*\{[^}]*justify-content:\s*center/s);
   assert.match(css, /\.team-badge,\s*\.position-badge,\s*\.age-badge\s*\{[^}]*align-items:\s*center[^}]*justify-content:\s*center/s);
 });
