@@ -611,15 +611,25 @@
 }
 
 .spotlight-growth-badge {
-  background: rgba(76, 175, 80, 0.12);
-  border: 1px solid rgba(76, 175, 80, 0.3);
-  color: #4caf50;
+  border: 1px solid transparent;
   padding: 0.5rem 1rem;
   border-radius: 12px;
   font-size: 0.95rem;
   font-weight: 700;
   text-align: center;
   margin-bottom: 1.5rem;
+}
+
+.spotlight-growth-badge.positive {
+  background: rgba(76, 175, 80, 0.12);
+  border-color: rgba(76, 175, 80, 0.3);
+  color: #4caf50;
+}
+
+.spotlight-growth-badge.negative {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #f87171;
 }
 
 .spotlight-stats-list {
@@ -688,9 +698,16 @@
 .spotlight-stat-growth {
   font-size: 0.8rem;
   font-weight: 700;
-  color: #4caf50;
   width: 60px;
   text-align: right;
+}
+
+.spotlight-stat-growth.positive {
+  color: #4caf50;
+}
+
+.spotlight-stat-growth.negative {
+  color: #f87171;
 }
 
 .spotlight-loader-wrap {
@@ -758,9 +775,7 @@
 }
 
 .growth-callout {
-  background: rgba(76, 175, 80, 0.12);
-  border: 1px solid rgba(76, 175, 80, 0.3);
-  color: #4caf50;
+  border: 1px solid transparent;
   border-radius: 8px;
   padding: 0.5rem 1rem;
   font-size: 0.85rem;
@@ -768,7 +783,20 @@
   letter-spacing: 1.5px;
   text-align: center;
   margin-bottom: 1.5rem;
+}
+
+.growth-callout.positive {
+  background: rgba(76, 175, 80, 0.12);
+  border-color: rgba(76, 175, 80, 0.3);
+  color: #4caf50;
   box-shadow: 0 0 12px rgba(76, 175, 80, 0.1);
+}
+
+.growth-callout.negative {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.1);
 }
 
 .stats-comparison-bars {

@@ -176,7 +176,7 @@ const RecommendationChart = () => {
                                         <span className="meta-badge-item position">{player.POSITION}</span>
                                     </div>
 
-                                    <div className="growth-callout">
+                                    <div className={`growth-callout ${improvement >= 0 ? 'positive' : 'negative'}`}>
                                         {improvement >= 0 ? '+' : ''}{improvement.toFixed(1)}% PROJECTED GROWTH
                                     </div>
 

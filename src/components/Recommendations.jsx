@@ -223,8 +223,8 @@ const Recommendations = () => {
                         <h3 className="spotlight-player-name">{player.PLAYER_NAME}</h3>
                         <div className="spotlight-team-badge">{player.TEAM} · {player.POSITION}</div>
                         
-                        <div className="spotlight-growth-badge">
-                          +{improvement.toFixed(1)}% {s} Breakout
+                        <div className={`spotlight-growth-badge ${improvement >= 0 ? 'positive' : 'negative'}`}>
+                          {improvement >= 0 ? '+' : ''}{improvement.toFixed(1)}% {s} Breakout
                         </div>
                         
                         <div className="spotlight-stats-list">
@@ -242,7 +242,7 @@ const Recommendations = () => {
                                   <span className="spotlight-stat-arrow">→</span>
                                   <span className="spotlight-stat-val predicted">{predVal.toFixed(1)}</span>
                                 </div>
-                                <span className="spotlight-stat-growth">
+                                <span className={`spotlight-stat-growth ${impVal >= 0 ? 'positive' : 'negative'}`}>
                                   {impVal >= 0 ? '+' : ''}{impVal.toFixed(1)}%
                                 </span>
                               </div>
