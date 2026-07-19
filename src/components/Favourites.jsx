@@ -127,7 +127,7 @@ const Favourites = () => {
         <div className="empty-state">
           <h2 className="empty-title">No favorites yet</h2>
           <p className="empty-description">
-            Go to the Stats page and add players to favorites!
+            Add players from Stats or AI Predictions to start tracking your favorites!
           </p>
           <Link to="/stats" className="empty-cta">
             Go to Stats →

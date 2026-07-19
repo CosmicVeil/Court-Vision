@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import PlayerPredictionGrid from './PlayerPredictionGrid';
 import { PREDICTION_STATS } from '../config/predictionStats';
+import { getFavorites, toggleFavorite } from '../utils/favorites';
+import { isAuthenticated } from '../utils/auth';
 import './Predictions.css';
 
 const MAIN_PREDICTION_STATS = [
@@ -9,6 +11,34 @@ const MAIN_PREDICTION_STATS = [
   { key: 'predicted_apg', label: 'APG' },
   { key: 'predicted_rpg', label: 'RPG' },
 ];
+
+const CURRENT_SHOOTING_STATS = [
+  { key: 'fg_pct_last', label: 'FG%' },
+  { key: 'fg3_pct_last', label: '3P%' },
+  { key: 'ft_pct_last', label: 'FT%' },
+];
+
+const toNumber = (value) => Number(value) || 0;
+
+const toFavoritePlayer = (player) => ({
+  id: player.id,
+  name: player.name,
+  team: player.team,
+  position: player.position,
+  age: toNumber(player.age),
+  stats: {
+    ppg_last: toNumber(player.ppg_last),
+    apg_last: toNumber(player.apg_last),
+    rpg_last: toNumber(player.rpg_last),
+    spg_last: toNumber(player.spg_last),
+    bpg_last: toNumber(player.bpg_last),
+    tov_last: toNumber(player.tov_last),
+    minutes: toNumber(player.mpg_last),
+    fg_pct_last: toNumber(player.fg_pct_last),
+    fg3_pct_last: toNumber(player.fg3_pct_last),
+    ft_pct_last: toNumber(player.ft_pct_last),
+  },
+});
 
 const Predictions = () => {
   const [predictions, setPredictions] = useState([]);
@@ -27,6 +57,32 @@ const Predictions = () => {
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [loadingPlayer, setLoadingPlayer] = useState(false);
   const [modalTab, setModalTab] = useState('current');
+  const [favoriteIds, setFavoriteIds] = useState(new Set());
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  useEffect(() => {
+    setFavoriteIds(new Set(getFavorites().map((favorite) => favorite.id)));
+  }, []);
+
+  const handleFavoriteToggle = (event, player) => {
+    event.stopPropagation();
+
+    if (!isAuthenticated()) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    const isNowFavorite = toggleFavorite(toFavoritePlayer(player));
+    setFavoriteIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+      if (isNowFavorite) {
+        nextIds.add(player.id);
+      } else {
+        nextIds.delete(player.id);
+      }
+      return nextIds;
+    });
+  };
 
   // Dismiss modal on Escape
   useEffect(() => {
@@ -267,6 +323,17 @@ const Predictions = () => {
                 style={{ cursor: 'pointer' }}
               >
                 <div className="card-header">
+                  <button
+                    type="button"
+                    className={`prediction-favorite-btn ${favoriteIds.has(player.id) ? 'favorited' : ''}`}
+                    onClick={(event) => handleFavoriteToggle(event, player)}
+                    aria-pressed={favoriteIds.has(player.id)}
+                    aria-label={favoriteIds.has(player.id)
+                      ? `Remove ${player.name} from favorites`
+                      : `Add ${player.name} to favorites`}
+                  >
+                    {favoriteIds.has(player.id) ? 'FAVORITED' : 'ADD FAV'}
+                  </button>
                   <div className="player-meta">
                     <h3>{player.name}</h3>
                     <div className="player-badges">
@@ -287,6 +354,19 @@ const Predictions = () => {
                         <span className="prediction-main-stat-label">Predicted {stat.label}</span>
                       </div>
                     ))}
+                  </div>
+                  <div className="prediction-card-shooting">
+                    <span className="prediction-shooting-heading">This Season Shooting</span>
+                    <div className="prediction-shooting-grid">
+                      {CURRENT_SHOOTING_STATS.map((stat) => (
+                        <div className="prediction-shooting-stat" key={stat.key}>
+                          <span className="prediction-shooting-value">
+                            {(Number(player[stat.key]) || 0).toFixed(1)}%
+                          </span>
+                          <span className="prediction-shooting-label">{stat.label}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -447,6 +527,34 @@ const Predictions = () => {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {showAuthModal && (
+        <div className="stats-modal-backdrop" onClick={() => setShowAuthModal(false)}>
+          <div
+            className="stats-modal-container"
+            onClick={(event) => event.stopPropagation()}
+            style={{ maxWidth: '450px', textAlign: 'center', padding: '3rem 2rem' }}
+          >
+            <button
+              type="button"
+              className="stats-modal-close-btn"
+              onClick={() => setShowAuthModal(false)}
+              aria-label="Close authentication prompt"
+            >
+              ×
+            </button>
+            <div className="prediction-auth-icon" aria-hidden="true">🔒</div>
+            <h2 className="empty-title">Authentication Required</h2>
+            <p className="empty-description">
+              You must create an account or log in to save your favorite NBA players and customize your analytics tracking!
+            </p>
+            <div className="prediction-auth-actions">
+              <Link to="/login" className="empty-cta">Log In</Link>
+              <Link to="/create-account" className="empty-cta prediction-auth-secondary">Create Account</Link>
+            </div>
           </div>
         </div>
       )}
