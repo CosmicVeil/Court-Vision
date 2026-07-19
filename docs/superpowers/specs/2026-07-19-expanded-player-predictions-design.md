@@ -27,7 +27,7 @@ Training targets will map to the next season's stored fields:
 
 The model will train percentages as fractions between 0 and 1, matching the stored data. Response formatting will convert them to the 0–100 scale used by the React views. Inference will clamp predictions to valid basketball ranges: nonnegative counting stats, minutes from 0 through 48, and percentages from 0 through 100 after conversion.
 
-The saved model metadata will include an explicit schema version and the ordered target list. Startup will reject an older three-output artifact. A retraining command will use the cached `nba_multi_season_data.pkl` file and replace `nba_ai_model.pkl` without scraping when the cache contains the required seasons and fields.
+The saved model metadata will include an explicit schema version and the ordered target list. Startup will reject an older three-output artifact. The writer will gzip-compress the pickle because the tuned ten-output model exceeds normal repository file-size limits without compression; the loader will continue to accept legacy uncompressed pickles. A retraining command will use the cached `nba_multi_season_data.pkl` file and replace `nba_ai_model.pkl` without scraping when the cache contains the required seasons and fields.
 
 ## Backend Contract
 
@@ -67,4 +67,4 @@ The final training run will report MAE and R² for each of the ten targets. A sm
 
 ## Scope
 
-This change will not add a new data source, scrape new seasons, tune separate models per metric, or change the existing breakout definition. It will preserve the user's regressor settings and the current 37-feature input schema.
+This change will not add a new data source, scrape new seasons, tune separate models per metric, or change the existing breakout definition. It will preserve the user's regressor settings and the current 36-feature input schema.

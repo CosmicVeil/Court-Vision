@@ -66,6 +66,18 @@ class ExpandedPredictionInferenceTests(unittest.TestCase):
                 }, handle)
             self.assertFalse(self.system.load_model(str(path)))
 
+    def test_saved_model_uses_lossless_gzip_compression(self):
+        self.system.model = "test-model"
+        self.system.scaler = "test-scaler"
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "model.pkl"
+            self.assertTrue(self.system.save_model(str(path)))
+            self.assertEqual(path.read_bytes()[:2], b"\x1f\x8b")
+
+            loaded = NBAAISystem()
+            self.assertTrue(loaded.load_model(str(path)))
+            self.assertEqual(loaded.model, "test-model")
+
 
 class ExpandedPredictionPayloadTests(unittest.TestCase):
     def setUp(self):

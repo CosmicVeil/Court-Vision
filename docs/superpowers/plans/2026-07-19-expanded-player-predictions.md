@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - Preserve the user's XGBoost settings: `n_estimators=1000`, `max_depth=10`, `learning_rate=0.01`, `subsample=0.8`, and `colsample_bytree=0.8`.
-- Keep the current 37-feature input schema and cached 2020–2026 data source.
+- Keep the current 36-feature input schema and cached 2020–2026 data source.
 - Predict PPG, APG, RPG, SPG, BPG, TOV, MPG, FG%, 3P%, and FT% in that order.
 - Train shooting percentages as 0–1 fractions and expose them to the frontend as 0–100 percentages.
 - Keep all existing API keys and query parameters backward compatible.

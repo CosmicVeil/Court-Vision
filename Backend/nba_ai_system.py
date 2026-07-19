@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import pickle
+import gzip
 import os
 import json
 from datetime import datetime
@@ -528,7 +529,7 @@ class NBAAISystem:
         }
         
         filepath = filename if os.path.isabs(filename) else os.path.join(os.path.dirname(__file__), filename)
-        with open(filepath, 'wb') as f:
+        with gzip.open(filepath, 'wb', compresslevel=6) as f:
             pickle.dump(model_data, f)
         print(f"Model saved to {filepath}")
         return True
@@ -537,7 +538,10 @@ class NBAAISystem:
         filepath = filename if os.path.isabs(filename) else os.path.join(os.path.dirname(__file__), filename)
         if os.path.exists(filepath):
             try:
-                with open(filepath, 'rb') as f:
+                with open(filepath, 'rb') as raw_file:
+                    is_gzip = raw_file.read(2) == b'\x1f\x8b'
+                opener = gzip.open if is_gzip else open
+                with opener(filepath, 'rb') as f:
                     model_data = pickle.load(f)
 
                 expected_targets = [spec['target_column'] for spec in TARGET_SPECS]
