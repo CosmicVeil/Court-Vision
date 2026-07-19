@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import PlayerPredictionGrid from './PlayerPredictionGrid';
-import { PREDICTION_STATS, toPredictionPageStats } from '../config/predictionStats';
+import { PREDICTION_STATS } from '../config/predictionStats';
 import './Predictions.css';
+
+const MAIN_PREDICTION_STATS = [
+  { key: 'predicted_ppg', label: 'PPG' },
+  { key: 'predicted_apg', label: 'APG' },
+  { key: 'predicted_rpg', label: 'RPG' },
+];
 
 const Predictions = () => {
   const [predictions, setPredictions] = useState([]);
@@ -266,7 +272,16 @@ const Predictions = () => {
                 </div>
 
                 <div className="card-body">
-                  <PlayerPredictionGrid {...toPredictionPageStats(player)} />
+                  <div className="prediction-card-main-stats">
+                    {MAIN_PREDICTION_STATS.map((stat) => (
+                      <div className="prediction-main-stat" key={stat.key}>
+                        <span className="prediction-main-stat-value">
+                          {(Number(player[stat.key]) || 0).toFixed(1)}
+                        </span>
+                        <span className="prediction-main-stat-label">Predicted {stat.label}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             ))}

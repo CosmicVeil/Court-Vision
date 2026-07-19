@@ -30,3 +30,20 @@ test("negative recommendation modifiers use the red palette", () => {
   assert.match(css, /\.spotlight-stat-growth\.negative\s*\{[^}]*color:\s*#f87171/s);
   assert.match(css, /\.growth-callout\.negative\s*\{[^}]*color:\s*#f87171/s);
 });
+
+test("AI prediction list cards show the three main predicted stats", () => {
+  const source = readComponent("Predictions.jsx");
+  for (const field of ["predicted_ppg", "predicted_apg", "predicted_rpg"]) {
+    assert.match(source, new RegExp(`key: ['"]${field}['"]`));
+  }
+  assert.match(source, /prediction-card-main-stats/);
+  assert.match(source, /modalTab === 'predictions'[\s\S]*PlayerPredictionGrid/);
+  assert.doesNotMatch(source, /toPredictionPageStats/);
+});
+
+test("AI prediction card identity and badges are centered", () => {
+  const css = readComponent("Predictions.css");
+  assert.match(css, /\.prediction-card \.player-meta\s*\{[^}]*text-align:\s*center/s);
+  assert.match(css, /\.prediction-card \.player-badges\s*\{[^}]*justify-content:\s*center/s);
+  assert.match(css, /\.team-badge,\s*\.position-badge,\s*\.age-badge\s*\{[^}]*align-items:\s*center[^}]*justify-content:\s*center/s);
+});

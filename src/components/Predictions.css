@@ -178,13 +178,9 @@
 /* Predictions Grid */
 .predictions-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 25px;
   margin-bottom: 40px;
-}
-
-.prediction-card .player-prediction-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .prediction-card {
@@ -225,6 +221,10 @@
   margin-bottom: 24px;
 }
 
+.prediction-card .player-meta {
+  text-align: center;
+}
+
 .player-meta h3 {
   font-size: 1.4rem;
   font-weight: 700;
@@ -239,7 +239,15 @@
   gap: 8px;
 }
 
+.prediction-card .player-badges {
+  justify-content: center;
+}
+
 .team-badge, .position-badge, .age-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   padding: 4px 10px;
   border-radius: 6px;
   font-size: 0.75rem;
@@ -264,6 +272,40 @@
   background: rgba(156, 163, 175, 0.15);
   color: #d1d5db;
   border: 1px solid rgba(156, 163, 175, 0.25);
+}
+
+.prediction-card-main-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.prediction-main-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 92px;
+  padding: 14px 10px;
+  border: 1px solid rgba(255, 69, 0, 0.12);
+  border-radius: 12px;
+  background: rgba(17, 24, 39, 0.45);
+  text-align: center;
+}
+
+.prediction-main-stat-value {
+  color: #fff;
+  font-size: 1.65rem;
+  font-weight: 800;
+}
+
+.prediction-main-stat-label {
+  margin-top: 4px;
+  color: #9ca3af;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
 /* Stat Comparisons */
@@ -494,9 +536,6 @@
   }
   .prediction-sort-select {
     width: 100%;
-  }
-  .prediction-card .player-prediction-grid {
-    grid-template-columns: 1fr;
   }
   .pagination-controls {
     flex-direction: column;
