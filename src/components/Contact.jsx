@@ -79,20 +79,33 @@ function Contact() {
             </a>
           </article>
 
-          <article className="team-card team-card-pending">
+          <article className="team-card team-card-featured">
             <div className="team-card-topline">
-              <div className="team-initials team-initials-muted">VU</div>
-              <span className="team-status team-status-muted">Profile in progress</span>
+              <div className="team-initials">VU</div>
+              <span className="team-status"><i /> Available to connect</span>
             </div>
             <div className="team-card-content">
               <p className="contact-label">PRODUCT ENGINEERING</p>
               <h3>Varun Uday</h3>
               <p className="team-role">Frontend/Backend Developer</p>
-              <p className="team-bio team-bio-pending">More about Varun&apos;s work and background is coming soon.</p>
+              <p className="team-bio">
+                Varun designs the user interfaces, state management architectures, and API integrations
+                that deliver live NBA insights into a polished, responsive dashboard experience.
+              </p>
+              <div className="team-skills" aria-label="Varun's focus areas">
+                <span>React</span>
+                <span>Node.js</span>
+                <span>Vite</span>
+              </div>
             </div>
-            <div className="team-linkedin team-linkedin-pending" aria-label="LinkedIn details coming soon">
-              LinkedIn details coming soon
-            </div>
+            <a
+              className="team-linkedin"
+              href="https://www.linkedin.com/in/varunuday"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <LinkedInIcon /> Connect on LinkedIn <span aria-hidden="true">↗</span>
+            </a>
           </article>
         </div>
       </section>
