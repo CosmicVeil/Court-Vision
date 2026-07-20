@@ -94,8 +94,8 @@ function Contact() {
               </p>
               <div className="team-skills" aria-label="Varun's focus areas">
                 <span>Flask</span>
-                <span>PostgreSQL</span>
-                <span>Prediction APIs</span>
+                <span>SQLite</span>
+                <span>XGBoost</span>
               </div>
             </div>
             <a
