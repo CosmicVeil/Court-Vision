@@ -1,21 +1,13 @@
 services:
   - type: web
-    name: nba-api
+    name: court-vision-api
     env: python
-    # Use production requirements that include PyTorch
+    rootDir: Backend
     buildCommand: pip install -r requirements_production.txt
-    startCommand: python app.py
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.12.0
-      - key: PORT
-        value: 5000
       - key: FLASK_ENV
         value: production
-    # Health check endpoint
+      - key: PYTHON_VERSION
+        value: 3.12.0
     healthCheckPath: /api/health
-
-
-
-
-

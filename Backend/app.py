@@ -935,7 +935,8 @@ if __name__ == '__main__':
        print("="*50 + "\n")
       
        init_db()
-       app.run(debug=False, host='0.0.0.0', port=5001, threaded=True)
+       port = int(os.environ.get('PORT', 5001))
+       app.run(debug=False, host='0.0.0.0', port=port, threaded=True)
       
    except KeyboardInterrupt:
        print("\nShutting down servers...")
