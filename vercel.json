@@ -5,7 +5,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://courtvision-ulq3.onrender.com/api/:path*"
+      "destination": "https://court-vision-zxuj.onrender.com/api/:path*"
     }
   ]
 }

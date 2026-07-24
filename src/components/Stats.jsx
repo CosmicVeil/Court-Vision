@@ -219,7 +219,7 @@ const Stats = () => {
   }
 
   if (error) {
-    const serverUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+    const serverUrl = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5001' : 'https://court-vision-zxuj.onrender.com');
     return (
       <div className="stats-container">
         <div className="error">

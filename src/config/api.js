@@ -11,17 +11,13 @@ const getApiBaseUrl = () => {
     return import.meta.env.VITE_API_URL;
   }
   
-  // For development, use relative URL (which works with Vite proxy)
-  // For production builds, this will need to be set via VITE_API_URL
   if (import.meta.env.DEV) {
     // Development mode - use relative URL that works with Vite proxy
     return '';
   }
   
-  // Production mode but no VITE_API_URL set - this will fail gracefully
-  // You should set VITE_API_URL in your build environment
-  console.warn('VITE_API_URL not set! Backend API calls will fail in production.');
-  return '';
+  // Production fallback to the active Render backend
+  return 'https://court-vision-zxuj.onrender.com';
 };
 
 export const API_BASE_URL = getApiBaseUrl();

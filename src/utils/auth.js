@@ -64,7 +64,7 @@ export const login = async (email, password) => {
   } catch (error) {
     console.error('Login error:', error);
     if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-      const serverUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+      const serverUrl = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5001' : 'https://court-vision-zxuj.onrender.com');
       return { 
         success: false, 
         message: `Cannot connect to server. Please make sure the backend server is running on ${serverUrl}` 
@@ -115,7 +115,7 @@ export const signup = async (firstName, lastName, email, password) => {
   } catch (error) {
     console.error('Signup error:', error);
     if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-      const serverUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+      const serverUrl = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5001' : 'https://court-vision-zxuj.onrender.com');
       return { 
         success: false, 
         message: `Cannot connect to server. Please make sure the backend server is running on ${serverUrl}` 
