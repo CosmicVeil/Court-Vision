@@ -26,6 +26,8 @@ xgboost>=2.0.0
 # Web scraping
 beautifulsoup4>=4.12.0
 chardet>=5.0.0
+playwright>=1.40.0
+
 
 # Utilities
 tqdm>=4.65.0
