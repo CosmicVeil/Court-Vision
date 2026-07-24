@@ -3,11 +3,12 @@ services:
     name: court-vision-api
     env: python
     rootDir: Backend
-    buildCommand: pip install -r requirements_production.txt
+    buildCommand: python -m pip install --upgrade pip setuptools wheel && pip install --no-cache-dir -r requirements_production.txt --extra-index-url https://download.pytorch.org/whl/cpu
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1
     envVars:
       - key: FLASK_ENV
         value: production
       - key: PYTHON_VERSION
-        value: 3.12.0
+        value: 3.11.9
     healthCheckPath: /api/health
+
