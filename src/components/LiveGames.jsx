@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import PlayerPredictionGrid from "./PlayerPredictionGrid";
+import { buildApiUrl } from "../config/api";
 import "./LiveGames.css";
 
-const API = "";
 const STATUS_LIVE  = 2;
 const STATUS_FINAL = 3;
 
@@ -186,8 +186,8 @@ export default function LiveGames() {
   const fetchGames = useCallback(async () => {
     try {
       const [todayRes, upRes] = await Promise.all([
-        fetch(`${API}/api/games/today`),
-        fetch(`${API}/api/games/upcoming`),
+          fetch(buildApiUrl('games/today')),
+          fetch(buildApiUrl('games/upcoming')),
       ]);
       const todayData = await todayRes.json();
       const upData    = await upRes.json();
@@ -211,7 +211,7 @@ export default function LiveGames() {
     setLoadingPlayer(true);
     setModalTab('current');
     try {
-      const response = await fetch(`/api/players/search-all?query=${encodeURIComponent(player.name)}`);
+      const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(player.name)}`));
       const data = await response.json();
       const match = (data.players || []).find(p => p.name.toLowerCase() === player.name.toLowerCase());
       if (match) {

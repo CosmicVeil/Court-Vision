@@ -4,8 +4,7 @@ import "./home.css";
 import AIPredictions from "./AIPredictions";
 import PlayerPredictionGrid from "./PlayerPredictionGrid";
 import { isAuthenticated, getUser, logout } from "../utils/auth";
-
-const API = "";
+import { buildApiUrl } from "../config/api";
 
 const BasketballAnimation = () => {
   const canvasRef = useRef(null);
@@ -139,9 +138,9 @@ function TrendingSection({ onPlayerClick }) {
     const fetch_ = async () => {
       try {
         const [todayRes, upRes, praRes] = await Promise.all([
-          fetch(`${API}/api/games/today`),
-          fetch(`${API}/api/games/upcoming`),
-          fetch(`${API}/api/stats/top-pra`),
+          fetch(buildApiUrl('games/today')),
+          fetch(buildApiUrl('games/upcoming')),
+          fetch(buildApiUrl('stats/top-pra')),
         ]);
         const today    = await todayRes.json();
         const upcoming = await upRes.json();
@@ -222,7 +221,7 @@ const Home = () => {
     setLoadingPlayer(true);
     setModalTab('current');
     try {
-      const response = await fetch(`/api/players/search-all?query=${encodeURIComponent(playerName)}`);
+      const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(playerName)}`));
       const data = await response.json();
       const match = (data.players || []).find(p => p.name.toLowerCase() === playerName.toLowerCase());
       if (match) {
@@ -286,7 +285,7 @@ const Home = () => {
       if (searchQuery.trim().length >= 2) {
         setIsSearching(true);
         try {
-          const response = await fetch(`/api/players/search-all?query=${encodeURIComponent(searchQuery)}`);
+          const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(searchQuery)}`));
           const data = await response.json();
           setSearchResults(data.players || []);
         } catch (error) {

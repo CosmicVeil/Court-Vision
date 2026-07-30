@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { isFavorite, toggleFavorite, getFavorites } from '../utils/favorites';
 import { isAuthenticated } from '../utils/auth';
+import { buildApiUrl } from '../config/api';
 import PlayerPredictionGrid from './PlayerPredictionGrid';
 import './Stats.css';
 
@@ -27,7 +28,7 @@ const Stats = () => {
   const [selectedYear, setSelectedYear] = useState('');
   const [showAuthModal, setShowAuthModal] = useState(false);
 
-  const API_BASE_URL = '/api';
+
 
   // Load favorites on mount
   useEffect(() => {
@@ -59,7 +60,7 @@ const Stats = () => {
     setLoadingPlayer(true);
     setModalTab('current');
     try {
-      const response = await fetch(`${API_BASE_URL}/players/search-all?query=${encodeURIComponent(player.name)}`);
+      const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(player.name)}`));
       const data = await response.json();
       const match = (data.players || []).find(p => p.name === player.name);
       if (match) {
@@ -126,7 +127,7 @@ const Stats = () => {
       if (selectedPosition) params.append('position', selectedPosition);
       if (selectedYear) params.append('year', selectedYear);
 
-      const response = await fetch(`${API_BASE_URL}/players?${params}`);
+      const response = await fetch(buildApiUrl(`players?${params}`));
       if (!response.ok) throw new Error('Failed to fetch players');
       
       const data = await response.json();
@@ -142,7 +143,7 @@ const Stats = () => {
 
   const fetchTeams = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/teams`);
+      const response = await fetch(buildApiUrl('teams'));
       if (response.ok) {
         const data = await response.json();
         setTeams(data.teams || []);
@@ -154,7 +155,7 @@ const Stats = () => {
 
   const fetchPositions = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/positions`);
+      const response = await fetch(buildApiUrl('positions'));
       if (response.ok) {
         const data = await response.json();
         setPositions(data.positions || []);

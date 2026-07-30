@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getFavorites, removeFavorite } from '../utils/favorites';
 import { isAuthenticated } from '../utils/auth';
+import { buildApiUrl } from '../config/api';
 import PlayerPredictionGrid from './PlayerPredictionGrid';
 import './Favourites.css';
 
@@ -25,7 +26,7 @@ const Favourites = () => {
     setLoadingPlayer(true);
     setModalTab('current');
     try {
-      const response = await fetch(`/api/players/search-all?query=${encodeURIComponent(player.name)}`);
+      const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(player.name)}`));
       const data = await response.json();
       const match = (data.players || []).find(p => p.name.toLowerCase() === player.name.toLowerCase());
       if (match) {

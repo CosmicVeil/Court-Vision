@@ -16,8 +16,8 @@ const getApiBaseUrl = () => {
     return '';
   }
   
-  // Production fallback to the active Render backend
-  return 'https://court-vision-zxuj.onrender.com';
+  // Production fallback to the active Render backend (proxied by Vercel)
+  return '';
 };
 
 export const API_BASE_URL = getApiBaseUrl();

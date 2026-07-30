@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import PlayerPredictionGrid from './PlayerPredictionGrid';
+import { buildApiUrl } from '../config/api';
 import './Recommendations.css';
 
 const FALLBACK_PLAYERS = {
@@ -62,7 +63,7 @@ const Recommendations = () => {
     setLoadingPlayer(true);
     setModalTab('current');
     try {
-      const response = await fetch(`/api/players/search-all?query=${encodeURIComponent(player.name || player.PLAYER_NAME)}`);
+      const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(player.name || player.PLAYER_NAME)}`));
       const data = await response.json();
       const match = (data.players || []).find(p => p.name.toLowerCase() === (player.name || player.PLAYER_NAME).toLowerCase());
       if (match) {
@@ -100,7 +101,7 @@ const Recommendations = () => {
         const stats = ['PPG', 'APG', 'RPG', 'PRA'];
         const results = await Promise.all(
           stats.map(async (s) => {
-            const res = await fetch(`/api/recommendations/${s}`);
+            const res = await fetch(buildApiUrl(`recommendations/${s}`));
             if (res.ok) {
               const data = await res.json();
               if (data && data.length > 0) {
