@@ -4,8 +4,8 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "https://court-vision-zxuj.onrender.com/api/$1"
+      "source": "/api/:match*",
+      "destination": "https://court-vision-zxuj.onrender.com/api/:match*"
     },
     {
       "source": "/(.*)",
