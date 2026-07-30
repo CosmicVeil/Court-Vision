@@ -10,6 +10,13 @@
 # VITE_API_URL should be set to your backend URL (e.g., https://nba-api-xxxx.onrender.com/api)
 # Go to: Site settings → Environment variables → Add variable
 
+# Proxy API requests to Render backend
+[[redirects]]
+  from = "/api/*"
+  to = "https://court-vision-zxuj.onrender.com/api/:splat"
+  status = 200
+  force = true
+
 # Redirect all routes to index.html for React Router
 [[redirects]]
   from = "/*"
