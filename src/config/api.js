@@ -16,8 +16,9 @@ const getApiBaseUrl = () => {
     return '';
   }
   
-  // Production fallback to the active Render backend (proxied by Vercel)
-  return '';
+  // Production fallback to the active Render backend
+  // We use the absolute URL because Vercel proxying passes headers that break Render's ingress routing
+  return 'https://court-vision-zxuj.onrender.com/api';
 };
 
 export const API_BASE_URL = getApiBaseUrl();
