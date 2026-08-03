@@ -11,7 +11,7 @@ import time
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from functools import wraps
-from db import init_db, create_user_from_json, authenticate_user_from_json, get_user_by_id, get_saved_players, save_player, remove_saved_player
+from db import init_db, get_db, create_user_from_json, authenticate_user_from_json, get_user_by_id, get_saved_players, save_player, remove_saved_player
 from live_games import get_todays_games, get_upcoming_games, get_top_pra_player
 from recommendations import get_top_performers
 
@@ -380,12 +380,20 @@ def root():
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
+   db_connected = False
+   try:
+       conn = get_db()
+       conn.execute('SELECT 1')
+       conn.close()
+       db_connected = True
+   except Exception:
+       pass
    return jsonify({
        'status': 'healthy',
        'message': 'NBA API server is running',
        'ai_available': AI_AVAILABLE,
        'players_loaded': len(nba_data) if nba_data else 0,
-       'database_connected': False
+       'database_connected': db_connected
    })
 
 
@@ -817,6 +825,8 @@ def recommendations(stat):
 print("Loading NBA data on module import...")
 load_nba_data()
 load_multi_season_data()
+init_db()
+print("Database initialized on module import")
 
 if __name__ == '__main__':
    frontend_process = None
