@@ -15,7 +15,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from nba_web_scraper import NBAWebScraper
 
 STAT_SCALE = 1.0
-MODEL_SCHEMA_VERSION = 2
+MODEL_SCHEMA_VERSION = 3
 
 FEATURE_COLUMNS = (
     'HEIGHT', 'WEIGHT', 'AGE',
@@ -44,14 +44,15 @@ TARGET_SPECS = (
 
 def _build_xgboost_model():
     return MultiOutputRegressor(XGBRegressor(
-        n_estimators=1000,
-        max_depth=10,
-        learning_rate=0.01,
+        n_estimators=200,
+        max_depth=5,
+        learning_rate=0.05,
         subsample=0.8,
         colsample_bytree=0.8,
         random_state=42,
-        n_jobs=-1,
+        n_jobs=1,
     ))
+
 
 class NBAAISystem:
     def __init__(self):
