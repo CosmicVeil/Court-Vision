@@ -828,6 +828,18 @@ load_multi_season_data()
 init_db()
 print("Database initialized on module import")
 
+# Pre-initialize AI system at module level so it's ready for Gunicorn workers
+# (The __main__ block below only runs in local dev, not under Gunicorn)
+if AI_AVAILABLE:
+    try:
+        print("Initializing AI system at module level...")
+        initialize_nba_ai()
+        warm_predictions_cache()
+        print("AI system initialized and predictions cached at module level")
+    except Exception as e:
+        print(f"AI initialization failed at module level (non-fatal): {e}")
+
+
 if __name__ == '__main__':
    frontend_process = None
   

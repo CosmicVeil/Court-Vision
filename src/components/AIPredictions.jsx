@@ -45,32 +45,53 @@ const AIPredictions = ({ onPlayerClick, lazy = true }) => {
     let cancelled = false;
     const fetchPredictions = async () => {
       setLoading(true);
-      try {
-        const response = await fetch(API_ENDPOINTS.aiPredictions);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+      const maxRetries = 3;
+      const baseDelay = 5000; // 5 seconds between retries
+
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout per attempt
+          
+          const response = await fetch(API_ENDPOINTS.aiPredictions, {
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+          if (!cancelled) {
+            setPredictions(data?.predictions ?? EMPTY_PREDICTIONS);
+            setError(null);
+          }
+          return; // Success - exit retry loop
+        } catch (err) {
+          console.error(`Attempt ${attempt + 1}/${maxRetries} failed:`, err);
+          if (cancelled) return;
+          
+          if (attempt < maxRetries - 1) {
+            // Wait before retrying (server might be waking up from cold start)
+            await new Promise(resolve => setTimeout(resolve, baseDelay * (attempt + 1)));
+          } else {
+            setError("Failed to connect to AI server. Make sure the backend is running.");
+          }
         }
-        const data = await response.json();
-        if (!cancelled) {
-          setPredictions(data?.predictions ?? EMPTY_PREDICTIONS);
-        }
-      } catch (err) {
-        console.error("Failed to fetch predictions:", err);
-        if (!cancelled) {
-          setError("Failed to connect to AI server. Make sure the backend is running.");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+      }
+      if (!cancelled) {
+        setLoading(false);
       }
     };
 
-    fetchPredictions();
+    fetchPredictions().finally(() => {
+      if (!cancelled) setLoading(false);
+    });
     return () => {
       cancelled = true;
     };
   }, [shouldLoad]);
+
 
   const formatStat = (value) => {
     if (typeof value === 'number') {
