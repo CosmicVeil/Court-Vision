@@ -17,6 +17,8 @@ from nba_web_scraper import NBAWebScraper
 STAT_SCALE = 1.0
 MODEL_SCHEMA_VERSION = 3
 
+SEASONS_TO_SCRAPE = [2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023, 2024, 2025, 2026]
+
 FEATURE_COLUMNS = (
     'HEIGHT', 'WEIGHT', 'AGE',
     'PPG_LAST', 'APG_LAST', 'RPG_LAST', 'SPG_LAST', 'BPG_LAST',
@@ -47,6 +49,9 @@ def _build_xgboost_model():
         n_estimators=200,
         max_depth=5,
         learning_rate=0.05,
+        n_estimators=10000,
+        max_depth=20,
+        learning_rate=0.01,
         subsample=0.8,
         colsample_bytree=0.8,
         random_state=42,
@@ -180,7 +185,7 @@ class NBAAISystem:
             print("No existing data or model found, proceeding to train.")
 
         print("🔄 Scraping NBA data for multiple seasons (2023-2026)...")
-        self.data = self.scraper.scrape_multiple_seasons([2020,2021,2022,2023, 2024, 2025, 2026])
+        self.data = self.scraper.scrape_multiple_seasons(SEASONS_TO_SCRAPE)
 
         if not self.data:
             print("❌ Failed to scrape NBA data")
