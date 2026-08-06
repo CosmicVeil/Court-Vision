@@ -93,7 +93,7 @@ class NBAWebScraper:
             if not html_content:
                 print(f"❌ Could not access NBA stats page for {season_str}")
                 # If we can't get real data, create mock data for this season
-                season_data = self.create_realistic_mock_data()
+                quit()
             else:
                 # Parse with BeautifulSoup
                 soup = BeautifulSoup(html_content, 'html.parser')

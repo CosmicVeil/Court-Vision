@@ -126,5 +126,38 @@ class ExpandedPredictionPayloadTests(unittest.TestCase):
         self.assertEqual(bundle["top_blocks"][0]["PLAYER_NAME"], "Blocks Leader")
 
 
+class SeasonAccuracyTests(unittest.TestCase):
+    def setUp(self):
+        self.system = NBAAISystem()
+        self.system.data = {
+            2024: [{
+                "PLAYER_NAME": "Test Player", "AGE": 24,
+                "PPG_LAST": 10.0, "APG_LAST": 2.0, "RPG_LAST": 5.0,
+                "SPG_LAST": 1.0, "BPG_LAST": 0.5, "TOV_LAST": 1.5,
+                "MIN_LAST": 25.0, "FG_PCT_LAST": 0.45,
+                "FG3_PCT_LAST": 0.35, "FT_PCT_LAST": 0.80,
+            }],
+            2025: [{
+                "PLAYER_NAME": "Test Player", "AGE": 25,
+                "PPG_LAST": 12.0, "APG_LAST": 3.0, "RPG_LAST": 6.0,
+                "SPG_LAST": 1.2, "BPG_LAST": 0.7, "TOV_LAST": 1.8,
+                "MIN_LAST": 28.0, "FG_PCT_LAST": 0.48,
+                "FG3_PCT_LAST": 0.38, "FT_PCT_LAST": 0.82,
+            }],
+        }
+        self.system.model_trained = True
+        self.system.scaler.fit(np.zeros((1, len(FEATURE_COLUMNS))))
+        self.system.predict = Mock(return_value=np.array([[12.0, 3.0, 6.0, 1.2, 0.7, 1.8, 28.0, 0.48, 0.38, 0.82]]))
+
+    def test_print_season_accuracies_reports_average_stat_differences(self):
+        result = self.system.print_season_accuracies()
+        self.assertIsNotNone(result)
+        self.assertEqual(result["season_count"], 1)
+        self.assertEqual(result["average_differences"]["ppg"], 0.0)
+        self.assertEqual(result["average_differences"]["apg"], 0.0)
+        self.assertEqual(result["average_differences"]["rpg"], 0.0)
+        self.assertEqual(result["seasons"]["2023-24"]["ppg"], 0.0)
+
+
 if __name__ == "__main__":
     unittest.main()

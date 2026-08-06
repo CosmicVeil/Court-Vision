@@ -835,6 +835,7 @@ if AI_AVAILABLE:
         print("Initializing AI system at module level...")
         initialize_nba_ai()
         warm_predictions_cache()
+        print(nba_ai_system.print_season_accuracies())
         print("AI system initialized and predictions cached at module level")
     except Exception as e:
         print(f"AI initialization failed at module level (non-fatal): {e}")

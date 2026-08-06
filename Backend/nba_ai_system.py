@@ -14,6 +14,11 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from nba_web_scraper import NBAWebScraper
 
+
+#TODO: Stop data leakage after the most recent season
+#TODO: Create new models for each stat
+#TODO: Find a way to stop the models from regressing stats usually expected to increase
+
 STAT_SCALE = 1.0
 MODEL_SCHEMA_VERSION = 3
 
@@ -46,11 +51,8 @@ TARGET_SPECS = (
 
 def _build_xgboost_model():
     return MultiOutputRegressor(XGBRegressor(
-        n_estimators=200,
-        max_depth=5,
-        learning_rate=0.05,
-        n_estimators=10000,
-        max_depth=20,
+        n_estimators=1000,
+        max_depth=10,
         learning_rate=0.01,
         subsample=0.8,
         colsample_bytree=0.8,
@@ -74,93 +76,152 @@ class NBAAISystem:
     def clear_predictions_cache(self):
         self._predictions_df = None
 
-    def prepare_combined_data(self):
-        """Prepare combined training data from multiple consecutive seasons"""
+    def _season_label(self, season_year: int) -> str:
+        return f"{season_year - 1}-{str(season_year)[-2:]}"
+
+    def _build_season_transitions(self) -> List[Dict]:
+        """Build feature/target arrays for each consecutive season pair."""
         if not self.data or len(self.data) < 2:
-            print("Insufficient multi-season data for training!")
-            return None, None, None
+            return []
 
-        # We'll use transitions: 2023->2024, 2024->2025, 2025->2026
-        X_list = []
-        y_list = []
-
-        # Get the feature columns from a sample of data (we'll use the first available season)
-        sample_season = None
-        for season_year in sorted(self.data.keys()):
-            if self.data[season_year]:
-                sample_season = season_year
-                break
-
-        if sample_season is None:
-            print("No valid data found in any season!")
-            return None, None, None
-
-        # Process each consecutive season pair
+        transitions = []
         sorted_seasons = sorted(self.data.keys())
+
         for i in range(len(sorted_seasons) - 1):
             current_season = sorted_seasons[i]
             next_season = sorted_seasons[i + 1]
 
-            # Only use consecutive seasons (e.g., 2023->2024, not 2023->2025)
             if next_season != current_season + 1:
                 continue
 
             current_data = self.data[current_season]
             next_data = self.data[next_season]
-
             if not current_data or not next_data:
                 continue
 
-            # Create lookup for next season data by player name
-            next_data_by_name = {}
-            for player in next_data:
-                if 'PLAYER_NAME' in player and player['PLAYER_NAME']:
-                    next_data_by_name[player['PLAYER_NAME']] = player
+            next_data_by_name = {
+                player['PLAYER_NAME']: player
+                for player in next_data
+                if player.get('PLAYER_NAME')
+            }
 
-            # Process each player in current season
+            X_list = []
+            y_list = []
             for player in current_data:
-                if 'PLAYER_NAME' not in player or not player['PLAYER_NAME']:
+                player_name = player.get('PLAYER_NAME')
+                if not player_name or player_name not in next_data_by_name:
                     continue
 
-                player_name = player['PLAYER_NAME']
-                if player_name not in next_data_by_name:
-                    continue  # Skip if player not found in next season
-
                 next_player = next_data_by_name[player_name]
+                feature_vector = [player.get(col, 0) for col in self.feature_columns]
 
-                # Build feature vector from current season data
-                feature_vector = []
-                for col in self.feature_columns:
-                    # Handle missing values - use 0 as default
-                    feature_vector.append(player.get(col, 0))
-
-                # Build target vector from next season data (using _LAST stats as the actual next season performance)
-                # In our data structure, each season's data contains that season's stats with _LAST suffix
-                # So for predicting next season performance, we use the next season's _LAST stats as target
                 try:
                     target_vector = [
                         float(next_player.get(spec['last_column'], 0))
                         for spec in TARGET_SPECS
                     ]
                 except (ValueError, TypeError):
-                    # If conversion fails, skip this player
                     continue
 
                 X_list.append(feature_vector)
                 y_list.append(target_vector)
 
-        if not X_list:
+            if X_list:
+                transitions.append({
+                    'from_season': current_season,
+                    'to_season': next_season,
+                    'season_label': self._season_label(current_season),
+                    'X': np.array(X_list, dtype=float),
+                    'y': np.array(y_list, dtype=float),
+                })
+
+        return transitions
+
+    def _format_stat_difference(self, value: float, spec: Dict) -> float:
+        if spec['kind'] == 'percentage':
+            return round(float(value) * 100, 2)
+        return round(float(value), 2)
+
+    def _compute_stat_differences(self, y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
+        differences = {}
+        for target_index, spec in enumerate(TARGET_SPECS):
+            avg_diff = float(np.mean(np.abs(y_pred[:, target_index] - y_true[:, target_index])))
+            differences[spec['key']] = self._format_stat_difference(avg_diff, spec)
+        return differences
+
+    def print_season_accuracies(self) -> Optional[Dict]:
+        """Evaluate the trained model on each season transition and print avg stat differences."""
+        if not self.data:
+            data_file = os.path.join(os.path.dirname(__file__), 'nba_multi_season_data.pkl')
+            if os.path.exists(data_file):
+                with open(data_file, 'rb') as f:
+                    self.data = pickle.load(f)
+
+        if not self.model_trained or self.model is None:
+            print("Model must be trained before calculating prediction differences.")
+            return None
+
+        transitions = self._build_season_transitions()
+        if not transitions:
+            print("No season data available for prediction difference evaluation.")
+            return None
+
+        print("\nAverage prediction difference by season (|predicted - actual|):")
+        season_results = {}
+        stat_totals = {spec['key']: [] for spec in TARGET_SPECS}
+
+        for transition in transitions:
+            X_scaled = self.scaler.transform(transition['X'])
+            y_true = transition['y']
+            y_pred = self.predict(X_scaled)
+            if y_pred is None:
+                continue
+
+            stat_differences = self._compute_stat_differences(y_true, y_pred)
+            label = transition['season_label']
+            season_results[label] = stat_differences
+
+            for key, value in stat_differences.items():
+                stat_totals[key].append(value)
+
+            diff_summary = ", ".join(
+                f"{key.upper()} {value}" for key, value in stat_differences.items()
+            )
+            print(f"  {label}: {diff_summary} ({len(y_true)} players)")
+
+        if not season_results:
+            print("Unable to compute prediction differences.")
+            return None
+
+        average_differences = {
+            key: round(float(np.mean(values)), 2)
+            for key, values in stat_totals.items()
+            if values
+        }
+
+        avg_summary = ", ".join(
+            f"{key.upper()} {value}" for key, value in average_differences.items()
+        )
+        print(f"Average difference across {len(season_results)} seasons: {avg_summary}\n")
+
+        return {
+            'average_differences': average_differences,
+            'season_count': len(season_results),
+            'seasons': season_results,
+        }
+
+    def prepare_combined_data(self):
+        """Prepare combined training data from multiple consecutive seasons"""
+        transitions = self._build_season_transitions()
+        if not transitions:
             print("No valid player transitions found for training!")
             return None, None, None
 
-        # Convert to numpy arrays
-        X = np.array(X_list, dtype=float)
-        y = np.array(y_list, dtype=float)
-
-        # Scale features
+        X = np.vstack([transition['X'] for transition in transitions])
+        y = np.vstack([transition['y'] for transition in transitions])
         X_scaled = self.scaler.fit_transform(X)
 
-        return X_scaled, y, None  # Return None for df since we don't need it in combined approach
+        return X_scaled, y, None
         
     def initialize_system(self, force_refresh=False):
         if force_refresh:
@@ -567,6 +628,7 @@ class NBAAISystem:
                 self.feature_columns = model_data['feature_columns']
                 self.target_columns = model_data['target_columns']
                 self.validation_metrics = model_data.get('validation_metrics', {})
+                self.model_trained = True
 
                 print(f"Model loaded from {filepath}")
                 return True
@@ -607,3 +669,6 @@ def warm_predictions_cache():
 
 def get_player_prediction(player_name):
     return nba_ai_system.get_player_prediction(player_name)
+
+def get_average_season_accuracy():
+    return nba_ai_system.print_season_accuracies()
