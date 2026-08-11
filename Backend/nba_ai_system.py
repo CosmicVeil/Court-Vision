@@ -14,11 +14,6 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from nba_web_scraper import NBAWebScraper
 
-
-#TODO: Stop data leakage after the most recent season
-#TODO: Create new models for each stat
-#TODO: Find a way to stop the models from regressing stats usually expected to increase
-
 STAT_SCALE = 1.0
 MODEL_SCHEMA_VERSION = 3
 
@@ -51,9 +46,9 @@ TARGET_SPECS = (
 
 def _build_xgboost_model():
     return MultiOutputRegressor(XGBRegressor(
-        n_estimators=1000,
-        max_depth=12,
-        learning_rate=0.01,
+        n_estimators=10000,
+        max_depth=20,
+        learning_rate=0.001,
         subsample=0.8,
         colsample_bytree=0.8,
         random_state=42,
@@ -224,6 +219,10 @@ class NBAAISystem:
         return X_scaled, y, None
         
     def initialize_system(self, force_refresh=False):
+
+        if self.model_trained and not force_refresh:
+            return True
+        
         if force_refresh:
             self.clear_predictions_cache()
 
@@ -628,7 +627,6 @@ class NBAAISystem:
                 self.feature_columns = model_data['feature_columns']
                 self.target_columns = model_data['target_columns']
                 self.validation_metrics = model_data.get('validation_metrics', {})
-                self.model_trained = True
 
                 print(f"Model loaded from {filepath}")
                 return True
