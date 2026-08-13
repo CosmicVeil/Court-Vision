@@ -146,6 +146,7 @@ class SeasonAccuracyTests(unittest.TestCase):
             }],
         }
         self.system.model_trained = True
+        self.system.model = Mock()
         self.system.scaler.fit(np.zeros((1, len(FEATURE_COLUMNS))))
         self.system.predict = Mock(return_value=np.array([[12.0, 3.0, 6.0, 1.2, 0.7, 1.8, 28.0, 0.48, 0.38, 0.82]]))
 

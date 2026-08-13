@@ -143,7 +143,6 @@ class NBAWebScraper:
             all_season_data[season_year] = players_data
             print(f"✅ Completed scraping for {season_str}: {len(players_data)} players")
 
-            # Add a small delay between requests to be respectful
             time.sleep(1)
 
         return all_season_data

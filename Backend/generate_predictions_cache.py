@@ -7,6 +7,14 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 print("Loading ML models and generating predictions... This may take a moment.")
 from nba_ai_system import initialize_nba_ai, get_ai_predictions_bundle, nba_ai_system
+from recommendations import get_top_performers
+
+
+RECOMMENDATION_STATS = ("PPG", "APG", "RPG", "PRA")
+
+
+def build_recommendations(getter=get_top_performers):
+    return {stat: getter(stat) for stat in RECOMMENDATION_STATS}
 
 def main():
     if not initialize_nba_ai():
@@ -69,7 +77,8 @@ def main():
     cache = {
         'bundle': bundle,
         'players': {p['name'].lower(): p for p in all_players},
-        'all_players_list': all_players
+        'all_players_list': all_players,
+        'recommendations': build_recommendations()
     }
     
     with open('predictions_cache.json', 'w') as f:

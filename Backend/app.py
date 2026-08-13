@@ -28,6 +28,23 @@ IS_RENDER = os.environ.get('RENDER') == 'true' or os.environ.get('RENDER') == '1
 predictions_cache = None
 AI_AVAILABLE = False
 
+SORT_KEY_MAP = {
+   'name': ('PLAYER_NAME', str),
+   'team': ('TEAM', str),
+   'position': ('POSITION', str),
+   'ppg': ('PPG_LAST', float),
+   'apg': ('APG_LAST', float),
+   'rpg': ('RPG_LAST', float),
+   'spg': ('SPG_LAST', float),
+   'bpg': ('BPG_LAST', float),
+   'fg_pct': ('FG_PCT_LAST', float),
+   'fg3_pct': ('FG3_PCT_LAST', float),
+   'ft_pct': ('FT_PCT_LAST', float),
+   'games': ('GAMES_PLAYED_LAST', float),
+   'age': ('AGE', float),
+}
+
+
 if IS_RENDER:
     print("Running in low-memory environment (Render). Loading static AI predictions instead of full model.")
     try:
@@ -407,23 +424,6 @@ def health_check():
        'players_loaded': len(nba_data) if nba_data else 0,
        'database_connected': db_connected
    })
-
-
-SORT_KEY_MAP = {
-   'name': ('PLAYER_NAME', str),
-   'team': ('TEAM', str),
-   'position': ('POSITION', str),
-   'ppg': ('PPG_LAST', float),
-   'apg': ('APG_LAST', float),
-   'rpg': ('RPG_LAST', float),
-   'spg': ('SPG_LAST', float),
-   'bpg': ('BPG_LAST', float),
-   'fg_pct': ('FG_PCT_LAST', float),
-   'fg3_pct': ('FG3_PCT_LAST', float),
-   'ft_pct': ('FT_PCT_LAST', float),
-   'games': ('GAMES_PLAYED_LAST', float),
-   'age': ('AGE', float),
-}
 
 
 @app.route('/api/players', methods=['GET'])
@@ -825,7 +825,7 @@ def get_stat_leaders():
 
 @app.route('/api/recommendations/<stat>', methods=['GET'])
 def recommendations(stat):
-   if not AI_AVAILABLE:
+   if not AI_AVAILABLE and not IS_RENDER:
        return jsonify({'error': 'AI predictions not available', 'ai_available': False}), 503
 
 
@@ -835,7 +835,26 @@ def recommendations(stat):
 
 
    try:
-       data = get_top_performers(stat_clean)
+       recommendations_cache = (
+           predictions_cache.get('recommendations', {})
+           if isinstance(predictions_cache, dict)
+           else {}
+       )
+       cached_data = (
+           recommendations_cache.get(stat_clean)
+           if isinstance(recommendations_cache, dict)
+           else None
+       )
+
+       if (
+           IS_RENDER
+           and isinstance(recommendations_cache, dict)
+           and stat_clean in recommendations_cache
+           and isinstance(cached_data, list)
+       ):
+           data = cached_data
+       else:
+           data = get_top_performers(stat_clean)
        return jsonify(data), 200
    except Exception as e:
        print(f"Error in recommendations: {e}")

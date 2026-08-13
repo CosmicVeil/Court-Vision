@@ -41,5 +41,68 @@ class ExpandedPredictionApiTests(unittest.TestCase):
         self.assertEqual(player["predicted_mpg"], 27.0)
 
 
+class CachedRecommendationApiTests(unittest.TestCase):
+    def _get_recommendations(self, cache):
+        model_data = [{"source": "model"}]
+        with patch.object(app_module, "AI_AVAILABLE", True), patch.object(
+            app_module, "IS_RENDER", True
+        ), patch.object(app_module, "predictions_cache", cache), patch.object(
+            app_module, "get_top_performers", return_value=model_data
+        ) as model_getter:
+            response = app_module.app.test_client().get("/api/recommendations/ppg")
+        return response, model_getter
+
+    def test_render_returns_cached_recommendations(self):
+        cached_data = [{"source": "cache"}]
+
+        response, model_getter = self._get_recommendations(
+            {"recommendations": {"PPG": cached_data}}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json(), cached_data)
+        model_getter.assert_not_called()
+
+    def test_empty_cached_list_is_valid(self):
+        response, model_getter = self._get_recommendations(
+            {"recommendations": {"PPG": []}}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json(), [])
+        model_getter.assert_not_called()
+
+    def test_missing_cached_stat_falls_back_to_model(self):
+        response, model_getter = self._get_recommendations(
+            {"recommendations": {"APG": [{"source": "cache"}]}}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json(), [{"source": "model"}])
+        model_getter.assert_called_once_with("PPG")
+
+    def test_invalid_cached_stat_falls_back_to_model(self):
+        response, model_getter = self._get_recommendations(
+            {"recommendations": {"PPG": None}}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json(), [{"source": "model"}])
+        model_getter.assert_called_once_with("PPG")
+
+    def test_missing_cache_file_on_render_falls_back_to_model(self):
+        model_data = [{"source": "model"}]
+        with patch.object(app_module, "AI_AVAILABLE", False), patch.object(
+            app_module, "IS_RENDER", True
+        ), patch.object(app_module, "predictions_cache", None), patch.object(
+            app_module, "get_top_performers", return_value=model_data
+        ) as model_getter:
+            response = app_module.app.test_client().get("/api/recommendations/ppg")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json(), model_data)
+        model_getter.assert_called_once_with("PPG")
+
+
 if __name__ == "__main__":
     unittest.main()
