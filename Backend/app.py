@@ -22,12 +22,28 @@ from recommendations import get_top_performers
 
 
 
-try:
-   from nba_ai_system import get_ai_predictions_bundle, get_player_prediction, initialize_nba_ai, nba_ai_system, STAT_SCALE, warm_predictions_cache
-   AI_AVAILABLE = True
-except ImportError as e:
-   print(f"AI predictions module not available: {e}")
-   AI_AVAILABLE = False
+import functools
+
+IS_RENDER = os.environ.get('RENDER') == 'true' or os.environ.get('RENDER') == '1' or os.environ.get('LOW_MEMORY') == 'true'
+predictions_cache = None
+AI_AVAILABLE = False
+
+if IS_RENDER:
+    print("Running in low-memory environment (Render). Loading static AI predictions instead of full model.")
+    try:
+        cache_path = os.path.join(os.path.dirname(__file__), 'predictions_cache.json')
+        with open(cache_path, 'r') as f:
+            predictions_cache = json.load(f)
+            AI_AVAILABLE = True
+            print("Successfully loaded static predictions cache.")
+    except Exception as e:
+        print(f"Failed to load predictions_cache.json: {e}")
+else:
+    try:
+       from nba_ai_system import get_ai_predictions_bundle, get_player_prediction, initialize_nba_ai, nba_ai_system, STAT_SCALE, warm_predictions_cache
+       AI_AVAILABLE = True
+    except ImportError as e:
+       print(f"AI predictions module not available: {e}")
 
 
 app = Flask(__name__)
@@ -638,8 +654,11 @@ def get_ai_predictions():
        }), 503
   
    try:
-       initialize_nba_ai()
-       predictions = get_ai_predictions_bundle(10)
+       if IS_RENDER and predictions_cache:
+           predictions = predictions_cache.get('bundle', {})
+       else:
+           initialize_nba_ai()
+           predictions = get_ai_predictions_bundle(10)
 
        return jsonify({
            'predictions': predictions,
@@ -665,36 +684,39 @@ def get_all_predictions_paginated():
        }), 503
   
    try:
-       initialize_nba_ai()
-       predictions_df = nba_ai_system.build_predictions_df()
+       if IS_RENDER and predictions_cache:
+           results = predictions_cache.get('all_players_list', [])
+       else:
+           initialize_nba_ai()
+           predictions_df = nba_ai_system.build_predictions_df()
 
-       if predictions_df is None:
-           return jsonify({'error': 'Failed to generate predictions'}), 500
+           if predictions_df is None:
+               return jsonify({'error': 'Failed to generate predictions'}), 500
 
-       results = []
-       for _, row in predictions_df.iterrows():
-           player_name = row['PLAYER_NAME']
-           result = {
-               'id': int(row.get('PLAYER_ID', abs(hash(player_name)) % (10**9))),
-               'name': player_name,
-               'team': row.get('TEAM', 'UNK'),
-               'position': row.get('POSITION', 'UNK'),
-               'age': int(row.get('AGE', 0)),
-           }
-           for key in ('ppg', 'apg', 'rpg', 'spg', 'bpg', 'tov'):
-               result[f'{key}_last'] = round(float(row.get(f'{key.upper()}_LAST', 0)), 1)
-               result[f'predicted_{key}'] = round(float(row.get(f'PREDICTED_{key.upper()}', 0)), 1)
-           result['mpg_last'] = round(float(row.get('MIN_LAST', 0)), 1)
-           result['predicted_mpg'] = round(float(row.get('PREDICTED_MPG', 0)), 1)
-           for key, column in (
-               ('fg_pct', 'FG_PCT'),
-               ('fg3_pct', 'FG3_PCT'),
-               ('ft_pct', 'FT_PCT'),
-           ):
-               result[f'{key}_last'] = round(float(row.get(f'{column}_LAST', 0)) * 100, 1)
-               result[f'predicted_{key}'] = round(float(row.get(f'PREDICTED_{column}', 0)) * 100, 1)
-           results.append(result)
-          
+           results = []
+           for _, row in predictions_df.iterrows():
+               player_name = row['PLAYER_NAME']
+               result = {
+                   'id': int(row.get('PLAYER_ID', abs(hash(player_name)) % (10**9))),
+                   'name': player_name,
+                   'team': row.get('TEAM', 'UNK'),
+                   'position': row.get('POSITION', 'UNK'),
+                   'age': int(row.get('AGE', 0)),
+               }
+               for key in ('ppg', 'apg', 'rpg', 'spg', 'bpg', 'tov'):
+                   result[f'{key}_last'] = round(float(row.get(f'{key.upper()}_LAST', 0)), 1)
+                   result[f'predicted_{key}'] = round(float(row.get(f'PREDICTED_{key.upper()}', 0)), 1)
+               result['mpg_last'] = round(float(row.get('MIN_LAST', 0)), 1)
+               result['predicted_mpg'] = round(float(row.get('PREDICTED_MPG', 0)), 1)
+               for key, column in (
+                   ('fg_pct', 'FG_PCT'),
+                   ('fg3_pct', 'FG3_PCT'),
+                   ('ft_pct', 'FT_PCT'),
+               ):
+                   result[f'{key}_last'] = round(float(row.get(f'{column}_LAST', 0)) * 100, 1)
+                   result[f'predicted_{key}'] = round(float(row.get(f'PREDICTED_{column}', 0)) * 100, 1)
+               results.append(result)
+               
        search = sanitize_string(request.args.get('search', ''), 50).lower()
        team = sanitize_string(request.args.get('team', ''), 10).upper()
        position = sanitize_string(request.args.get('position', ''), 10).upper()
@@ -759,7 +781,12 @@ def get_player_prediction_api(player_name):
        return jsonify({'error': 'Invalid player name'}), 400
   
    try:
-       prediction = get_player_prediction(player_name_clean)
+       if IS_RENDER and predictions_cache:
+           prediction = predictions_cache.get('players', {}).get(player_name_clean.lower())
+           if not prediction:
+               return jsonify({'error': 'Player not found in cache'}), 404
+       else:
+           prediction = get_player_prediction(player_name_clean)
        return jsonify({
            'prediction': prediction,
            'ai_available': True
