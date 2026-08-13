@@ -19,8 +19,13 @@ window.fetch = function (input, init) {
   return originalFetch(input, init);
 };
 
-import App from './App.jsx' 
+import App from './App.jsx'
 import './components/home.css'
+
+import ReactGA from "react-ga4";
+
+ReactGA.initialize("G-ZEC2G93W0V");
+ReactGA.send({ hitType: "pageview", page: window.location.pathname });
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

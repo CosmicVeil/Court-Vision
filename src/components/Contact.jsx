@@ -85,7 +85,7 @@ function Contact() {
               <span className="team-status"><i /> Available to connect</span>
             </div>
             <div className="team-card-content">
-              <p className="contact-label">BACKEND &amp; PREDICTIONS</p>
+              <p className="contact-label">BACKEND &amp; FRONTEND</p>
               <h3>Varun Uday</h3>
               <p className="team-role">Backend Developer / Frontend</p>
               <p className="team-bio">
@@ -95,7 +95,7 @@ function Contact() {
               <div className="team-skills" aria-label="Varun's focus areas">
                 <span>Flask</span>
                 <span>SQLite</span>
-                <span>XGBoost</span>
+                <span>JS</span>
               </div>
             </div>
             <a
