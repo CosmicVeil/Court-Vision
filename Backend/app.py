@@ -853,7 +853,7 @@ print("Database initialized on module import")
 
 # Pre-initialize AI system at module level so it's ready for Gunicorn workers
 # (The __main__ block below only runs in local dev, not under Gunicorn)
-if AI_AVAILABLE:
+if AI_AVAILABLE and not IS_RENDER:
     try:
         print("Initializing AI system at module level...")
         initialize_nba_ai()
