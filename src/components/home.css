@@ -808,9 +808,16 @@ a { color: inherit; text-decoration: none; }
    SCROLL-REVEAL ANIMATIONS
    ============================================================ */
 .scroll-reveal {
-  opacity: 0;
-  transform: translateY(60px);
+  opacity: 1;
+  transform: translateY(0);
   transition: opacity 0.8s var(--ease-out-expo), transform 0.8s var(--ease-out-expo);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .scroll-reveal:not(.revealed) {
+    opacity: 0.15;
+    transform: translateY(30px);
+  }
 }
 
 .scroll-reveal.revealed {

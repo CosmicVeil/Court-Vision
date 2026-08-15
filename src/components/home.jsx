@@ -17,7 +17,7 @@ function useScrollReveal() {
           }
         });
       },
-      { threshold: 0.15, rootMargin: '0px 0px -60px 0px' }
+      { threshold: 0.05, rootMargin: '0px 0px 100px 0px' }
     );
     document.querySelectorAll('.scroll-reveal, .scroll-reveal-left, .scroll-reveal-scale').forEach((el) => {
       observer.observe(el);
