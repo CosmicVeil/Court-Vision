@@ -27,18 +27,7 @@ function Contact() {
         </p>
       </section>
 
-      <section className="contact-project-card" aria-label="Court-Vision project contact">
-        <div className="contact-project-orb">✦</div>
-        <div>
-          <p className="contact-label">PROJECT CONTACT</p>
-          <h2>Let&apos;s build what&apos;s next.</h2>
-          <p>For project updates, collaboration, and future opportunities, find Court-Vision at:</p>
-        </div>
-        <a className="contact-domain" href="https://courtvision.works" target="_blank" rel="noreferrer">
-          <span>courtvision.works</span>
-          <small>Launching soon</small>
-        </a>
-      </section>
+
 
       <section className="contact-team" aria-labelledby="team-title">
         <div className="contact-section-heading">

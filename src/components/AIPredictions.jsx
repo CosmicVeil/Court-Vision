@@ -152,7 +152,10 @@ const AIPredictions = ({ onPlayerClick, lazy = true }) => {
       }
     };
 
-    const stat = getStatDisplay();
+    const pastNum = parseFloat(stat.past) || 0;
+    const currentNum = parseFloat(stat.current) || 0;
+    const isUp = currentNum >= pastNum;
+    const diff = (currentNum - pastNum).toFixed(1);
 
     return (
       <div key={index} className="player-card" onClick={() => onPlayerClick && onPlayerClick(player)} style={{ cursor: 'pointer' }}>
@@ -169,20 +172,26 @@ const AIPredictions = ({ onPlayerClick, lazy = true }) => {
               <div className="breakout-stats-grid">
                 <div className="breakout-stat">
                   <div className="stat-value-small">{stat.past}</div>
-                  <div className="stat-arrow-small">→</div>
-                  <div className="stat-value-small">{stat.current}</div>
+                  <div className={`stat-arrow-small ${parseFloat(stat.current) >= parseFloat(stat.past) ? 'positive' : 'negative'}`}>
+                    {parseFloat(stat.current) >= parseFloat(stat.past) ? '↗' : '↘'}
+                  </div>
+                  <div className={`stat-value-small ${parseFloat(stat.current) >= parseFloat(stat.past) ? 'positive' : 'negative'}`}>{stat.current}</div>
                   <div className="stat-label-small">PPG</div>
                 </div>
                 <div className="breakout-stat">
                   <div className="stat-value-small">{stat.apg_past}</div>
-                  <div className="stat-arrow-small">→</div>
-                  <div className="stat-value-small">{stat.apg_current}</div>
+                  <div className={`stat-arrow-small ${parseFloat(stat.apg_current) >= parseFloat(stat.apg_past) ? 'positive' : 'negative'}`}>
+                    {parseFloat(stat.apg_current) >= parseFloat(stat.apg_past) ? '↗' : '↘'}
+                  </div>
+                  <div className={`stat-value-small ${parseFloat(stat.apg_current) >= parseFloat(stat.apg_past) ? 'positive' : 'negative'}`}>{stat.apg_current}</div>
                   <div className="stat-label-small">APG</div>
                 </div>
                 <div className="breakout-stat">
                   <div className="stat-value-small">{stat.rpg_past}</div>
-                  <div className="stat-arrow-small">→</div>
-                  <div className="stat-value-small">{stat.rpg_current}</div>
+                  <div className={`stat-arrow-small ${parseFloat(stat.rpg_current) >= parseFloat(stat.rpg_past) ? 'positive' : 'negative'}`}>
+                    {parseFloat(stat.rpg_current) >= parseFloat(stat.rpg_past) ? '↗' : '↘'}
+                  </div>
+                  <div className={`stat-value-small ${parseFloat(stat.rpg_current) >= parseFloat(stat.rpg_past) ? 'positive' : 'negative'}`}>{stat.rpg_current}</div>
                   <div className="stat-label-small">RPG</div>
                 </div>
               </div>
@@ -191,12 +200,15 @@ const AIPredictions = ({ onPlayerClick, lazy = true }) => {
             <div className="stat-comparison">
               <div className="stat-past">
                 <div className="stat-value-small">{stat.past}</div>
-                <div className="stat-label-small">Past {stat.label}</div>
+                <div className="stat-label-small">PAST {stat.label}</div>
               </div>
-              <div className="stat-arrow">→</div>
+              <div className={`stat-arrow-indicator ${isUp ? 'positive' : 'negative'}`}>
+                <span className="arrow-glyph">{isUp ? '↗' : '↘'}</span>
+                <span className="diff-val">{isUp ? `+${diff}` : diff}</span>
+              </div>
               <div className="stat-current">
-                <div className="stat-value">{stat.current}</div>
-                <div className="stat-label">Predicted {stat.label}</div>
+                <div className={`stat-value ${isUp ? 'positive' : 'negative'}`}>{stat.current}</div>
+                <div className="stat-label">PREDICTED {stat.label}</div>
               </div>
             </div>
           )}

@@ -16,7 +16,7 @@
 /* ---------- Header ---------- */
 .recommendations-header {
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 32px;
   position: relative;
   z-index: 10;
 }
@@ -40,9 +40,33 @@
   line-height: 1.6;
 }
 
+/* ---------- Category Tabs (Centered) ---------- */
+.category-tabs {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 40px;
+}
+
+.category-tabs .tab-button {
+  padding: 10px 24px;
+  background: linear-gradient(135deg, #ff6436, #e04a1c);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-full, 9999px);
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  box-shadow: 0 0 20px rgba(255, 100, 54, 0.45);
+  cursor: pointer;
+}
+
 /* ---------- Spotlight Section ---------- */
 .spotlight-section {
-  margin-bottom: 48px;
+  margin-bottom: 56px;
   text-align: center;
 }
 
@@ -148,6 +172,12 @@
   color: #4caf50;
 }
 
+.spotlight-growth-badge.negative {
+  background: rgba(239, 83, 80, 0.15);
+  border: 1px solid rgba(239, 83, 80, 0.4);
+  color: #ef5350;
+}
+
 .spotlight-stats-list {
   display: flex;
   flex-direction: column;
@@ -176,27 +206,152 @@
   color: var(--color-stone, #8e8c94);
 }
 
-.stat-comparison {
+.spotlight-stat-comparison {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
 }
 
-.current-val {
+.spotlight-stat-val {
   font-family: var(--font-mono, monospace);
-  font-size: 12px;
-  color: var(--color-stone, #8e8c94);
-  text-decoration: line-through;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
 }
 
-.pred-val {
-  font-family: var(--font-mono, monospace);
-  font-size: 14px;
-  font-weight: 800;
-  color: #ffffff;
-}
-
-.spotlight-stat-row.highlighted .pred-val {
+.spotlight-stat-val.predicted {
   color: var(--color-ember-orange, #ff6436);
-  text-shadow: 0 0 10px rgba(255, 100, 54, 0.4);
+  font-weight: 800;
+}
+
+.spotlight-stat-arrow {
+  color: var(--color-stone, #8e8c94);
+  font-size: 11px;
+}
+
+.spotlight-stat-growth {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.spotlight-stat-growth.positive { color: #4caf50; }
+.spotlight-stat-growth.negative { color: #ef5350; }
+
+/* ---------- Basketball Insights & Trends Cards ---------- */
+.section-heading {
+  font-family: var(--font-heading, 'Inter', sans-serif);
+  font-size: 1.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #ffffff;
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.section-description {
+  font-size: 14px;
+  color: var(--color-stone, #8e8c94);
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.recommendations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.recommendation-card {
+  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
+  border: 1px solid rgba(255, 100, 54, 0.18);
+  border-radius: var(--radius-xl, 20px);
+  padding: 24px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.recommendation-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(255, 100, 54, 0.5);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 24px rgba(255, 100, 54, 0.2);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.insight-icon {
+  font-size: 1.5rem;
+}
+
+.category-badge {
+  background: rgba(255, 100, 54, 0.15);
+  border: 1px solid var(--color-ember-orange, #ff6436);
+  color: var(--color-ember-orange, #ff6436);
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.insight-title {
+  font-family: var(--font-heading, 'Inter', sans-serif);
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.recommendation-reason {
+  color: var(--color-stone, #8e8c94);
+  font-size: 13.5px;
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.insight-details {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: #ff9b7d;
+  margin-bottom: 20px;
+}
+
+.view-stats-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 100, 54, 0.25);
+  border-radius: var(--radius-full, 9999px);
+  color: #fff;
+  text-decoration: none;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+}
+
+.view-stats-link:hover {
+  background: rgba(255, 100, 54, 0.15);
+  border-color: var(--color-ember-orange, #ff6436);
+  box-shadow: 0 0 16px rgba(255, 100, 54, 0.25);
 }

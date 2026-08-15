@@ -85,19 +85,27 @@ const Favourites = () => {
     return (
       <div className="favourites-wrapper">
         <header className="favourites-header">
-          <Link to="/" className="back-link">← Back to Home</Link>
-          <h1 className="favourites-title">FAVOURITES</h1>
-          <p className="favourites-subtitle">Track your favorite players in one place</p>
+          <div className="stats-nav-top">
+            <Link to="/" className="back-to-home">← HOME</Link>
+            <span className="cv-section-badge">PLAYER ROSTER</span>
+          </div>
+          <h1 className="favourites-title">SAVED <span className="text-ember">FAVOURITES</span></h1>
+          <p className="favourites-subtitle">Track and manage your personalized player watchlist</p>
         </header>
-        <div className="empty-state" style={{ maxWidth: '600px', margin: '0 auto' }}>
-          <div className="empty-icon" style={{ fontSize: '4rem', marginBottom: '1.5rem', color: '#ff4500' }}>🔒</div>
-          <h2 className="empty-title">Authentication Required</h2>
+        <div className="empty-state" style={{ maxWidth: '520px', margin: '0 auto' }}>
+          <div className="empty-icon-wrapper" style={{ margin: '0 auto 1.5rem', width: 64, height: 64, borderRadius: '50%', background: 'rgba(255, 100, 54, 0.12)', border: '1px solid rgba(255, 100, 54, 0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-ember-orange, #ff6436)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+          <h2 className="empty-title">AUTHENTICATION REQUIRED</h2>
           <p className="empty-description">
-            You must create an account or log in to view and manage your favorite NBA players.
+            Create a free account or log in to track your favorite NBA players and save customized analytics.
           </p>
-          <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', marginTop: '2rem' }}>
-            <Link to="/login" className="empty-cta" style={{ textDecoration: 'none' }}>Log In</Link>
-            <Link to="/create-account" className="empty-cta" style={{ textDecoration: 'none', background: 'rgba(255,255,255,0.1)', borderColor: 'rgba(255,255,255,0.2)', color: '#fff', boxShadow: 'none' }}>Create Account</Link>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '2rem' }}>
+            <Link to="/login" className="empty-cta">LOG IN</Link>
+            <Link to="/create-account" className="empty-cta" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,100,54,0.25)', color: '#fff', boxShadow: 'none' }}>CREATE ACCOUNT</Link>
           </div>
         </div>
       </div>
