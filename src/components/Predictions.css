@@ -1,5 +1,5 @@
 /* ============================================================
-   COURT VISION — AI PREDICTIONS
+   COURT VISION — AI PREDICTIONS PAGE
    Obsidian Glass Arena Theme + Ember Orange Design Tokens
    ============================================================ */
 
@@ -16,7 +16,7 @@
 /* ---------- Header ---------- */
 .predictions-header {
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 36px;
   position: relative;
   z-index: 10;
 }
@@ -40,17 +40,116 @@
   line-height: 1.6;
 }
 
-/* ---------- Sorting Section ---------- */
+/* ---------- Filters Bar ---------- */
+.filters-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  max-width: 1200px;
+  margin: 0 auto 28px;
+  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
+  border: 1px solid rgba(255, 100, 54, 0.18);
+  border-radius: var(--radius-xl, 20px);
+  padding: 16px 24px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.search-input {
+  padding: 10px 18px;
+  border: 1px solid rgba(255, 100, 54, 0.2);
+  border-radius: var(--radius-full, 9999px);
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 13px;
+  min-width: 220px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.search-input:focus {
+  border-color: var(--color-ember-orange, #ff6436);
+  box-shadow: 0 0 16px rgba(255, 100, 54, 0.3);
+}
+
+.team-filter, .position-filter {
+  padding: 10px 18px;
+  border: 1px solid rgba(255, 100, 54, 0.2);
+  border-radius: var(--radius-full, 9999px);
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 12px;
+  font-family: var(--font-mono, monospace);
+  font-weight: 700;
+  text-transform: uppercase;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.team-filter:focus, .position-filter:focus {
+  border-color: var(--color-ember-orange, #ff6436);
+}
+
+.clear-filters-btn {
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 100, 54, 0.25);
+  border-radius: var(--radius-full, 9999px);
+  color: var(--color-ember-orange, #ff6436);
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clear-filters-btn:hover {
+  background: rgba(255, 100, 54, 0.15);
+  border-color: var(--color-ember-orange, #ff6436);
+}
+
+/* ---------- Sorting Bar ---------- */
+.sorting-section {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto 32px;
+}
+
 .sort-control-group {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
+.sort-label {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-stone, #8e8c94);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
 .prediction-sort-select {
-  padding: 8px 16px;
-  border: 1px solid rgba(255, 100, 54, 0.2);
+  padding: 8px 18px;
+  border: 1px solid rgba(255, 100, 54, 0.25);
   border-radius: var(--radius-full, 9999px);
   background: rgba(0, 0, 0, 0.5);
   color: #fff;
@@ -70,9 +169,12 @@
 }
 
 .sort-direction-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 8px 18px;
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 100, 54, 0.2);
+  border: 1px solid rgba(255, 100, 54, 0.25);
   border-radius: var(--radius-full, 9999px);
   color: var(--color-stone, #8e8c94);
   font-family: var(--font-mono, monospace);
@@ -90,10 +192,296 @@
   color: #ffffff;
 }
 
+/* ---------- Predictions Grid & Obsidian Cards ---------- */
+.predictions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto 48px;
+}
+
+.prediction-card {
+  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
+  border: 1px solid rgba(255, 100, 54, 0.18);
+  border-radius: var(--radius-xl, 20px);
+  padding: 24px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.prediction-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(255, 100, 54, 0.5);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 24px rgba(255, 100, 54, 0.2);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  gap: 12px;
+}
+
+.player-meta h3 {
+  font-family: var(--font-heading, 'Inter', sans-serif);
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: #fff;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.player-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.team-badge, .position-badge, .age-badge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.team-badge {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.position-badge {
+  background: rgba(255, 100, 54, 0.12);
+  border: 1px solid rgba(255, 100, 54, 0.3);
+  color: var(--color-ember-orange, #ff6436);
+}
+
+.age-badge {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--color-stone, #8e8c94);
+}
+
+.prediction-favorite-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 100, 54, 0.25);
+  color: var(--color-ember-orange, #ff6436);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.prediction-favorite-btn:hover {
+  background: rgba(255, 100, 54, 0.15);
+  border-color: var(--color-ember-orange, #ff6436);
+}
+
+.prediction-favorite-btn.favorited {
+  background: rgba(255, 206, 109, 0.15);
+  color: #ffce6d;
+  border-color: rgba(255, 206, 109, 0.4);
+  box-shadow: 0 0 12px rgba(255, 206, 109, 0.2);
+}
+
+/* ---------- Card Body Stats ---------- */
+.card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.prediction-card-main-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 14px 10px;
+}
+
+.prediction-main-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.prediction-main-stat-value {
+  font-family: var(--font-mono, monospace);
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--color-ember-orange, #ff6436);
+  line-height: 1.2;
+}
+
+.prediction-main-stat-label {
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  color: var(--color-stone, #8e8c94);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+.prediction-card-shooting {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.prediction-shooting-heading {
+  display: block;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-stone, #8e8c94);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.prediction-shooting-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  text-align: center;
+}
+
+.prediction-shooting-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.prediction-shooting-value {
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.prediction-shooting-label {
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  color: var(--color-stone, #8e8c94);
+}
+
+/* ---------- Pagination ---------- */
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin: 40px 0 20px;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.pagination-btn {
+  padding: 10px 24px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 100, 54, 0.25);
+  border-radius: var(--radius-full, 9999px);
+  color: #fff;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: rgba(255, 100, 54, 0.15);
+  border-color: var(--color-ember-orange, #ff6436);
+  box-shadow: 0 0 16px rgba(255, 100, 54, 0.25);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.page-info-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.page-count-info {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--color-stone, #8e8c94);
+  text-align: center;
+}
+
+/* ---------- States ---------- */
+.loading, .error, .no-results {
+  text-align: center;
+  padding: 80px 20px;
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--color-stone, #8e8c94);
+}
+
+.error {
+  color: #ef5350;
+}
+
 /* ---------- Auth Modal inside Predictions ---------- */
-.prediction-auth-icon {
-  font-size: 2.5rem;
-  margin-bottom: 12px;
+.prediction-auth-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.prediction-auth-modal-content {
+  background: linear-gradient(180deg, rgba(24, 24, 30, 0.95) 0%, rgba(14, 14, 18, 0.98) 100%);
+  border: 1px solid rgba(255, 100, 54, 0.3);
+  border-radius: var(--radius-xl, 20px);
+  padding: 36px;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
 }
 
 .prediction-auth-actions {
