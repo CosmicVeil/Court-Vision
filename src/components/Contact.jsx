@@ -79,10 +79,10 @@ function Contact() {
                 prediction-serving endpoints that power Court Vision's live outcome forecasts.
               </p>
               <div className="team-skills" aria-label="Varun's focus areas">
-                <span>Flask &amp; REST APIs</span>
+                <span>Flask</span>
                 <span>Scikit-Learn</span>
                 <span>Pandas &amp; NumPy</span>
-                <span>SQLite</span>
+                <span>JS</span>
               </div>
             </div>
             <a
