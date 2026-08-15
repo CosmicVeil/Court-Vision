@@ -327,6 +327,14 @@ const Predictions = () => {
                 style={{ cursor: 'pointer' }}
               >
                 <div className="card-header">
+                  <div className="player-meta">
+                    <h3>{player.name}</h3>
+                    <div className="player-badges">
+                      <span className="team-badge">{player.team}</span>
+                      <span className="position-badge">{player.position}</span>
+                      <span className="age-badge">Age {player.age}</span>
+                    </div>
+                  </div>
                   <button
                     type="button"
                     className={`prediction-favorite-btn ${favoriteIds.has(player.id) ? 'favorited' : ''}`}
@@ -338,14 +346,6 @@ const Predictions = () => {
                   >
                     {favoriteIds.has(player.id) ? 'FAVORITED' : 'ADD FAV'}
                   </button>
-                  <div className="player-meta">
-                    <h3>{player.name}</h3>
-                    <div className="player-badges">
-                      <span className="team-badge">{player.team}</span>
-                      <span className="position-badge">{player.position}</span>
-                      <span className="age-badge">Age {player.age}</span>
-                    </div>
-                  </div>
                 </div>
 
                 <div className="card-body">
