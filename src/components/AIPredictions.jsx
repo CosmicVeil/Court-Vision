@@ -152,6 +152,7 @@ const AIPredictions = ({ onPlayerClick, lazy = true }) => {
       }
     };
 
+    const stat = getStatDisplay();
     const pastNum = parseFloat(stat.past) || 0;
     const currentNum = parseFloat(stat.current) || 0;
     const isUp = currentNum >= pastNum;
