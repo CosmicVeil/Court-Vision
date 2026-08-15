@@ -75,7 +75,7 @@ function Contact() {
               <h3>Varun Uday</h3>
               <p className="team-role">Backend Developer</p>
               <p className="team-bio">
-                Varun develops and maintains the Flask API layer, real-time NBA telemetry ingestion pipelines, and
+                Varun develops and maintains the Flask API layer, real-time NBA data collection, and
                 prediction-serving endpoints that power Court Vision's live outcome forecasts.
               </p>
               <div className="team-skills" aria-label="Varun's focus areas">

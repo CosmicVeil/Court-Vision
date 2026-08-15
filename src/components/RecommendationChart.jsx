@@ -134,9 +134,12 @@ const RecommendationChart = () => {
     return (
         <div className="recommendations-wrapper">
             <header className="recommendations-header">
-                <Link to="/recommendations" className="back-link">← Back to Radar</Link>
+                <div className="stats-nav-top">
+                    <Link to="/recommendations" className="back-to-home">← RADAR</Link>
+                    <span className="cv-section-badge">AI SPOTLIGHT</span>
+                </div>
                 <h1 className="recommendations-title">
-                    {wording.title}
+                    {wording.title.toUpperCase()}
                 </h1>
                 <p className="recommendations-subtitle">
                     {wording.desc}
