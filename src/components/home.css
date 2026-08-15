@@ -1312,25 +1312,36 @@ a { color: inherit; text-decoration: none; }
 
 /* Modal Tabs */
 .stats-modal-tabs {
-  display: flex; gap: 0;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  padding: 0 24px; margin-top: 16px;
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255, 100, 54, 0.18);
+  padding: 0 24px;
+  margin-top: 20px;
 }
 
 .stats-modal-tab-btn {
   padding: 12px 20px;
-  font-size: 13px; font-weight: 600; font-family: var(--font-body);
-  color: var(--color-stone);
-  background: none; border: none;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--color-stone, #8e8c94);
+  background: none;
+  border: none;
   border-bottom: 2px solid transparent;
-  cursor: pointer; transition: all 0.15s ease;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.stats-modal-tab-btn:hover { color: var(--color-silver-mist); }
+.stats-modal-tab-btn:hover {
+  color: #ffffff;
+}
 
 .stats-modal-tab-btn.active {
-  color: var(--color-ember-orange);
-  border-bottom-color: var(--color-ember-orange);
+  color: var(--color-ember-orange, #ff6436);
+  border-bottom-color: var(--color-ember-orange, #ff6436);
+  text-shadow: 0 0 16px rgba(255, 100, 54, 0.4);
 }
 
 .stats-modal-body { padding: 24px; }

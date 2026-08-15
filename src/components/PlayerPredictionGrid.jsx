@@ -1,3 +1,4 @@
+import React from 'react';
 import { PREDICTION_GROUPS, calculatePredictionChange } from '../config/predictionStats';
 import './PlayerPredictionGrid.css';
 
@@ -7,7 +8,9 @@ const PlayerPredictionGrid = ({ currentStats = {}, predictionStats = {}, improve
   <div className="player-prediction-groups">
     {PREDICTION_GROUPS.map((group) => (
       <section className="player-prediction-group" key={group.id}>
-        <h3 className="player-prediction-group-title">{group.label}</h3>
+        <div className="player-prediction-group-header">
+          <span className="cv-section-badge-mini">{group.label}</span>
+        </div>
         <div className="player-prediction-grid">
           {group.stats.map((stat) => {
             const current = Number(currentStats?.[stat.key]) || 0;
@@ -15,17 +18,31 @@ const PlayerPredictionGrid = ({ currentStats = {}, predictionStats = {}, improve
             const suppliedChange = improvements?.[stat.key];
             const change = suppliedChange ?? calculatePredictionChange(current, predicted, stat.changeUnit);
             const changeSuffix = stat.changeUnit === 'pp' ? ' pp' : '%';
+            const isPositive = change >= 0;
 
             return (
-              <article className="ai-pred-box player-prediction-card" key={stat.key}>
-                <div className="ai-pred-box-label">{stat.label}</div>
-                <div className="ai-pred-values-flex">
-                  <span className="ai-pred-num old">{formatValue(current)} <small>{stat.unit}</small></span>
-                  <span className="ai-pred-arrow">→</span>
-                  <span className="ai-pred-num new">{formatValue(predicted)} <small>{stat.unit}</small></span>
+              <article className="player-pred-card" key={stat.key}>
+                <div className="player-pred-label">{stat.label}</div>
+                
+                <div className="player-pred-comparison">
+                  <div className="player-pred-val-box past">
+                    <span className="player-pred-val">{formatValue(current)}</span>
+                    <span className="player-pred-unit">{stat.unit}</span>
+                  </div>
+                  
+                  <div className="player-pred-arrow">→</div>
+                  
+                  <div className="player-pred-val-box predicted">
+                    <span className="player-pred-val">{formatValue(predicted)}</span>
+                    <span className="player-pred-unit">{stat.unit}</span>
+                  </div>
                 </div>
-                <div className={`ai-pred-badge ${change >= 0 ? 'positive' : 'negative'}`}>
-                  {change >= 0 ? '+' : ''}{formatValue(change)}{changeSuffix}
+
+                <div className="player-pred-footer">
+                  <span className={`player-pred-badge ${isPositive ? 'positive' : 'negative'}`}>
+                    <span className="badge-arrow">{isPositive ? '↗' : '↘'}</span>
+                    <span>{isPositive ? '+' : ''}{formatValue(change)}{changeSuffix}</span>
+                  </span>
                 </div>
               </article>
             );

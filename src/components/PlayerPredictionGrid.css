@@ -1,37 +1,151 @@
+/* ============================================================
+   COURT VISION — PLAYER MODAL AI PREDICTION GRID
+   Obsidian Glass Theme + Ember Orange Design Tokens
+   ============================================================ */
+
 .player-prediction-groups {
-  display: grid;
-  gap: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
 }
 
 .player-prediction-group {
-  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.player-prediction-group-title {
-  margin: 0 0 0.75rem;
-  color: var(--text-secondary, #a0a0a8);
-  font-family: var(--font-heading, 'Outfit', sans-serif);
-  font-size: 0.82rem;
-  letter-spacing: 0.12em;
+.player-prediction-group-header {
+  display: flex;
+  align-items: center;
+}
+
+.cv-section-badge-mini {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--color-ember-orange, #ff6436);
+  padding: 4px 12px;
+  border-radius: var(--radius-full, 9999px);
+  background: rgba(255, 100, 54, 0.08);
+  border: 1px solid rgba(255, 100, 54, 0.25);
+}
+
+/* ---------- Grid of Cards ---------- */
+.player-prediction-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.player-pred-card {
+  background: linear-gradient(180deg, rgba(28, 28, 36, 0.85) 0%, rgba(16, 16, 22, 0.95) 100%);
+  border: 1px solid rgba(255, 100, 54, 0.16);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+}
+
+.player-pred-card:hover {
+  border-color: rgba(255, 100, 54, 0.45);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.7), 0 0 16px rgba(255, 100, 54, 0.15);
+}
+
+.player-pred-label {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-stone, #8e8c94);
+  letter-spacing: 1px;
   text-transform: uppercase;
 }
 
-.player-prediction-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
+/* ---------- Comparison Block ---------- */
+.player-pred-comparison {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  padding: 10px 12px;
 }
 
-.player-prediction-card {
-  min-width: 0;
+.player-pred-val-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
 }
 
-@media (max-width: 600px) {
-  .player-prediction-grid {
-    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
-  }
+.player-pred-val-box .player-pred-val {
+  font-family: var(--font-mono, monospace);
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.1;
+}
 
-  .player-prediction-card .ai-pred-values-flex {
-    gap: 0.35rem;
-  }
+.player-pred-val-box.predicted .player-pred-val {
+  color: var(--color-ember-orange, #ff6436);
+  font-weight: 900;
+  text-shadow: 0 0 12px rgba(255, 100, 54, 0.3);
+}
+
+.player-pred-val-box .player-pred-unit {
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  color: var(--color-stone, #8e8c94);
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+.player-pred-arrow {
+  color: var(--color-stone, #8e8c94);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+/* ---------- Delta Footer ---------- */
+.player-pred-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.player-pred-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.player-pred-badge.positive {
+  background: rgba(76, 175, 80, 0.15);
+  border: 1px solid rgba(76, 175, 80, 0.4);
+  color: #4caf50;
+}
+
+.player-pred-badge.negative {
+  background: rgba(239, 83, 80, 0.15);
+  border: 1px solid rgba(239, 83, 80, 0.4);
+  color: #ef5350;
+}
+
+.badge-arrow {
+  font-size: 11px;
 }
