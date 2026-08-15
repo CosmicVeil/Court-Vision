@@ -710,43 +710,62 @@ const Home = () => {
             </svg>
           </div>
 
-          {/* Subtitle + search — fades out on first scroll */}
+          {/* Hero UI CTA buttons */}
           <div className="cv-hero-ui">
             <p className="hero-subtitle">AI-powered basketball analytics, live stats &amp; predictions</p>
-            <div className="hero-search-wrapper" ref={searchContainerRef}>
-              <div className="search-bar-container">
-                <svg className="search-icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                <input type="text" className="search-input-field" placeholder="Search NBA player..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-                {isSearching && <div className="search-spinner"></div>}
-                {searchQuery && (
-                  <button className="clear-search-btn" onClick={() => setSearchQuery("")}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                  </button>
-                )}
-              </div>
-              {searchResults.length > 0 && (
-                <div className="search-results-dropdown">
-                  {searchResults.map((player) => (
-                    <div key={player.name} className="search-result-item" onClick={() => { setSelectedPlayer(player); setModalTab("current"); setSearchResults([]); setSearchQuery(""); }}>
-                      <div className="search-result-player-info">
-                        <span className="search-result-player-name">{player.name}</span>
-                        <span className="search-result-player-meta">{player.position} · Age {player.age}</span>
-                      </div>
-                      <span className="search-result-player-team">{player.team}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {searchQuery.trim().length >= 2 && !isSearching && searchResults.length === 0 && (
-                <div className="search-results-dropdown"><div className="search-dropdown-no-results">No players found matching "{searchQuery}"</div></div>
-              )}
-            </div>
             <div className="hero-cta">
               <Link to="/stats" className="cta-button primary">EXPLORE STATS</Link>
               <Link to="/recommendations" className="cta-button secondary">GET RECOMMENDATIONS</Link>
             </div>
           </div>
 
+        </div>
+      </section>
+
+      {/* ─── SEARCH SECTION (Underneath Court Vision) ─── */}
+      <section className="court-search-section scroll-reveal">
+        <div className="court-search-container" ref={searchContainerRef}>
+          <div className="cv-section-badge-wrapper">
+            <span className="cv-section-badge">PLAYER SEARCH</span>
+          </div>
+          <h2 className="court-search-title">SEARCH ANY <span className="text-ember">NBA ATHLETE</span></h2>
+          <p className="court-search-subtitle">Instant telemetry, season trajectories, and AI-projected performance metrics</p>
+          
+          <div className="hero-search-wrapper">
+            <div className="search-bar-container">
+              <svg className="search-icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input 
+                type="text" 
+                className="search-input-field" 
+                placeholder="Search NBA player by name (e.g. Luka Dončić, Shai, Giannis)..." 
+                value={searchQuery} 
+                onChange={(e) => setSearchQuery(e.target.value)} 
+              />
+              {isSearching && <div className="search-spinner"></div>}
+              {searchQuery && (
+                <button className="clear-search-btn" onClick={() => setSearchQuery("")}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              )}
+            </div>
+
+            {searchResults.length > 0 && (
+              <div className="search-results-dropdown">
+                {searchResults.map((player) => (
+                  <div key={player.name} className="search-result-item" onClick={() => { setSelectedPlayer(player); setModalTab("current"); setSearchResults([]); setSearchQuery(""); }}>
+                    <div className="search-result-player-info">
+                      <span className="search-result-player-name">{player.name}</span>
+                      <span className="search-result-player-meta">{player.position} · Age {player.age}</span>
+                    </div>
+                    <span className="search-result-player-team">{player.team}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {searchQuery.trim().length >= 2 && !isSearching && searchResults.length === 0 && (
+              <div className="search-results-dropdown"><div className="search-dropdown-no-results">No players found matching "{searchQuery}"</div></div>
+            )}
+          </div>
         </div>
       </section>
 
