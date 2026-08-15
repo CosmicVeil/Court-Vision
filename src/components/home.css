@@ -1168,6 +1168,52 @@ a { color: inherit; text-decoration: none; }
 
 .ai-content { max-width: 1200px; margin: 0 auto; }
 
+.predictions-tabs,
+.ai-section .predictions-tabs {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 12px !important;
+  margin: 0 auto 36px !important;
+  flex-wrap: wrap !important;
+}
+
+.predictions-tabs .tab-button,
+.ai-section .predictions-tabs .tab-button {
+  padding: 10px 22px !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 100, 54, 0.22) !important;
+  border-radius: var(--radius-full, 9999px) !important;
+  color: var(--color-stone, #8e8c94) !important;
+  font-family: var(--font-mono, monospace) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 1.5px !important;
+  text-transform: uppercase !important;
+  cursor: pointer !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+.predictions-tabs .tab-button:hover,
+.ai-section .predictions-tabs .tab-button:hover {
+  background: rgba(255, 100, 54, 0.15) !important;
+  border-color: rgba(255, 100, 54, 0.5) !important;
+  color: #fff !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 18px rgba(255, 100, 54, 0.25) !important;
+}
+
+.predictions-tabs .tab-button.active,
+.ai-section .predictions-tabs .tab-button.active {
+  background: linear-gradient(135deg, #ff6436, #e04a1c) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+  box-shadow: 0 0 24px rgba(255, 100, 54, 0.5) !important;
+  transform: translateY(-2px) !important;
+}
+
 /* ============================================================
    CTA SECTION
    ============================================================ */
