@@ -12,18 +12,20 @@
 }
 
 /* ---------- Category Tabs ---------- */
+.predictions-tabs,
 .category-tabs {
   display: flex;
   justify-content: center;
-  gap: 10px;
-  margin-bottom: 32px;
+  gap: 12px;
+  margin-bottom: 36px;
   flex-wrap: wrap;
 }
 
+.predictions-tabs .tab-button,
 .category-tabs .tab-button {
   padding: 10px 22px;
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 100, 54, 0.18);
+  border: 1px solid rgba(255, 100, 54, 0.22);
   border-radius: var(--radius-full, 9999px);
   color: var(--color-stone, #8e8c94);
   font-family: var(--font-mono, monospace);
@@ -32,21 +34,27 @@
   letter-spacing: 1.5px;
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+.predictions-tabs .tab-button:hover,
 .category-tabs .tab-button:hover {
-  background: rgba(255, 100, 54, 0.12);
-  border-color: rgba(255, 100, 54, 0.4);
+  background: rgba(255, 100, 54, 0.15);
+  border-color: rgba(255, 100, 54, 0.5);
   color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(255, 100, 54, 0.25);
 }
 
+.predictions-tabs .tab-button.active,
 .category-tabs .tab-button.active {
   background: linear-gradient(135deg, #ff6436, #e04a1c);
   border-color: transparent;
   color: #fff;
   font-weight: 800;
-  box-shadow: 0 0 20px rgba(255, 100, 54, 0.45);
+  box-shadow: 0 0 24px rgba(255, 100, 54, 0.5);
+  transform: translateY(-2px);
 }
 
 /* ---------- Player Grid & Cards ---------- */
