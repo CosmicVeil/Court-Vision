@@ -442,7 +442,8 @@
     grid-template-columns: 1fr;
     gap: 0.8rem;
   }
-  
+}
+
 /* Loading / Error / Empty States */
 .ai-predictions-container .error,
 .ai-predictions-container .no-data,
