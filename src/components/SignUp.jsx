@@ -94,8 +94,12 @@ const SignUp = () => {
   return (
     <div className="signup-wrapper">
       <div className="signup-container">
+        <div className="stats-nav-top" style={{ marginBottom: '1.5rem', justifyContent: 'center' }}>
+          <Link to="/" className="back-to-home">← HOME</Link>
+          <span className="cv-section-badge">JOIN THE PLATFORM</span>
+        </div>
         <div className="signup-header">
-          <h1 className="signup-title">CREATE ACCOUNT</h1>
+          <h1 className="signup-title">CREATE <span className="text-ember">ACCOUNT</span></h1>
         </div>
         <form className="signup-form" onSubmit={handleSubmit}>
           <div className="form-group">

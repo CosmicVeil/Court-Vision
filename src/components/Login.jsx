@@ -41,8 +41,12 @@ const Login = () => {
   return (
     <div className="login-wrapper">
       <div className="login-container">
+        <div className="stats-nav-top" style={{ marginBottom: '1.5rem', justifyContent: 'center' }}>
+          <Link to="/" className="back-to-home">← HOME</Link>
+          <span className="cv-section-badge">ACCESS PORTAL</span>
+        </div>
         <div className="login-header">
-          <h1 className="login-title">LOGIN</h1>
+          <h1 className="login-title">AUTHENTICATE <span className="text-ember">ACCOUNT</span></h1>
         </div>
         <form className="login-form" onSubmit={handleSubmit}>
           <div className="form-group">

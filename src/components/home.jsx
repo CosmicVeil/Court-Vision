@@ -742,14 +742,9 @@ const Home = () => {
               )}
             </div>
             <div className="hero-cta">
-              <Link to="/stats" className="cta-button primary">Explore Stats</Link>
-              <Link to="/recommendations" className="cta-button secondary">Get Recommendations</Link>
+              <Link to="/stats" className="cta-button primary">EXPLORE STATS</Link>
+              <Link to="/recommendations" className="cta-button secondary">GET RECOMMENDATIONS</Link>
             </div>
-          </div>
-
-          <div className="cv-scroll-hint">
-            <span>SCROLL</span>
-            <div className="cv-scroll-line" />
           </div>
 
         </div>

@@ -624,38 +624,7 @@ a { color: inherit; text-decoration: none; }
   will-change: opacity;
 }
 
-/* ─── Scroll hint ────────────────────────────────────────── */
-.cv-scroll-hint {
-  position: absolute;
-  bottom: var(--spacing-32);
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  z-index: 20;
-  opacity: var(--cv-ui-op, 1);
-}
 
-.cv-scroll-hint span {
-  font-size: 10px;
-  letter-spacing: 0.25em;
-  color: var(--color-stone);
-  font-family: var(--font-mono, monospace);
-}
-
-.cv-scroll-line {
-  width: 1px;
-  height: 40px;
-  background: linear-gradient(180deg, var(--color-ember-orange), transparent);
-  animation: scrollPulse 1.5s ease-in-out infinite;
-}
-
-@keyframes scrollPulse {
-  0%, 100% { opacity: 0.4; transform: scaleY(1); }
-  50%       { opacity: 1;   transform: scaleY(1.15); }
-}
 
 /* ─── Hide all old hero classes ─────────────────────────── */
 .hero-title, .hero-scroll-wrapper, .hero-sticky-container,

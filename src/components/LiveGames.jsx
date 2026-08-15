@@ -252,40 +252,45 @@ export default function LiveGames() {
   return (
     <div className="lg-page">
       <div className="lg-hero">
-        <div className="lg-hero-bg" />
-        <Link to="/" className="back-to-home">← Back to Home</Link>
+        <div className="stats-nav-top">
+          <Link to="/" className="back-to-home">← HOME</Link>
+          <span className="cv-section-badge">REAL-TIME ARENA</span>
+        </div>
         <h1 className="lg-title">
-          <span className="lg-title-dim">NBA</span>
-          <span className="lg-title-accent"> LIVE</span>
+          NBA <span className="text-ember">LIVE SLATE</span>
         </h1>
-        <p className="lg-subtitle">Real-time scores · Boxscores · Player stats</p>
+        <p className="lg-subtitle">Live game scores, active box scores &amp; possession stats</p>
         {lastUpdated && (
           <div className="last-updated">
-            Updated {lastUpdated.toLocaleTimeString()}
-            <button className="refresh-btn" onClick={fetchGames}>↻ Refresh</button>
+            <span>LAST SYNC: {lastUpdated.toLocaleTimeString()}</span>
+            <button className="refresh-btn" onClick={fetchGames}>↻ REFRESH</button>
           </div>
         )}
       </div>
 
       <div className="lg-tabs">
         <button className={`lg-tab ${tab === "today" ? "active" : ""}`} onClick={() => setTab("today")}>
-          Today
+          TODAY'S SLATE
           {liveGames.length > 0 && <span className="live-badge">{liveGames.length} LIVE</span>}
         </button>
         <button className={`lg-tab ${tab === "upcoming" ? "active" : ""}`} onClick={() => setTab("upcoming")}>
-          Upcoming
+          UPCOMING GAMES
           {upcomingGames.length > 0 && <span className="count-badge">{upcomingGames.length}</span>}
         </button>
       </div>
 
       <div className="lg-content">
         {loading ? (
-          <div className="lg-loading"><div className="spinner" /><p>Loading games...</p></div>
+          <div className="lg-loading"><div className="spinner" /><p>LOADING REAL-TIME SLATE...</p></div>
         ) : tab === "today" ? (
           displayToday.length === 0 ? (
             <div className="no-games">
-              <h3>No games scheduled today</h3>
-              <p>Check the Upcoming tab for future games</p>
+              <div className="trend-empty-radar" style={{ margin: '0 auto 1.5rem' }}>
+                <div className="trend-empty-dot" />
+              </div>
+              <h3>NO LIVE GAMES SCHEDULED TODAY</h3>
+              <p>Check the Upcoming Games tab for the next NBA slate</p>
+              <button className="cta-button primary" onClick={() => setTab("upcoming")} style={{ marginTop: '1.5rem', display: 'inline-block' }}>VIEW UPCOMING SCHEDULE →</button>
             </div>
           ) : (
             <div className="games-grid">
@@ -294,7 +299,9 @@ export default function LiveGames() {
           )
         ) : (
           upcomingGames.length === 0 ? (
-            <div className="no-games"><h3>No upcoming games found</h3></div>
+            <div className="no-games">
+              <h3>NO UPCOMING GAMES FOUND</h3>
+            </div>
           ) : (
             <div className="games-grid">
               {upcomingGames.map(g => <GameCard key={g.gameId} game={g} onPlayerClick={handlePlayerClick} />)}
@@ -337,38 +344,52 @@ export default function LiveGames() {
                 </div>
 
                 <div className="stats-modal-body">
-                  {modalTab === 'current' && (
-                    <div>
-                      <div className="stats-grid-container">
-                        <div className="stat-box-card"><div className="stat-box-value highlighted">{selectedPlayer.current_stats.ppg}</div><div className="stat-box-label">PPG</div></div>
-                        <div className="stat-box-card"><div className="stat-box-value">{selectedPlayer.current_stats.apg}</div><div className="stat-box-label">APG</div></div>
-                        <div className="stat-box-card"><div className="stat-box-value">{selectedPlayer.current_stats.rpg}</div><div className="stat-box-label">RPG</div></div>
-                        <div className="stat-box-card"><div className="stat-box-value">{selectedPlayer.current_stats.spg}</div><div className="stat-box-label">SPG</div></div>
-                        <div className="stat-box-card"><div className="stat-box-value">{selectedPlayer.current_stats.bpg}</div><div className="stat-box-label">BPG</div></div>
-                      </div>
-                      <div className="secondary-stats-container">
-                        <h3 className="secondary-stats-title">Shooting & Playing Time</h3>
-                        <div className="percentage-stat-row">
-                          <div className="percentage-stat-header"><span className="percentage-stat-name">Field Goal (FG%)</span><span className="percentage-stat-value">{selectedPlayer.current_stats.fg_pct}%</span></div>
-                          <div className="percentage-stat-track"><div className="percentage-stat-bar" style={{ width: `${selectedPlayer.current_stats.fg_pct}%` }}></div></div>
+                  {modalTab === 'current' && (() => {
+                    const stats = selectedPlayer.current_stats || selectedPlayer.stats || {};
+                    const ppg = stats.ppg ?? stats.ppg_last ?? 0;
+                    const apg = stats.apg ?? stats.apg_last ?? 0;
+                    const rpg = stats.rpg ?? stats.rpg_last ?? 0;
+                    const spg = stats.spg ?? stats.spg_last ?? 0;
+                    const bpg = stats.bpg ?? stats.bpg_last ?? 0;
+                    const fg_pct = stats.fg_pct ?? stats.fg_pct_last ?? 0;
+                    const fg3_pct = stats.fg3_pct ?? stats.fg3_pct_last ?? 0;
+                    const ft_pct = stats.ft_pct ?? stats.ft_pct_last ?? 0;
+                    const gp = stats.games_played ?? 0;
+                    const min = stats.minutes ?? stats.mpg ?? 0;
+
+                    return (
+                      <div>
+                        <div className="stats-grid-container">
+                          <div className="stat-box-card"><div className="stat-box-value highlighted">{ppg}</div><div className="stat-box-label">PPG</div></div>
+                          <div className="stat-box-card"><div className="stat-box-value">{apg}</div><div className="stat-box-label">APG</div></div>
+                          <div className="stat-box-card"><div className="stat-box-value">{rpg}</div><div className="stat-box-label">RPG</div></div>
+                          <div className="stat-box-card"><div className="stat-box-value">{spg}</div><div className="stat-box-label">SPG</div></div>
+                          <div className="stat-box-card"><div className="stat-box-value">{bpg}</div><div className="stat-box-label">BPG</div></div>
                         </div>
-                        <div className="percentage-stat-row">
-                          <div className="percentage-stat-header"><span className="percentage-stat-name">3-Point (3PT%)</span><span className="percentage-stat-value">{selectedPlayer.current_stats.fg3_pct}%</span></div>
-                          <div className="percentage-stat-track"><div className="percentage-stat-bar" style={{ width: `${selectedPlayer.current_stats.fg3_pct}%` }}></div></div>
-                        </div>
-                        <div className="percentage-stat-row">
-                          <div className="percentage-stat-header"><span className="percentage-stat-name">Free Throw (FT%)</span><span className="percentage-stat-value">{selectedPlayer.current_stats.ft_pct}%</span></div>
-                          <div className="percentage-stat-track"><div className="percentage-stat-bar" style={{ width: `${selectedPlayer.current_stats.ft_pct}%` }}></div></div>
-                        </div>
-                        <div className="percentage-stat-row" style={{ marginTop: '1.5rem' }}>
-                          <div className="percentage-stat-header" style={{ marginBottom: 0 }}>
-                            <span className="percentage-stat-name">Games Played / Playing Time</span>
-                            <span className="percentage-stat-value">{selectedPlayer.current_stats.games_played} Games | {selectedPlayer.current_stats.minutes} MPG</span>
+                        <div className="secondary-stats-container">
+                          <h3 className="secondary-stats-title">Shooting &amp; Playing Time</h3>
+                          <div className="percentage-stat-row">
+                            <div className="percentage-stat-header"><span className="percentage-stat-name">Field Goal (FG%)</span><span className="percentage-stat-value">{fg_pct}%</span></div>
+                            <div className="percentage-stat-track"><div className="percentage-stat-bar" style={{ width: `${Math.min(Math.max(fg_pct, 0), 100)}%` }}></div></div>
+                          </div>
+                          <div className="percentage-stat-row">
+                            <div className="percentage-stat-header"><span className="percentage-stat-name">3-Point (3PT%)</span><span className="percentage-stat-value">{fg3_pct}%</span></div>
+                            <div className="percentage-stat-track"><div className="percentage-stat-bar" style={{ width: `${Math.min(Math.max(fg3_pct, 0), 100)}%` }}></div></div>
+                          </div>
+                          <div className="percentage-stat-row">
+                            <div className="percentage-stat-header"><span className="percentage-stat-name">Free Throw (FT%)</span><span className="percentage-stat-value">{ft_pct}%</span></div>
+                            <div className="percentage-stat-track"><div className="percentage-stat-bar" style={{ width: `${Math.min(Math.max(ft_pct, 0), 100)}%` }}></div></div>
+                          </div>
+                          <div className="percentage-stat-row" style={{ marginTop: '1.5rem' }}>
+                            <div className="percentage-stat-header" style={{ marginBottom: 0 }}>
+                              <span className="percentage-stat-name">Games Played / Playing Time</span>
+                              <span className="percentage-stat-value">{gp} Games | {min} MPG</span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {modalTab === 'predictions' && (
                     <div>

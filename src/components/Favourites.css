@@ -1,178 +1,78 @@
-/* ----------------------------------
-   Favourites Component Styles
----------------------------------- */
+/* ============================================================
+   COURT VISION — SAVED FAVOURITES
+   Obsidian Glass Arena Theme + Ember Orange Design Tokens
+   ============================================================ */
+
 .favourites-wrapper {
   min-height: 100vh;
-  background: var(--bg-main, #0a0a0c);
-  color: var(--text-primary, #f0f0f0);
-  padding: 100px 2rem 4rem;
-  font-family: var(--font-body, 'Inter', sans-serif);
+  background: var(--bg-main, #08080a);
+  color: var(--text-primary, #ffffff);
+  padding: 110px 24px 70px;
   position: relative;
   z-index: 2;
+  font-family: var(--font-body, 'Inter', sans-serif);
 }
 
+/* ---------- Header ---------- */
 .favourites-header {
   text-align: center;
-  margin-bottom: 3rem;
+  margin-bottom: 40px;
   position: relative;
   z-index: 10;
 }
 
-.back-link {
-  display: inline-block;
-  margin-bottom: 2rem;
-  color: #fff;
-  text-decoration: none;
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  padding: 0.8rem 2rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 30px;
-  transition: all var(--transition-smooth, 0.3s);
-  backdrop-filter: blur(10px);
-  font-family: var(--font-heading, 'Outfit', sans-serif);
-}
-
-.back-link:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateY(-3px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-  border-color: var(--accent-primary, #ff4500);
-}
-
 .favourites-title {
-  font-family: var(--font-heading, 'Outfit', sans-serif);
-  font-size: 3.5rem;
+  font-size: clamp(2.5rem, 5vw, 4.2rem);
+  margin-bottom: 12px;
+  font-family: var(--font-heading, 'Inter', sans-serif);
   font-weight: 900;
-  letter-spacing: 2px;
   text-transform: uppercase;
-  margin: 0 0 1rem 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1.5rem;
-  color: #fff;
-  text-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
-}
-
-.title-icon {
-  font-size: 3rem;
-  filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.5));
+  letter-spacing: -0.5px;
+  color: #ffffff;
+  line-height: 1.08;
 }
 
 .favourites-subtitle {
-  font-size: 1.2rem;
-  color: var(--text-secondary, #a0a0a8);
-  max-width: 700px;
+  font-size: clamp(15px, 1.8vw, 17px);
+  color: var(--color-stone, #8e8c94);
+  max-width: 650px;
   margin: 0 auto;
-}
-
-/* ----------------------------------
-   Empty State
----------------------------------- */
-.empty-state {
-  text-align: center;
-  padding: 5rem 2rem;
-  max-width: 600px;
-  margin: 0 auto;
-  background: var(--bg-glass, rgba(18, 18, 22, 0.65));
-  border: 1px solid var(--border-glass, rgba(255, 255, 255, 0.08));
-  border-radius: 20px;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
-}
-
-.empty-icon {
-  font-size: 5rem;
-  margin-bottom: 1.5rem;
-  filter: drop-shadow(0 0 15px rgba(255, 69, 0, 0.3));
-}
-
-.empty-title {
-  font-family: var(--font-heading, 'Outfit', sans-serif);
-  font-size: 2rem;
-  font-weight: 900;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: #fff;
-  margin: 0 0 1rem 0;
-}
-
-.empty-description {
-  font-size: 1.1rem;
-  color: var(--text-secondary, #a0a0a8);
-  margin: 0 0 2.5rem 0;
-  line-height: 1.8;
-}
-
-.empty-cta {
-  display: inline-block;
-  padding: 1rem 2.5rem;
-  background: linear-gradient(45deg, var(--accent-secondary, #e53935), var(--accent-primary, #ff4500));
-  color: #fff;
-  text-decoration: none;
-  border-radius: 30px;
-  font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  transition: all var(--transition-smooth, 0.4s);
-  border: none;
-  font-family: var(--font-heading, 'Outfit', sans-serif);
-  box-shadow: 0 8px 25px var(--accent-glow, rgba(255, 69, 0, 0.5));
-}
-
-.empty-cta:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 12px 35px rgba(255, 69, 0, 0.8);
-}
-
-/* ----------------------------------
-   Content Grid
----------------------------------- */
-.favourites-content {
-  max-width: 1400px;
-  margin: 0 auto;
+  line-height: 1.6;
 }
 
 .favourites-info {
   text-align: center;
-  margin-bottom: 3rem;
-  padding: 1.5rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  backdrop-filter: blur(10px);
+  margin-bottom: 24px;
 }
 
 .info-text {
-  font-size: 1.1rem;
-  color: var(--text-primary, #f0f0f0);
-  margin: 0;
-  font-weight: 600;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--color-stone, #8e8c94);
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
+/* ---------- Grid ---------- */
 .favourites-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 2.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto 40px;
 }
 
 .favourite-card {
-  background: var(--bg-glass, rgba(18, 18, 22, 0.65));
-  border: 1px solid var(--border-glass, rgba(255, 255, 255, 0.08));
-  border-radius: 20px;
-  padding: 2.5rem;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  transition: all var(--transition-smooth, 0.4s);
+  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
+  border: 1px solid rgba(255, 100, 54, 0.18);
+  border-radius: var(--radius-xl, 20px);
+  padding: 24px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   overflow: hidden;
-  cursor: pointer;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
 }
 
 .favourite-card::before {
@@ -181,252 +81,112 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #ffd700, var(--accent-primary, #ff4500));
-  opacity: 0.5;
-  transition: opacity var(--transition-fast, 0.2s);
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--color-ember-orange, #ff6436), transparent);
+  opacity: 0.6;
 }
 
 .favourite-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 215, 0, 0.15);
-  border-color: #ffd700;
-}
-
-.favourite-card:hover::before {
-  opacity: 1;
+  transform: translateY(-6px);
+  border-color: rgba(255, 100, 54, 0.5);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 24px rgba(255, 100, 54, 0.2);
 }
 
 .card-header-fav {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 2rem;
-}
-
-.player-header-info {
-  flex: 1;
+  margin-bottom: 12px;
 }
 
 .player-name-fav {
-  font-family: var(--font-heading, 'Outfit', sans-serif);
-  font-size: 1.8rem;
+  font-family: var(--font-heading, 'Inter', sans-serif);
+  font-size: 1.35rem;
   font-weight: 900;
-  letter-spacing: 1px;
-  text-transform: uppercase;
   color: #fff;
-  margin: 0 0 1rem 0;
+  margin: 0 0 6px;
+  text-transform: uppercase;
 }
 
 .player-meta-fav {
   display: flex;
-  gap: 1rem;
+  gap: 8px;
 }
 
 .team-badge-fav, .position-badge-fav {
-  padding: 0.4rem 1.2rem;
-  border-radius: 20px;
-  font-size: 0.85rem;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 1px;
   text-transform: uppercase;
-  border: 1px solid;
 }
 
 .team-badge-fav {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   color: #fff;
 }
 
 .position-badge-fav {
-  background: rgba(255, 215, 0, 0.15);
-  border-color: #ffd700;
-  color: #ffd700;
+  background: rgba(255, 100, 54, 0.12);
+  border: 1px solid rgba(255, 100, 54, 0.3);
+  color: var(--color-ember-orange, #ff6436);
 }
 
 .favorite-btn-fav {
-  background: rgba(255, 215, 0, 0.15);
-  border: 1px solid rgba(255, 215, 0, 0.35);
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.72rem;
+  background: rgba(255, 206, 109, 0.15);
+  color: #ffce6d;
+  border: 1px solid rgba(255, 206, 109, 0.4);
+  box-shadow: 0 0 12px rgba(255, 206, 109, 0.2);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: #ffd700;
-  padding: 6px 12px;
-  transition: all var(--transition-fast, 0.2s);
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .favorite-btn-fav:hover {
-  background: rgba(255, 215, 0, 0.25);
-  transform: scale(1.02);
-  color: #fff;
-  border-color: rgba(255, 215, 0, 0.55);
-  box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
-}
-
-.favorite-btn-fav.favorited {
-  background: rgba(255, 215, 0, 0.15);
-  color: #ffd700;
-  border-color: rgba(255, 215, 0, 0.35);
-  box-shadow: 0 0 10px rgba(255, 215, 0, 0.15);
-}
-
-@keyframes favoritePulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.2); }
-  100% { transform: scale(1); }
-}
-
-.player-info-fav {
-  margin-bottom: 2rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 59, 48, 0.15);
+  color: #ff3b30;
+  border-color: rgba(255, 59, 48, 0.4);
 }
 
 .player-details-fav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-  font-size: 1rem;
-  color: var(--text-secondary, #a0a0a8);
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--color-stone, #8e8c94);
+  margin-bottom: 16px;
 }
 
-.player-details-fav span {
-  font-weight: 600;
-  color: #fff;
-}
-
-/* ----------------------------------
-   Stats & Trends
----------------------------------- */
-.player-stats-fav, .player-trends-fav {
-  margin-bottom: 2rem;
-}
-
-.stats-title, .trends-title {
-  font-family: var(--font-heading, 'Outfit', sans-serif);
-  font-size: 1.3rem;
-  font-weight: 800;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: #fff;
-  margin: 0 0 1.2rem 0;
-}
-
-.stats-grid-fav {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-}
-
-.stat-item-fav {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 1rem;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  transition: all var(--transition-fast, 0.2s);
-}
-
-.stat-item-fav:hover {
-  background: rgba(0, 0, 0, 0.5);
-  transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.stat-label-fav {
-  font-size: 0.8rem;
-  color: var(--text-secondary, #a0a0a8);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 0.5rem;
-}
-
-.stat-value-fav {
-  font-family: var(--font-heading, 'Outfit', sans-serif);
-  font-size: 1.5rem;
-  font-weight: 900;
-  color: var(--accent-primary, #ff4500);
-}
-
-.trends-grid-fav {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-}
-
-.trend-item-fav {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 1rem;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-}
-
-.trend-label-fav {
-  font-size: 0.8rem;
-  color: var(--text-secondary, #a0a0a8);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 0.5rem;
-}
-
-.trend-value-fav {
-  font-family: var(--font-heading, 'Outfit', sans-serif);
-  font-size: 1.3rem;
-  font-weight: 900;
-}
-
-.trend-value-fav.positive {
-  color: #4caf50;
-  text-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
-}
-
-.trend-value-fav.negative {
-  color: var(--accent-secondary, #e53935);
-  text-shadow: 0 0 10px rgba(229, 57, 53, 0.3);
-}
-
-.loading-state {
+/* ---------- Empty State ---------- */
+.empty-state {
+  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
+  border: 1px solid rgba(255, 100, 54, 0.18);
+  border-radius: var(--radius-xl, 20px);
+  padding: 60px 30px;
   text-align: center;
-  font-family: var(--font-heading, 'Outfit', sans-serif);
-  font-size: 2rem;
+  max-width: 600px;
+  margin: 0 auto;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+}
+
+.empty-title {
+  font-family: var(--font-heading, 'Inter', sans-serif);
+  font-size: 1.8rem;
   font-weight: 800;
-  color: #fff;
-  padding: 5rem 2rem;
-  letter-spacing: 2px;
   text-transform: uppercase;
-  text-shadow: 0 0 20px rgba(255, 69, 0, 0.5);
+  letter-spacing: 0.5px;
+  color: #fff;
+  margin: 0 0 10px;
 }
 
-@media (max-width: 900px) {
-  .favourites-title {
-    font-size: 2.5rem;
-  }
-  .favourites-grid {
-    grid-template-columns: 1fr;
-  }
-  .stats-grid-fav {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .trends-grid-fav {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 480px) {
-  .stats-grid-fav {
-    grid-template-columns: 1fr;
-  }
-  .player-details-fav {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
+.empty-description {
+  color: var(--color-stone, #8e8c94);
+  font-size: 14px;
+  margin-bottom: 24px;
 }

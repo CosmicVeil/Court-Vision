@@ -14,19 +14,16 @@ function Contact() {
       <div className="contact-ambient contact-ambient-two" />
 
       <header className="contact-header">
-        <Link className="contact-brand" to="/" aria-label="Return to the Court Vision home page">
-          <span className="contact-brand-mark">CV</span>
-          <span>COURT VISION</span>
-        </Link>
-        <Link className="contact-back" to="/">← Back to dashboard</Link>
+        <div className="stats-nav-top">
+          <Link to="/" className="back-to-home">← HOME</Link>
+          <span className="cv-section-badge">DEVELOPMENT INTEL</span>
+        </div>
       </header>
 
       <section className="contact-hero" aria-labelledby="contact-title">
-        <p className="contact-eyebrow">THE TEAM BEHIND COURT-VISION</p>
-        <h1 id="contact-title">Built for people who see more in the game.</h1>
+        <h1 id="contact-title">THE ARCHITECTS BEHIND <span className="text-ember">COURT VISION</span></h1>
         <p className="contact-intro">
-          Court-Vision brings live NBA data and machine-learning insight into one focused experience.
-          Meet the developers building the product behind the numbers.
+          Transforming raw NBA tracking telemetry into actionable neural forecasting. Meet the engineers engineering the platform.
         </p>
       </section>
 
