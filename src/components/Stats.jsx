@@ -55,43 +55,49 @@ const Stats = () => {
     setFavorites(newFavorites);
   };
 
-  // Fetch full player details (multi-season + ML) when a row is clicked
+  // Fetch full player details (multi-season + ML) when a row or card is clicked
   const handlePlayerClick = async (player) => {
+    if (!player) return;
     setLoadingPlayer(true);
     setModalTab('current');
+
+    // Create an immediate baseline profile from the row/card data so modal opens instantly
+    const initialProfile = {
+      name: player.name || player.PLAYER_NAME || 'Unknown Player',
+      team: player.team || player.TEAM_ABBREVIATION || 'NBA',
+      position: player.position || player.POSITION || 'G/F',
+      age: player.age || player.AGE || '--',
+      current_stats: {
+        ppg: player.stats?.ppg_last || player.ppg || 0,
+        apg: player.stats?.apg_last || player.apg || 0,
+        rpg: player.stats?.rpg_last || player.rpg || 0,
+        spg: player.stats?.spg_last || player.spg || 0,
+        bpg: player.stats?.bpg_last || player.bpg || 0,
+        tov: player.stats?.tov_last || player.tov || 0,
+        mpg: player.stats?.minutes || player.minutes || 0,
+        fg_pct: player.stats?.fg_pct_last || player.fg_pct || 0,
+        fg3_pct: player.stats?.fg3_pct_last || player.fg3_pct || 0,
+        ft_pct: player.stats?.ft_pct_last || player.ft_pct || 0,
+        games_played: player.stats?.games_played || player.games_played || 0,
+        minutes: player.stats?.minutes || player.minutes || 0
+      },
+      ml_stats: null,
+      history: {}
+    };
+
+    setSelectedPlayer(initialProfile);
+
     try {
-      const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(player.name)}`));
-      const data = await response.json();
-      const match = (data.players || []).find(p => p.name === player.name);
-      if (match) {
-        setSelectedPlayer(match);
-      } else {
-        // Fallback: build a basic profile from the table data
-        setSelectedPlayer({
-          name: player.name,
-          team: player.team,
-          position: player.position,
-          age: player.age,
-          current_stats: {
-            ppg: player.stats?.ppg_last || 0,
-            apg: player.stats?.apg_last || 0,
-            rpg: player.stats?.rpg_last || 0,
-            spg: player.stats?.spg_last || 0,
-            bpg: player.stats?.bpg_last || 0,
-            tov: player.stats?.tov_last || 0,
-            mpg: player.stats?.minutes || 0,
-            fg_pct: player.stats?.fg_pct_last || 0,
-            fg3_pct: player.stats?.fg3_pct_last || 0,
-            ft_pct: player.stats?.ft_pct_last || 0,
-            games_played: player.stats?.games_played || 0,
-            minutes: 0
-          },
-          ml_stats: null,
-          history: {}
-        });
+      const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(player.name || player.PLAYER_NAME)}`));
+      if (response.ok) {
+        const data = await response.json();
+        const match = (data.players || []).find(p => p.name === (player.name || player.PLAYER_NAME));
+        if (match) {
+          setSelectedPlayer(match);
+        }
       }
     } catch (err) {
-      console.error('Error fetching player details:', err);
+      console.error('Error fetching full player details, using local data:', err);
     } finally {
       setLoadingPlayer(false);
     }
