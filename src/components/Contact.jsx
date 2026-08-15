@@ -82,17 +82,18 @@ function Contact() {
               <span className="team-status"><i /> Available to connect</span>
             </div>
             <div className="team-card-content">
-              <p className="contact-label">BACKEND &amp; FRONTEND</p>
+              <p className="contact-label">BACKEND &amp; ML SYSTEMS</p>
               <h3>Varun Uday</h3>
-              <p className="team-role">Backend Developer / Frontend</p>
+              <p className="team-role">Backend &amp; ML Infrastructure Engineer</p>
               <p className="team-bio">
-                Varun builds and maintains the Flask API layer, prediction-serving endpoints, and
-                database architecture that deliver real-time NBA outcome forecasts to the platform.
+                Varun architects the high-throughput API services, real-time data ingestion pipelines, and
+                low-latency model inference engines that power Court Vision's live NBA analytics.
               </p>
               <div className="team-skills" aria-label="Varun's focus areas">
-                <span>Flask</span>
-                <span>SQLite</span>
-                <span>JS</span>
+                <span>FastAPI / Flask</span>
+                <span>PostgreSQL</span>
+                <span>Redis &amp; Docker</span>
+                <span>Scikit-Learn</span>
               </div>
             </div>
             <a
