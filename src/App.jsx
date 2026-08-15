@@ -15,12 +15,12 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Home/>} />
-        <Route path="/stats" element={<Stats/>} />
-        <Route path="/recommendations" element={<Recommendations/>} />
-        <Route path="/favourites" element={<Favourites/>} />
-        <Route path="/login" element={<Login/>} />
-        <Route path="/create-account" element={<SignUp/>} />
+        <Route path="/" element={<Home />} />
+        <Route path="/stats" element={<Stats />} />
+        <Route path="/recommendations" element={<Recommendations />} />
+        <Route path="/favourites" element={<Favourites />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/create-account" element={<SignUp />} />
         <Route path="/games" element={<LiveGames />} />
         <Route path="/predictions" element={<Predictions />} />
         <Route path="/contact" element={<Contact />} />
