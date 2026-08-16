@@ -274,8 +274,8 @@ const Home = () => {
 
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      // Cinematic and smooth scroll pace matching 240vh hero wrapper: animation plays gracefully over 1.35 viewport heights
-      const p = Math.min(Math.max(scrollY / (vh * 1.35), 0), 1);
+      // Majestic, cinematic scroll pace matching 320vh hero wrapper: animation plays gracefully over 2.0 viewport heights
+      const p = Math.min(Math.max(scrollY / (vh * 2.0), 0), 1);
 
       // Dual Rim positions relative to screen center (50vw, 50vh) - perfectly in the middle of the restricted circle!
       const hoopDist = vw * 0.395;
@@ -283,17 +283,17 @@ const Home = () => {
       const hoopLeftX = -hoopDist;
       const hoopDY = 0;
 
-      // ── 1. DUAL LETTER-BY-LETTER PAPER-ROLL FOLD (p: 0 → 0.26)
-      const foldProgress = Math.min(1, p / 0.26);
+      // ── 1. DUAL LETTER-BY-LETTER PAPER-ROLL FOLD (p: 0 → 0.40)
+      const foldProgress = Math.min(1, p / 0.40);
       el.style.setProperty('--cv-fold-p', foldProgress);
 
-      const titleOp = p >= 0.26 ? 0 : Math.max(0, 1 - Math.pow(p / 0.26, 2.5));
-      const titleDisplay = p >= 0.26 ? 'none' : 'flex';
+      const titleOp = p >= 0.40 ? 0 : Math.max(0, 1 - Math.pow(p / 0.40, 2.0));
+      const titleDisplay = p >= 0.40 ? 'none' : 'flex';
       el.style.setProperty('--cv-title-op', titleOp);
       el.style.setProperty('--cv-title-display', titleDisplay);
 
-      // ── 2. DUAL HOOP BASELINE UNFOLDING (p: 0.10 → 0.36)
-      const hoopUnfold = Math.min(1, Math.max(0, (p - 0.10) / 0.26));
+      // ── 2. DUAL HOOP BASELINE UNFOLDING (p: 0.15 → 0.48)
+      const hoopUnfold = Math.min(1, Math.max(0, (p - 0.15) / 0.33));
       const hoopOp = Math.min(1, hoopUnfold * 1.5);
       el.style.setProperty('--cv-hoop-unfold', hoopUnfold);
       el.style.setProperty('--cv-hoop-op', hoopOp);
@@ -304,28 +304,28 @@ const Home = () => {
       let netSwishX = 0, netSwishScale = 1, netSwishY = 1, rimFlex = 0;
 
       // ── 3. DUAL BALL TRAJECTORIES
-      if (p <= 0.26) {
-        // Phase 1: Dual balls gather from COURT (left) and VISION (right)
+      if (p <= 0.40) {
+        // Phase 1: Dual balls gradually materialize and gather from COURT (left) and VISION (right) text
         const courtStartX = -vw * 0.12, courtEndX = -vw * 0.18;
         bCourtX = courtStartX + foldProgress * (courtEndX - courtStartX);
         bCourtY = 0;
-        bCourtScale = 0.28 + foldProgress * 0.72;
-        bCourtOp = foldProgress > 0.06 ? Math.min(1, (foldProgress - 0.06) * 3) : 0;
+        bCourtScale = 0.20 + foldProgress * 0.80;
+        bCourtOp = foldProgress > 0.05 ? Math.min(1, (foldProgress - 0.05) * 2.5) : 0;
         bCourtRot = -foldProgress * 720; // roll left
 
         const visionStartX = vw * 0.12, visionEndX = vw * 0.18;
         bVisionX = visionStartX + foldProgress * (visionEndX - visionStartX);
         bVisionY = 0;
-        bVisionScale = 0.28 + foldProgress * 0.72;
-        bVisionOp = foldProgress > 0.06 ? Math.min(1, (foldProgress - 0.06) * 3) : 0;
+        bVisionScale = 0.20 + foldProgress * 0.80;
+        bVisionOp = foldProgress > 0.05 ? Math.min(1, (foldProgress - 0.05) * 2.5) : 0;
         bVisionRot = foldProgress * 720; // roll right
 
         shadowOp = bCourtOp * 0.6;
-      } else if (p <= 0.54) {
+      } else if (p <= 0.65) {
         // Phase 2: Both balls roll outward across the floor toward the key boxes
         bCourtOp = 1; bVisionOp = 1;
         bCourtScale = 1; bVisionScale = 1;
-        const rP = (p - 0.26) / 0.28;
+        const rP = (p - 0.40) / 0.25;
 
         const courtStartX = -vw * 0.18, courtEndX = hoopLeftX * 0.60;
         bCourtX = courtStartX + rP * (courtEndX - courtStartX);
@@ -338,10 +338,10 @@ const Home = () => {
         bVisionRot = 720 + rP * 880;
 
         shadowOp = 0.7;
-      } else if (p <= 0.80) {
+      } else if (p <= 0.86) {
         // Phase 3: Dual High Parabolic Arc Shots into Left & Right Baskets
         bCourtOp = 1; bVisionOp = 1;
-        const aP = (p - 0.54) / 0.26;
+        const aP = (p - 0.65) / 0.21;
 
         // Left arc (COURT)
         const lx0 = hoopLeftX * 0.60, lx1 = hoopLeftX * 0.84, lx2 = hoopLeftX;
@@ -359,10 +359,10 @@ const Home = () => {
         bVisionScale = 1 - aP * 0.22;
 
         shadowOp = Math.max(0, 0.7 - aP * 0.6);
-      } else if (p <= 0.94) {
+      } else if (p <= 0.96) {
         // Phase 4: Simultaneous Dual Swish through Left & Right Nets!
         bCourtOp = 1; bVisionOp = 1;
-        const dP = (p - 0.80) / 0.14;
+        const dP = (p - 0.86) / 0.10;
 
         bCourtX = hoopLeftX;
         bCourtY = (hoopDY - 32) + dP * 125;
@@ -383,7 +383,7 @@ const Home = () => {
         netSwishY = 1 + Math.sin(dP * Math.PI) * 0.18;
       } else {
         // Phase 5: Smooth exit into content
-        const fP = (p - 0.94) / 0.06;
+        const fP = (p - 0.96) / 0.04;
         bCourtOp = Math.max(0, 1 - fP);
         bVisionOp = Math.max(0, 1 - fP);
         bCourtX = hoopLeftX;
