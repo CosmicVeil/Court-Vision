@@ -39,10 +39,12 @@ If the backend returns no games, the existing empty state remains. If a later pa
 
 `LiveGames.css` will add page-specific pagination classes that match the Predictions page's obsidian, ember-orange, pill-button treatment. Page-specific class names will prevent global CSS collisions. On narrow screens, the controls will stack or tighten so they stay within the viewport.
 
+The currently unstyled roster/details button will become a centered ember-orange outlined pill. It will use the site's mono uppercase label treatment, translucent orange hover fill, soft glow, and visible keyboard focus. The existing View/Hide Roster and View Details behavior will remain unchanged.
+
 ## Testing and verification
 
-A Node regression test will check the request's `page` query parameter, the response metadata state, the total-count badge, the Previous/Next controls, and the displayed range. Verification will run the frontend tests, ESLint, and the production build.
+A Node regression test will check the request's `page` query parameter, the response metadata state, the total-count badge, the Previous/Next controls, the displayed range, and the roster button's site-matched styling. Verification will run the frontend tests, ESLint, and the production build.
 
 ## Scope
 
-This change will not alter the backend pagination contract, add numbered page buttons, sync pagination to the browser URL, or refactor the game cards and player modal.
+This change will not alter the backend pagination contract, add numbered page buttons, sync pagination to the browser URL, change roster-button behavior, or refactor the game cards and player modal.
