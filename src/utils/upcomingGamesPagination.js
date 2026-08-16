@@ -1,4 +1,4 @@
-export const UPCOMING_GAMES_PAGE_SIZE = 10;
+export const UPCOMING_GAMES_PAGE_SIZE = 20;
 
 const positiveInteger = (value, fallback = 1) => {
   const parsed = Number.parseInt(value, 10);
