@@ -149,6 +149,68 @@
   gap: 24px;
 }
 
+.lg-pagination {
+  display: flex;
+  justify-content: center;
+  margin: 40px 0 20px;
+}
+
+.lg-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.lg-pagination-btn {
+  padding: 10px 24px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 100, 54, 0.25);
+  border-radius: var(--radius-full, 9999px);
+  color: #fff;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.lg-pagination-btn:hover:not(:disabled) {
+  background: rgba(255, 100, 54, 0.15);
+  border-color: var(--color-ember-orange, #ff6436);
+  box-shadow: 0 0 16px rgba(255, 100, 54, 0.25);
+}
+
+.lg-pagination-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.lg-pagination-btn:focus-visible {
+  outline: 2px solid var(--color-ember-orange, #ff6436);
+  outline-offset: 3px;
+}
+
+.lg-pagination-info {
+  min-width: 180px;
+  text-align: center;
+}
+
+.lg-page-label {
+  margin-bottom: 4px;
+  color: #fff;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.lg-page-count {
+  color: var(--color-stone, #8e8c94);
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+}
+
 .lg-loading {
   text-align: center;
   padding: 6rem 2rem;
@@ -359,6 +421,36 @@
   margin-top: 12px;
 }
 
+.expand-btn {
+  display: block;
+  margin: 18px auto 0;
+  padding: 9px 18px;
+  background: rgba(255, 100, 54, 0.08);
+  border: 1px solid rgba(255, 100, 54, 0.4);
+  border-radius: var(--radius-full, 9999px);
+  color: var(--color-ember-orange, #ff6436);
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.expand-btn:hover {
+  color: #fff;
+  background: rgba(255, 100, 54, 0.2);
+  border-color: var(--color-ember-orange, #ff6436);
+  box-shadow: 0 0 16px rgba(255, 100, 54, 0.25);
+  transform: translateY(-1px);
+}
+
+.expand-btn:focus-visible {
+  outline: 2px solid var(--color-ember-orange, #ff6436);
+  outline-offset: 3px;
+}
+
 /* ---------- Tables inside Game Cards ---------- */
 .quarter-table-wrap, .player-table-wrap {
   overflow-x: auto;
@@ -450,4 +542,20 @@
   width: 16px;
   height: 16px;
   object-fit: contain;
+}
+
+@media (max-width: 600px) {
+  .lg-pagination-controls {
+    width: 100%;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .lg-pagination-btn {
+    width: min(100%, 220px);
+  }
+
+  .expand-btn {
+    max-width: 100%;
+  }
 }

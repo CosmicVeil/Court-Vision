@@ -14,7 +14,7 @@ from functools import wraps
 from db import init_db, get_db, create_user_from_json, authenticate_user_from_json, get_user_by_id, get_saved_players, save_player, remove_saved_player
 from live_games import get_todays_games, get_upcoming_games, get_top_pra_player
 from recommendations import get_top_performers
-
+import math
 
 
 
@@ -184,9 +184,22 @@ def get_today_games():
 @app.route('/api/games/upcoming', methods=['GET'])
 def get_upcoming():
    try:
-       days = int(request.args.get('days', 120))
-       games = get_upcoming_games(days=days, nba_data=nba_data)
-       return jsonify({'games': games, 'count': len(games)}), 200
+        days = int(request.args.get('days', 365))
+        games = get_upcoming_games(days=days, nba_data=nba_data)
+
+        page = request.args.get('page', 1, type=int)
+        page = max(1,page)
+        per_page = 20
+
+        start = (page - 1) * per_page
+        end = start + per_page
+
+        paginated_games = games[start:end]
+
+        total_pages = math.ceil(len(games)/per_page)
+
+
+        return jsonify({'games': paginated_games, 'count': len(games), 'total_pages': total_pages, 'page': page}), 200
    except Exception as e:
        print(f"Error fetching upcoming games: {e}")
        return jsonify({'error': 'Failed to fetch upcoming games', 'games': []}), 500

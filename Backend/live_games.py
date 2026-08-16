@@ -14,6 +14,8 @@ Public interface is identical to the original:
   get_top_pra_player(nba_data)    -> Optional[Dict]
 """
 
+import csv
+import os
 import requests
 import time
 from datetime import datetime, timezone, timedelta
@@ -25,6 +27,26 @@ from typing import Dict, List, Optional, Any
 _ESPN_BASE  = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba"
 _SCOREBOARD = f"{_ESPN_BASE}/scoreboard"
 _SUMMARY    = f"{_ESPN_BASE}/summary"
+_UPCOMING_CSV = os.path.join(os.path.dirname(__file__), "nba_upcoming_data.csv")
+_UPCOMING_COLUMNS = [
+    "cache_date",
+    "game_date",
+    "gameId",
+    "status",
+    "statusText",
+    "gameTime",
+    "arena",
+    "home_tricode",
+    "home_name",
+    "home_city",
+    "home_logo",
+    "home_record",
+    "away_tricode",
+    "away_name",
+    "away_city",
+    "away_logo",
+    "away_record",
+]
 
 # ESPN sometimes uses shortened abbreviations — map them to standard tricodes
 ESPN_TO_TRICODE = {
@@ -291,6 +313,148 @@ def _current_season() -> str:
     return f"{year}-{str(year + 1)[2:]}"
 
 
+def _filter_games_by_days(games: List[Dict], days: int) -> List[Dict]:
+    today = datetime.now(timezone(timedelta(hours=-4))).date()
+    cutoff = today + timedelta(days=days)
+    filtered: List[Dict] = []
+
+    for game in games:
+        game_date_str = game.get("gameDate", "")
+        if not game_date_str:
+            continue
+        try:
+            game_date = datetime.strptime(game_date_str, "%Y%m%d").date()
+        except ValueError:
+            continue
+        if today < game_date <= cutoff:
+            filtered.append(game)
+
+    return filtered
+
+
+def _attach_rosters(games: List[Dict], nba_data: Optional[List[Dict]]) -> List[Dict]:
+    for game in games:
+        home_tri = game["home"]["tricode"]
+        away_tri = game["away"]["tricode"]
+        game["players"]["home"] = _roster_from_pkl(home_tri, nba_data)
+        game["players"]["away"] = _roster_from_pkl(away_tri, nba_data)
+    return games
+
+
+def _game_to_csv_row(cache_date: str, game: Dict) -> Dict[str, str]:
+    home = game.get("home", {})
+    away = game.get("away", {})
+    return {
+        "cache_date": cache_date,
+        "game_date": game.get("gameDate", ""),
+        "gameId": str(game.get("gameId", "")),
+        "status": str(game.get("status", 1)),
+        "statusText": game.get("statusText", ""),
+        "gameTime": game.get("gameTime", ""),
+        "arena": game.get("arena", ""),
+        "home_tricode": home.get("tricode", ""),
+        "home_name": home.get("name", ""),
+        "home_city": home.get("city", ""),
+        "home_logo": home.get("logo", ""),
+        "home_record": home.get("record", ""),
+        "away_tricode": away.get("tricode", ""),
+        "away_name": away.get("name", ""),
+        "away_city": away.get("city", ""),
+        "away_logo": away.get("logo", ""),
+        "away_record": away.get("record", ""),
+    }
+
+
+def _game_from_csv_row(row: Dict[str, str]) -> Dict:
+    return {
+        "gameId": row.get("gameId", ""),
+        "status": int(row.get("status", 1) or 1),
+        "statusText": row.get("statusText", ""),
+        "gameTime": row.get("gameTime", ""),
+        "gameDate": row.get("game_date", ""),
+        "arena": row.get("arena", ""),
+        "period": 0,
+        "gameClock": "",
+        "home": {
+            "tricode": row.get("home_tricode", ""),
+            "name": row.get("home_name", ""),
+            "city": row.get("home_city", ""),
+            "score": 0,
+            "logo": row.get("home_logo", ""),
+            "quarters": [],
+            "record": row.get("home_record", ""),
+        },
+        "away": {
+            "tricode": row.get("away_tricode", ""),
+            "name": row.get("away_name", ""),
+            "city": row.get("away_city", ""),
+            "score": 0,
+            "logo": row.get("away_logo", ""),
+            "quarters": [],
+            "record": row.get("away_record", ""),
+        },
+        "players": {"home": [], "away": []},
+    }
+
+
+def _load_upcoming_csv(cache_date: str) -> Optional[List[Dict]]:
+    if not os.path.exists(_UPCOMING_CSV):
+        return None
+
+    games: List[Dict] = []
+    try:
+        with open(_UPCOMING_CSV, newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle)
+            for row in reader:
+                if row.get("cache_date") != cache_date:
+                    return None
+                games.append(_game_from_csv_row(row))
+    except Exception as exc:
+        print(f"[live_games] Error reading upcoming CSV: {exc}")
+        return None
+
+    return games
+
+
+def _write_upcoming_csv(cache_date: str, games: List[Dict]) -> None:
+    try:
+        with open(_UPCOMING_CSV, "w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=_UPCOMING_COLUMNS)
+            writer.writeheader()
+            for game in games:
+                writer.writerow(_game_to_csv_row(cache_date, game))
+    except Exception as exc:
+        print(f"[live_games] Error writing upcoming CSV: {exc}")
+
+
+def _fetch_upcoming_games(days: int, nba_data: Optional[List[Dict]]) -> List[Dict]:
+    today = datetime.now(timezone(timedelta(hours=-4))).date()
+    upcoming: List[Dict] = []
+
+    for delta in range(1, days + 1):
+        check_date = today + timedelta(days=delta)
+        date_str = check_date.strftime("%Y%m%d")
+
+        data = _get(_SCOREBOARD, params={"dates": date_str})
+        if not data:
+            continue
+
+        for event in data.get("events", []):
+            game = _parse_espn_game(event)
+            if not game:
+                continue
+
+            home_tri = game["home"]["tricode"]
+            away_tri = game["away"]["tricode"]
+            game["gameDate"] = date_str
+            game["statusText"] = check_date.strftime("%b %d")
+            game["players"]["home"] = _roster_from_pkl(home_tri, nba_data)
+            game["players"]["away"] = _roster_from_pkl(away_tri, nba_data)
+            upcoming.append(game)
+
+    return upcoming
+
+
 # ---------------------------------------------------------------------------
 # Public API (identical signatures to original)
 # ---------------------------------------------------------------------------
@@ -329,35 +493,17 @@ def get_todays_games(nba_data: Optional[List[Dict]] = None) -> List[Dict]:
     return result
 
 
-def get_upcoming_games(days: int = 120, nba_data: Optional[List[Dict]] = None) -> List[Dict]:
-    """Return scheduled games in the next *days* days with season roster context."""
-    today    = datetime.now(timezone(timedelta(hours=-4))).date()
-    upcoming = []
+def get_upcoming_games(days: int = 365, nba_data: Optional[List[Dict]] = None) -> List[Dict]:
+    """Return scheduled games in the next *days* days, cached in nba_upcoming_data.csv."""
+    cache_date = _todays_date_str()
+    cached_games = _load_upcoming_csv(cache_date)
 
-    for delta in range(1, min(days + 1, 120)):
-        check_date = today + timedelta(days=delta)
-        date_str   = check_date.strftime("%Y%m%d")
+    if cached_games is not None:
+        return _attach_rosters(_filter_games_by_days(cached_games, days), nba_data)
 
-        data = _get(_SCOREBOARD, params={"dates": date_str})
-        if not data:
-            continue
-
-        for event in data.get("events", []):
-            game = _parse_espn_game(event)
-            if not game:
-                continue
-
-            home_tri = game["home"]["tricode"]
-            away_tri = game["away"]["tricode"]
-            game["statusText"]      = check_date.strftime("%b %d")
-            game["players"]["home"] = _roster_from_pkl(home_tri, nba_data)
-            game["players"]["away"] = _roster_from_pkl(away_tri, nba_data)
-            upcoming.append(game)
-
-        if len(upcoming) >= 20:
-            break
-
-    return upcoming[:20]
+    upcoming = _fetch_upcoming_games(365, nba_data)
+    _write_upcoming_csv(cache_date, upcoming)
+    return _attach_rosters(_filter_games_by_days(upcoming, days), nba_data)
 
 
 def get_top_pra_player(
