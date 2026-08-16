@@ -14,6 +14,14 @@ from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 from bs4 import BeautifulSoup
 import re
+import sys
+
+# Ensure UTF-8 stdout/stderr across all platforms
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 try:
     from playwright.sync_api import sync_playwright
 except ImportError:
@@ -36,45 +44,51 @@ class NBAWebScraper:
         self.session.headers.update(self.headers)
 
     def get_player_stats_page(self, season_year: int) -> Optional[str]:
-        """Get the main player stats page for a given season year using Playwright or requests"""
+        """Get the main player stats page for a given season year using requests or Playwright fallback"""
         url = f"https://www.basketball-reference.com/leagues/NBA_{season_year}_per_game.html"
         
+        # 1. Try fast standard HTTP request first
+        try:
+            res = self.session.get(url, timeout=12)
+            if res.status_code == 200 and len(res.text) > 10000:
+                print(f"[OK] Successfully accessed via requests: {url}")
+                return res.text
+            else:
+                print(f"Requests returned status {res.status_code}, trying Playwright fallback...")
+        except Exception as e:
+            print(f"Requests error for season {season_year}: {e}, trying Playwright fallback...")
+
+        # 2. Fallback to Playwright if available and requests failed
         if sync_playwright is not None:
             try:
                 with sync_playwright() as p:
-                    browser = p.chromium.launch(headless=True)
+                    browser = p.chromium.launch(
+                        headless=True,
+                        args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+                    )
                     page = browser.new_page()
                     page.set_extra_http_headers({
                         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                     })
-                    response = page.goto(url, timeout=30000)
+                    response = page.goto(url, timeout=15000)
 
                     if response and response.status == 200:
-                        print(f"✅ Successfully accessed: {url}")
+                        print(f"[OK] Successfully accessed via Playwright: {url}")
                         try:
-                            page.wait_for_selector("table#per_game_stats", timeout=10000)
-                        except Exception as e:
-                            print("Table didn't load in time, but proceeding with HTML anyway.")
+                            page.wait_for_selector("table#per_game_stats", timeout=5000)
+                        except Exception:
+                            pass
 
                         html_content = page.content()
                         browser.close()
                         return html_content
                     else:
                         status = response.status if response else 'None'
-                        print(f"❌ Failed with status {status}: {url}")
+                        print(f"[ERR] Failed with status {status}: {url}")
 
                     browser.close()
             except Exception as e:
                 print(f"Playwright error for season {season_year}: {e}")
-
-        # Fallback to standard HTTP requests if Playwright is unavailable or fails
-        try:
-            res = self.session.get(url, timeout=10)
-            if res.status_code == 200:
-                print(f"✅ Successfully accessed via requests fallback: {url}")
-                return res.text
-        except Exception as e:
-            print(f"Requests fallback error for season {season_year}: {e}")
 
         return None
 
@@ -596,7 +610,7 @@ class NBAWebScraper:
 
 def test_scraper():
     """Test the NBA web scraper"""
-    print("🏀 Testing NBA Web Scraper...")
+    print("Testing NBA Web Scraper...")
     
     scraper = NBAWebScraper()
     
@@ -610,11 +624,11 @@ def test_scraper():
         if data:
             scraper.save_data(data)
         else:
-            print("❌ Failed to scrape data")
+            print("[ERR] Failed to scrape data")
             return None
     
     if data:
-        print(f"✅ Successfully loaded data for {len(data)} players")
+        print(f"[OK] Successfully loaded data for {len(data)} players")
         
         # Show sample data
         df = pd.DataFrame(data)
