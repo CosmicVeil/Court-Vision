@@ -4,11 +4,15 @@ services:
     env: python
     rootDir: Backend
     buildCommand: python -m pip install --upgrade pip setuptools wheel && pip install --no-cache-dir -r requirements_production.txt --extra-index-url https://download.pytorch.org/whl/cpu
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 300 --workers 1
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1 --threads 4 --max-requests 1000 --max-requests-jitter 50
     envVars:
       - key: FLASK_ENV
         value: production
       - key: PYTHON_VERSION
         value: 3.11.9
+      - key: RENDER
+        value: "true"
+      - key: LOW_MEMORY
+        value: "true"
     healthCheckPath: /api/health
 

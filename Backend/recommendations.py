@@ -1,5 +1,4 @@
 import numpy as np
-from nba_ai_system import initialize_nba_ai, nba_ai_system
 
 LIMIT = 20
 
@@ -20,6 +19,7 @@ STAT_MIN_PREDICTED = {
 }
 
 def _ensure_ai():
+    from nba_ai_system import initialize_nba_ai
     if not initialize_nba_ai():
         raise RuntimeError('AI system failed to initialize. Check nba_ai_model.pkl and nba_2025_26_data.pkl in Backend/.')
 
@@ -40,6 +40,7 @@ def _jsonify_records(records):
 def _build_predictions_df():
     """All players with predicted stats and % improvement per category."""
     _ensure_ai()
+    from nba_ai_system import nba_ai_system
     return nba_ai_system.build_predictions_df()
 
 def get_top_by_improvement(stat, limit=LIMIT):
