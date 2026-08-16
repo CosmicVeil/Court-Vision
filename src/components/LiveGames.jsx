@@ -1,7 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import PlayerPredictionGrid from "./PlayerPredictionGrid";
 import { buildApiUrl } from "../config/api";
+import {
+  buildUpcomingGamesEndpoint,
+  getUpcomingPaginationView,
+  normalizeUpcomingGamesPage,
+} from "../utils/upcomingGamesPagination";
 import "./LiveGames.css";
 
 const STATUS_LIVE  = 2;
@@ -149,7 +154,9 @@ function GameCard({ game, onPlayerClick }) {
         </div>
         {game.arena && <div className="arena-label">{game.arena}</div>}
         {hasPlayers && (
-          <button className="expand-btn">{expanded ? "Hide Roster ▲" : (isFuture ? "View Roster ▼" : "View Details ▼")}</button>
+          <button type="button" className="expand-btn" aria-expanded={expanded}>
+            {expanded ? "Hide Roster ▲" : (isFuture ? "View Roster ▼" : "View Details ▼")}
+          </button>
         )}
       </div>
 
@@ -164,7 +171,6 @@ function GameCard({ game, onPlayerClick }) {
 }
 
 export default function LiveGames() {
-  const navigate = useNavigate();
   const [todayGames,    setTodayGames]    = useState([]);
   const [upcomingGames, setUpcomingGames] = useState([]);
   const [loading,       setLoading]       = useState(true);
@@ -173,6 +179,10 @@ export default function LiveGames() {
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [loadingPlayer, setLoadingPlayer] = useState(false);
   const [modalTab, setModalTab] = useState('current');
+  const [upcomingPage, setUpcomingPage] = useState(1);
+  const [upcomingTotalPages, setUpcomingTotalPages] = useState(1);
+  const [upcomingTotalGames, setUpcomingTotalGames] = useState(0);
+  const [upcomingLoading, setUpcomingLoading] = useState(false);
 
   // Dismiss modal on Escape
   useEffect(() => {
@@ -184,22 +194,29 @@ export default function LiveGames() {
   }, []);
 
   const fetchGames = useCallback(async () => {
+    setUpcomingLoading(true);
     try {
       const [todayRes, upRes] = await Promise.all([
           fetch(buildApiUrl('games/today')),
-          fetch(buildApiUrl('games/upcoming')),
+          fetch(buildApiUrl(buildUpcomingGamesEndpoint(upcomingPage))),
       ]);
       const todayData = await todayRes.json();
-      const upData    = await upRes.json();
+      const upcomingData = normalizeUpcomingGamesPage(await upRes.json());
       setTodayGames(todayData.games || []);
-      setUpcomingGames(upData.games || []);
+      setUpcomingGames(upcomingData.games);
+      setUpcomingTotalGames(upcomingData.totalGames);
+      setUpcomingTotalPages(upcomingData.totalPages);
+      if (upcomingData.page !== upcomingPage) {
+        setUpcomingPage(upcomingData.page);
+      }
       setLastUpdated(new Date());
     } catch (e) {
       console.error("Failed to fetch games", e);
     } finally {
       setLoading(false);
+      setUpcomingLoading(false);
     }
-  }, []);
+  }, [upcomingPage]);
 
   useEffect(() => {
     fetchGames();
@@ -242,11 +259,15 @@ export default function LiveGames() {
   };
 
   const liveGames   = todayGames.filter(g => Number(g.status) === 2);
-  const finalGames  = todayGames.filter(g => Number(g.status) === 3);
-  const todayFuture = todayGames.filter(g => Number(g.status) === 1);
   const displayToday = [...todayGames].sort((a, b) => {
     const order = { 2: 0, 1: 1, 3: 2 }; // live → future → final
     return (order[a.status] ?? 3) - (order[b.status] ?? 3);
+  });
+  const upcomingPagination = getUpcomingPaginationView({
+    page: upcomingPage,
+    totalPages: upcomingTotalPages,
+    totalGames: upcomingTotalGames,
+    loading: upcomingLoading,
   });
 
   return (
@@ -275,7 +296,7 @@ export default function LiveGames() {
         </button>
         <button className={`lg-tab ${tab === "upcoming" ? "active" : ""}`} onClick={() => setTab("upcoming")}>
           UPCOMING GAMES
-          {upcomingGames.length > 0 && <span className="count-badge">{upcomingGames.length}</span>}
+          {upcomingTotalGames > 0 && <span className="count-badge">{upcomingTotalGames}</span>}
         </button>
       </div>
 
@@ -303,9 +324,35 @@ export default function LiveGames() {
               <h3>NO UPCOMING GAMES FOUND</h3>
             </div>
           ) : (
-            <div className="games-grid">
-              {upcomingGames.map(g => <GameCard key={g.gameId} game={g} onPlayerClick={handlePlayerClick} />)}
-            </div>
+            <>
+              <div className="games-grid">
+                {upcomingGames.map(g => <GameCard key={g.gameId} game={g} onPlayerClick={handlePlayerClick} />)}
+              </div>
+              <nav className="lg-pagination" aria-label="Upcoming games pages">
+                <div className="lg-pagination-controls">
+                  <button
+                    type="button"
+                    className="lg-pagination-btn"
+                    disabled={upcomingPagination.previousDisabled}
+                    onClick={() => setUpcomingPage((page) => Math.max(1, page - 1))}
+                  >
+                    Previous Page
+                  </button>
+                  <div className="lg-pagination-info">
+                    <div className="lg-page-label">{upcomingPagination.pageLabel}</div>
+                    <div className="lg-page-count">{upcomingPagination.countLabel}</div>
+                  </div>
+                  <button
+                    type="button"
+                    className="lg-pagination-btn"
+                    disabled={upcomingPagination.nextDisabled}
+                    onClick={() => setUpcomingPage((page) => Math.min(upcomingTotalPages, page + 1))}
+                  >
+                    Next Page
+                  </button>
+                </div>
+              </nav>
+            </>
           )
         )}
       </div>
