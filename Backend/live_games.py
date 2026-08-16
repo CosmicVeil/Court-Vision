@@ -286,7 +286,7 @@ def _current_season() -> str:
     """Return the current NBA season string, e.g. '2024-25'."""
     now  = datetime.now()
     year = now.year
-    if now.month < 10:
+    if now.month < 7:
         return f"{year - 1}-{str(year)[2:]}"
     return f"{year}-{str(year + 1)[2:]}"
 
@@ -329,12 +329,12 @@ def get_todays_games(nba_data: Optional[List[Dict]] = None) -> List[Dict]:
     return result
 
 
-def get_upcoming_games(days: int = 7, nba_data: Optional[List[Dict]] = None) -> List[Dict]:
+def get_upcoming_games(days: int = 120, nba_data: Optional[List[Dict]] = None) -> List[Dict]:
     """Return scheduled games in the next *days* days with season roster context."""
     today    = datetime.now(timezone(timedelta(hours=-4))).date()
     upcoming = []
 
-    for delta in range(1, min(days + 1, 8)):
+    for delta in range(1, min(days + 1, 120)):
         check_date = today + timedelta(days=delta)
         date_str   = check_date.strftime("%Y%m%d")
 

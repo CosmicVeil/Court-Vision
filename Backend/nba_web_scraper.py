@@ -306,7 +306,7 @@ class NBAWebScraper:
                                     player_data['FG3_PCT_LAST'] = self.parse_number(value)
                                 elif header == 'FT%':
                                     player_data['FT_PCT_LAST'] = self.parse_number(value)
-                                elif header == 'MP':
+                                elif header == 'MP': 
                                     player_data['MIN_LAST'] = self.parse_number(value)
                                 elif header == 'G':
                                     player_data['GAMES_PLAYED_LAST'] = self.parse_number(value)
@@ -631,3 +631,5 @@ def test_scraper():
 
 if __name__ == "__main__":
     test_scraper()
+
+

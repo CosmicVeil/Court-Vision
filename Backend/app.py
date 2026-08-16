@@ -160,8 +160,8 @@ def get_today_games():
 @app.route('/api/games/upcoming', methods=['GET'])
 def get_upcoming():
    try:
-       days = int(request.args.get('days', 7))
-       games = get_upcoming_games(days=min(days, 14), nba_data=nba_data)
+       days = int(request.args.get('days', 120))
+       games = get_upcoming_games(days=days, nba_data=nba_data)
        return jsonify({'games': games, 'count': len(games)}), 200
    except Exception as e:
        print(f"Error fetching upcoming games: {e}")
