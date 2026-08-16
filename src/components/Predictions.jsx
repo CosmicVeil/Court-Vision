@@ -100,7 +100,12 @@ const Predictions = () => {
     try {
       const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(player.name)}`));
       const data = await response.json();
-      const match = (data.players || []).find(p => p.name.toLowerCase() === player.name.toLowerCase());
+      const pLower = (player.name || '').toLowerCase();
+      const pNorm = pLower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const match = (data.players || []).find(p => {
+        const name = (p.name || '').toLowerCase();
+        return name === pLower || name.normalize("NFD").replace(/[\u0300-\u036f]/g, "") === pNorm;
+      }) || (data.players && data.players[0]);
       if (match) {
         setSelectedPlayer(match);
       } else {

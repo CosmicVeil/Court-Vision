@@ -63,6 +63,30 @@ else:
        print(f"AI predictions module not available: {e}")
 
 
+def get_cached_player_prediction(name: str):
+    """Retrieve player prediction from static cache with case and accent normalization."""
+    if not isinstance(predictions_cache, dict):
+        return None
+    players = predictions_cache.get('players', {})
+    if not players or not name:
+        return None
+    name_clean = str(name).strip()
+    name_lower = name_clean.lower()
+    if name_lower in players:
+        return players[name_lower]
+    
+    try:
+        import unicodedata
+        norm_target = unicodedata.normalize('NFKD', name_clean).encode('ascii', 'ignore').decode('ascii').lower()
+        for k, v in players.items():
+            norm_k = unicodedata.normalize('NFKD', k).encode('ascii', 'ignore').decode('ascii').lower()
+            if norm_k == norm_target:
+                return v
+    except Exception:
+        pass
+    return None
+
+
 app = Flask(__name__)
 
 
@@ -569,7 +593,10 @@ def search_players_all():
        ml_stats = None
        if AI_AVAILABLE:
            try:
-               pred = get_player_prediction(name)
+               if IS_RENDER or predictions_cache:
+                   pred = get_cached_player_prediction(name)
+               else:
+                   pred = get_player_prediction(name)
                if pred:
                    ml_stats = {
                        'predicted_stats': pred.get('predicted_stats'),
@@ -781,8 +808,8 @@ def get_player_prediction_api(player_name):
        return jsonify({'error': 'Invalid player name'}), 400
   
    try:
-       if IS_RENDER and predictions_cache:
-           prediction = predictions_cache.get('players', {}).get(player_name_clean.lower())
+       if IS_RENDER or predictions_cache:
+           prediction = get_cached_player_prediction(player_name_clean)
            if not prediction:
                return jsonify({'error': 'Player not found in cache'}), 404
        else:

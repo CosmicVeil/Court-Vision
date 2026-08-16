@@ -211,9 +211,15 @@ export default function LiveGames() {
     setLoadingPlayer(true);
     setModalTab('current');
     try {
-      const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(player.name)}`));
+      const pName = player.name || '';
+      const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(pName)}`));
       const data = await response.json();
-      const match = (data.players || []).find(p => p.name.toLowerCase() === player.name.toLowerCase());
+      const pLower = pName.toLowerCase();
+      const pNorm = pLower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const match = (data.players || []).find(p => {
+        const name = (p.name || '').toLowerCase();
+        return name === pLower || name.normalize("NFD").replace(/[\u0300-\u036f]/g, "") === pNorm;
+      }) || (data.players && data.players[0]);
       if (match) {
         setSelectedPlayer(match);
       } else {
