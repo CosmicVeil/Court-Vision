@@ -269,8 +269,8 @@ const Home = () => {
 
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      // Snappy and smooth scroll pace matching 140vh hero wrapper: animation plays over 0.4 viewport heights
-      const p = Math.min(Math.max(scrollY / (vh * 0.4), 0), 1);
+      // Cinematic and smooth scroll pace matching 240vh hero wrapper: animation plays gracefully over 1.35 viewport heights
+      const p = Math.min(Math.max(scrollY / (vh * 1.35), 0), 1);
 
       // Dual Rim positions relative to screen center (50vw, 50vh) - perfectly in the middle of the restricted circle!
       const hoopDist = vw * 0.395;
