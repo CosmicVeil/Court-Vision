@@ -431,26 +431,35 @@ def _fetch_upcoming_games(days: int, nba_data: Optional[List[Dict]]) -> List[Dic
     today = datetime.now(timezone(timedelta(hours=-4))).date()
     upcoming: List[Dict] = []
 
-    for delta in range(1, days + 1):
-        check_date = today + timedelta(days=delta)
-        date_str = check_date.strftime("%Y%m%d")
+    start_date = today + timedelta(days=1)
+    end_date = today + timedelta(days=days)
+    dates_str = f"{start_date.strftime('%Y%m%d')}-{end_date.strftime('%Y%m%d')}"
 
-        data = _get(_SCOREBOARD, params={"dates": date_str})
-        if not data:
+    data = _get(_SCOREBOARD, params={"dates": dates_str, "limit": 1000})
+    if not data:
+        return []
+
+    for event in data.get("events", []):
+        game = _parse_espn_game(event)
+        if not game:
             continue
 
-        for event in data.get("events", []):
-            game = _parse_espn_game(event)
-            if not game:
-                continue
+        try:
+            event_dt = datetime.fromisoformat(event.get("date", "").replace("Z", "+00:00"))
+            et_dt = event_dt.astimezone(timezone(timedelta(hours=-4)))
+            date_str = et_dt.strftime("%Y%m%d")
+            status_text = et_dt.strftime("%b %d")
+        except Exception:
+            date_str = start_date.strftime("%Y%m%d")
+            status_text = start_date.strftime("%b %d")
 
-            home_tri = game["home"]["tricode"]
-            away_tri = game["away"]["tricode"]
-            game["gameDate"] = date_str
-            game["statusText"] = check_date.strftime("%b %d")
-            game["players"]["home"] = _roster_from_pkl(home_tri, nba_data)
-            game["players"]["away"] = _roster_from_pkl(away_tri, nba_data)
-            upcoming.append(game)
+        home_tri = game["home"]["tricode"]
+        away_tri = game["away"]["tricode"]
+        game["gameDate"] = date_str
+        game["statusText"] = status_text
+        game["players"]["home"] = _roster_from_pkl(home_tri, nba_data)
+        game["players"]["away"] = _roster_from_pkl(away_tri, nba_data)
+        upcoming.append(game)
 
     return upcoming
 
@@ -516,20 +525,20 @@ def get_top_pra_player(
     # Find which teams are playing today or in the next 'days'
     active_teams = set()
     today = datetime.now(timezone(timedelta(hours=-4))).date()
+    end_date = today + timedelta(days=days-1)
     
-    for delta in range(days):
-        check_date = today + timedelta(days=delta)
-        date_str = check_date.strftime("%Y%m%d")
-        data = _get(_SCOREBOARD, params={"dates": date_str})
-        if data:
-            for event in data.get("events", []):
-                competition = (event.get("competitions") or [{}])[0]
-                competitors = competition.get("competitors", [])
-                for comp in competitors:
-                    team = comp.get("team", {})
-                    tri = _normalize_tricode(team.get("abbreviation", ""))
-                    if tri:
-                        active_teams.add(tri)
+    dates_str = f"{today.strftime('%Y%m%d')}-{end_date.strftime('%Y%m%d')}"
+    
+    data = _get(_SCOREBOARD, params={"dates": dates_str, "limit": 500})
+    if data:
+        for event in data.get("events", []):
+            competition = (event.get("competitions") or [{}])[0]
+            competitors = competition.get("competitors", [])
+            for comp in competitors:
+                team = comp.get("team", {})
+                tri = _normalize_tricode(team.get("abbreviation", ""))
+                if tri:
+                    active_teams.add(tri)
     
     # Filter players to only those whose team is active (prevents eliminated players)
     if active_teams:
