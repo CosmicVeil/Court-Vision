@@ -167,7 +167,7 @@ function TrendingSection({ onPlayerClick }) {
 
         setLiveGames(gameCards);
         setFutureGames(upcomingGames);
-        setPraPlayer(pra.name ? pra : null);
+        setPraPlayer(pra.name || pra.no_games ? pra : null);
       } catch (e) {
         console.error("Trending fetch failed", e);
       } finally {
