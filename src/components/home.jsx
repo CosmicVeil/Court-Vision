@@ -206,7 +206,7 @@ function TrendingSection({ onPlayerClick }) {
   ) : (
     <>
       {liveGames.map(g => <TrendingGameCard key={g.gameId} game={g} />)}
-      <PRACard player={praPlayer} onPlayerClick={onPlayerClick} />
+      <PRACard player={praPlayer || { no_games: true }} onPlayerClick={onPlayerClick} />
     </>
   );
 
