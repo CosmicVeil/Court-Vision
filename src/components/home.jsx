@@ -63,28 +63,75 @@ function TrendingGameCard({ game }) {
 }
 
 function PRACard({ player, onPlayerClick }) {
+  const [showHistory, setShowHistory] = useState(false);
+
+  const pastWinners = [
+    { name: "Jalen Brunson", team: "NYK", position: "G", ppg: 35.5, rpg: 4.5, apg: 9.0, pra: 49.0 },
+    { name: "Victor Wembanyama", team: "SAS", position: "C", ppg: 25.2, rpg: 12.5, apg: 5.5, pra: 43.2 }
+  ];
+
   if (!player) return null;
+
   return (
-    <div
-      className="featured-card pra-card clickable-pra-card"
-      onClick={() => onPlayerClick && onPlayerClick(player.name)}
-      style={{ cursor: 'pointer' }}
-    >
-      <div className="featured-badge highlight">WEEK'S BEST PRA</div>
-      <div className="featured-content">
-        <h3 className="pra-name">{player.name}</h3>
-        <p className="pra-meta">{player.team} · {player.position}</p>
-        <div className="pra-stats-row">
-          <div className="pra-stat"><span className="pra-val">{player.ppg}</span><span className="pra-lbl">PPG</span></div>
-          <div className="pra-stat"><span className="pra-val">{player.rpg}</span><span className="pra-lbl">RPG</span></div>
-          <div className="pra-stat"><span className="pra-val">{player.apg}</span><span className="pra-lbl">APG</span></div>
-          <div className="pra-stat pra-total"><span className="pra-val">{player.pra}</span><span className="pra-lbl">PRA</span></div>
-        </div>
-        <div className="featured-link">
-          Click for Full Stats →
+    <>
+      <div
+        className="featured-card pra-card clickable-pra-card"
+        onClick={() => setShowHistory(true)}
+        style={{ cursor: 'pointer' }}
+      >
+        <div className="featured-badge highlight">WEEK'S BEST PRA</div>
+        <div className="featured-content">
+          {player.no_games ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
+              <h3 className="pra-name" style={{ fontSize: '1.2rem', color: 'white' }}>No Recent NBA Games</h3>
+              <p className="pra-meta" style={{ fontSize: '0.9rem', color: '#aaa' }}>Check back when the season resumes!</p>
+              <div className="featured-link" style={{ marginTop: 'auto' }}>
+                Click for Past Winners →
+              </div>
+            </div>
+          ) : (
+            <>
+              <h3 className="pra-name">{player.name}</h3>
+              <p className="pra-meta">{player.team} · {player.position}</p>
+              <div className="pra-stats-row">
+                <div className="pra-stat"><span className="pra-val">{player.ppg}</span><span className="pra-lbl">PPG</span></div>
+                <div className="pra-stat"><span className="pra-val">{player.rpg}</span><span className="pra-lbl">RPG</span></div>
+                <div className="pra-stat"><span className="pra-val">{player.apg}</span><span className="pra-lbl">APG</span></div>
+                <div className="pra-stat pra-total"><span className="pra-val">{player.pra}</span><span className="pra-lbl">PRA</span></div>
+              </div>
+              <div className="featured-link">
+                Click for Past Winners →
+              </div>
+            </>
+          )}
         </div>
       </div>
-    </div>
+
+      {showHistory && (
+        <div className="modal-overlay" onClick={() => setShowHistory(false)} style={{ zIndex: 10000 }}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <button className="modal-close" onClick={() => setShowHistory(false)}>✕</button>
+            <h2 style={{ marginBottom: '20px', color: 'white', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '15px' }}>Past Weekly PRA Winners</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              {pastWinners.map((winner, idx) => (
+                <div key={idx} style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.1rem', margin: '0 0 5px 0', color: '#ff6436' }}>{winner.name}</h3>
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#aaa' }}>{winner.team} · {winner.position}</p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '15px', textAlign: 'center' }}>
+                    <div><div style={{ fontSize: '1.1rem', fontWeight: 600 }}>{winner.ppg}</div><div style={{ fontSize: '0.7rem', color: '#888' }}>PPG</div></div>
+                    <div><div style={{ fontSize: '1.1rem', fontWeight: 600 }}>{winner.rpg}</div><div style={{ fontSize: '0.7rem', color: '#888' }}>RPG</div></div>
+                    <div><div style={{ fontSize: '1.1rem', fontWeight: 600 }}>{winner.apg}</div><div style={{ fontSize: '0.7rem', color: '#888' }}>APG</div></div>
+                    <div><div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#ff6436' }}>{winner.pra}</div><div style={{ fontSize: '0.7rem', color: '#ff6436' }}>PRA</div></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

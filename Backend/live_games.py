@@ -544,9 +544,9 @@ def get_top_pra_player(
     if active_teams:
         eligible_players = [p for p in nba_data if p.get("TEAM") in active_teams]
         if not eligible_players:
-            eligible_players = nba_data
+            return {"no_games": True}
     else:
-        eligible_players = nba_data
+        return {"no_games": True}
 
     best = max(
         eligible_players,
