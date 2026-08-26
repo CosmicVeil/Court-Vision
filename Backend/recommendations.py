@@ -57,7 +57,7 @@ def get_top_by_improvement(stat, limit=LIMIT):
     filtered_results = results[results[pred_col] > min_pred]
     
     # Robust Fallback: If no players meet the strict threshold,
-    # fall back to the full dataset so we still show the best breakout players!
+    # fall back to the full dataset so we still show the best breakout players
     if len(filtered_results) == 0:
         filtered_results = results
 
