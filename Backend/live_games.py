@@ -119,7 +119,7 @@ def _parse_espn_game(event: Dict) -> Optional[Dict]:
         else:
             status_num = 1
 
-        period      = status_obj.get("period", 0)
+        period  = status_obj.get("period", 0)
         clock       = status_obj.get("displayClock", "")
         status_text = status_type.get("shortDetail", status_type.get("description", ""))
 
@@ -182,7 +182,7 @@ def _fetch_boxscore(game_id: str, home_tri: str, away_tri: str) -> Dict[str, Lis
     home_players: List[Dict] = []
     away_players: List[Dict] = []
 
-    # ESPN stat label order: MIN PTS FG 3PT FT REB AST TO STL BLK +/- ...
+    # ESPN stat label order: MIN PTS FG 3PT FT REB AST TO STL BLK +/-
     LABEL_ORDER = ["MIN", "PTS", "FG", "3PT", "FT", "REB", "AST", "TO", "STL", "BLK"]
 
     try:

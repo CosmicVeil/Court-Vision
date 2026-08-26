@@ -1,5 +1,5 @@
-# Database requirements (Flask and MySQL)
+# Database requirements (Flask and PostgreSQL)
 flask>=2.3.0
-flask-mysqldb>=1.0.1
+psycopg[binary]>=3.2.0,<4.0.0
 python-dotenv>=1.0.0
 werkzeug>=3.0.0

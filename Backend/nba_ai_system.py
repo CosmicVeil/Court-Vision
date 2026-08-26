@@ -46,11 +46,11 @@ TARGET_SPECS = (
 
 def _build_xgboost_model():
     return MultiOutputRegressor(XGBRegressor(
-        n_estimators=1000,
-        max_depth=10,
-        learning_rate=0.01,
+        n_estimators=2000,
+        max_depth=20,
+        learning_rate=0.05,
         subsample=0.8,
-        colsample_bytree=0.8,
+        colsample_bytree=0.7,
         random_state=42,
         n_jobs=1,
     ))
