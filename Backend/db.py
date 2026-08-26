@@ -1,9 +1,12 @@
 import os
 import psycopg
+from dotenv import load_dotenv
 from psycopg.rows import dict_row
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import request
 from typing import Dict, Optional, Tuple
+
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 def get_db():
     database_url = os.environ.get('DATABASE_URL')
