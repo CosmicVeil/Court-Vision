@@ -11,7 +11,7 @@ Endpoints used:
 Public interface is identical to the original:
   get_todays_games(nba_data)      -> List[Dict]
   get_upcoming_games(days, nba_data) -> List[Dict]
-  get_top_pra_player(nba_data)    -> Optional[Dict]
+  get_weekly_top_pra(now)         -> Dict
 """
 
 import csv
@@ -20,6 +20,7 @@ import requests
 import time
 from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Any
+from zoneinfo import ZoneInfo
 
 # ---------------------------------------------------------------------------
 # ESPN API endpoints
@@ -74,6 +75,10 @@ TEAM_LOGOS = {
 # ---------------------------------------------------------------------------
 _cache: Dict[str, Dict] = {}
 CACHE_TTL = 30  # seconds
+LIVE_BOX_TTL = 60
+_ET = ZoneInfo("America/New_York")
+_WEEK_BOX_CACHE: Dict[str, Dict] = {}
+_WEEK_DAY_CACHE: Dict[str, Dict] = {}
 
 
 def _get(url: str, params: Optional[Dict] = None) -> Optional[Any]:
@@ -506,62 +511,123 @@ def get_upcoming_games(days: int = 365, nba_data: Optional[List[Dict]] = None) -
     return _attach_rosters(_filter_games_by_days(upcoming, days), nba_data)
 
 
-def get_top_pra_player(
-    nba_data: List[Dict], days: int = 7
-) -> Optional[Dict]:
-    """Return the highest PRA player from teams active in the next 'days'."""
-    if not nba_data:
-        return None
-
-    # Find which teams are playing today or in the next 'days'
-    active_teams = set()
-    today = datetime.now(timezone(timedelta(hours=-4))).date()
-    
-    for delta in range(days):
-        check_date = today + timedelta(days=delta)
-        date_str = check_date.strftime("%Y%m%d")
-        data = _get(_SCOREBOARD, params={"dates": date_str})
-        if data:
-            for event in data.get("events", []):
-                competition = (event.get("competitions") or [{}])[0]
-                competitors = competition.get("competitors", [])
-                for comp in competitors:
-                    team = comp.get("team", {})
-                    tri = _normalize_tricode(team.get("abbreviation", ""))
-                    if tri:
-                        active_teams.add(tri)
-    
-    # Filter players to only those whose team is active (prevents eliminated players)
-    if active_teams:
-        eligible_players = [p for p in nba_data if p.get("TEAM") in active_teams]
-        if not eligible_players:
-            eligible_players = nba_data
+def current_week_bounds(now=None):
+    """Return the Monday/Sunday dates for the current US Eastern week."""
+    if now is None:
+        eastern = datetime.now(_ET)
+    elif now.tzinfo is None:
+        eastern = now.replace(tzinfo=_ET)
     else:
-        eligible_players = nba_data
+        eastern = now.astimezone(_ET)
+    start = eastern.date() - timedelta(days=eastern.weekday())
+    return start, start + timedelta(days=6)
 
-    best = max(
-        eligible_players,
-        key=lambda p: (
-            (p.get("PPG_LAST") or 0)
-            + (p.get("RPG_LAST") or 0)
-            + (p.get("APG_LAST") or 0)
-        ),
-    )
-    ppg = round(best.get("PPG_LAST", 0), 1)
-    rpg = round(best.get("RPG_LAST", 0), 1)
-    apg = round(best.get("APG_LAST", 0), 1)
-    return {
-        "name":      best.get("PLAYER_NAME", ""),
-        "team":      best.get("TEAM", ""),
-        "position":  best.get("POSITION", ""),
-        "ppg":       ppg,
-        "rpg":       rpg,
-        "apg":       apg,
-        "pra":       round(ppg + rpg + apg, 1),
-        "spg":       round(best.get("SPG_LAST", 0), 1),
-        "bpg":       round(best.get("BPG_LAST", 0), 1),
-        "player_id": best.get("PLAYER_ID"),
+
+def _is_started(event: Dict) -> bool:
+    status_type = event.get("status", {}).get("type", {})
+    state = status_type.get("state")
+    return state == "in" or (state == "post" and status_type.get("completed") is True)
+
+
+def _event_tipoff(event: Dict) -> datetime:
+    value = event.get("date", "")
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc)
+    except (TypeError, ValueError):
+        return datetime.max.replace(tzinfo=timezone.utc)
+
+
+def _weekly_events(day, today):
+    date_key = day.strftime("%Y%m%d")
+    cached = _WEEK_DAY_CACHE.get(date_key)
+    if cached is not None:
+        return cached["events"]
+    data = _get(_SCOREBOARD, params={"dates": date_key})
+    if data is None:
+        return []
+    events = [event for event in data.get("events", []) if _is_started(event)]
+    if day < today and all(event.get("status", {}).get("type", {}).get("state") != "in" for event in events):
+        _WEEK_DAY_CACHE[date_key] = {"events": events}
+    return events
+
+
+def _weekly_boxscore(game: Dict, is_live: bool):
+    game_id = str(game["gameId"])
+    now_ts = time.time()
+    cached = _WEEK_BOX_CACHE.get(game_id)
+    if cached and (cached["final"] or (is_live and now_ts - cached["ts"] < LIVE_BOX_TTL)):
+        return cached["players"]
+    if not is_live:
+        # A summary cached while the game was live must be refreshed once before
+        # the final result is retained for the rest of this process.
+        summary_key = _SUMMARY + str(sorted({"event": game_id}.items()))
+        _cache.pop(summary_key, None)
+    players = _fetch_boxscore(game_id, game["home"]["tricode"], game["away"]["tricode"])
+    if players.get("home") or players.get("away"):
+        _WEEK_BOX_CACHE[game_id] = {
+            "players": players, "final": not is_live, "ts": now_ts,
+        }
+    return players
+
+
+def get_weekly_top_pra(now=None) -> Dict:
+    """Return this Eastern calendar week's best single-game PRA performance."""
+    if now is None:
+        eastern_now = datetime.now(_ET)
+    elif now.tzinfo is None:
+        eastern_now = now.replace(tzinfo=_ET)
+    else:
+        eastern_now = now.astimezone(_ET)
+    week_start, week_end = current_week_bounds(eastern_now)
+    result = {
+        "player": None,
+        "week_start": week_start.isoformat(),
+        "week_end": week_end.isoformat(),
     }
+    events = {}
+    day = week_start
+    while day <= min(eastern_now.date(), week_end):
+        for event in _weekly_events(day, eastern_now.date()):
+            events[str(event.get("id", ""))] = (event, day)
+        day += timedelta(days=1)
+
+    candidates = []
+    for event, game_day in events.values():
+        try:
+            game = _parse_espn_game(event)
+            if not game:
+                continue
+            is_live = game["status"] == 2
+            players = _weekly_boxscore(game, is_live)
+            for side, opponent_side in (("home", "away"), ("away", "home")):
+                for player in players.get(side, []):
+                    if player.get("status") == "DNP":
+                        continue
+                    pts = int(player.get("pts", 0) or 0)
+                    reb = int(player.get("reb", 0) or 0)
+                    ast = int(player.get("ast", 0) or 0)
+                    candidate = {
+                        "name": player.get("name", ""),
+                        "team": game[side]["tricode"],
+                        "position": player.get("position", ""),
+                        "pts": pts, "reb": reb, "ast": ast,
+                        "pra": pts + reb + ast,
+                        "opponent": game[opponent_side]["tricode"],
+                        "game_id": str(game["gameId"]),
+                        "game_date": game_day.isoformat(),
+                        "is_live": is_live,
+                        "player_id": player.get("personId"),
+                    }
+                    candidates.append((candidate, _event_tipoff(event)))
+        except Exception as exc:
+            print(f"[live_games] weekly PRA game error ({event.get('id', '')}): {exc}")
+
+    if candidates:
+        result["player"] = min(
+            candidates,
+            key=lambda item: (-item[0]["pra"], item[1], item[0]["name"].casefold()),
+        )[0]
+    return result
 
 
 # ---------------------------------------------------------------------------

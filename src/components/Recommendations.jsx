@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import PlayerPredictionGrid from './PlayerPredictionGrid';
 import { buildApiUrl } from '../config/api';
+import { samePlayerName } from '../utils/playerNames';
 import './Recommendations.css';
 
 const FALLBACK_PLAYERS = {
@@ -65,7 +66,7 @@ const Recommendations = () => {
     try {
       const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(player.name || player.PLAYER_NAME)}`));
       const data = await response.json();
-      const match = (data.players || []).find(p => p.name.toLowerCase() === (player.name || player.PLAYER_NAME).toLowerCase());
+      const match = (data.players || []).find(p => samePlayerName(p.name, player.name || player.PLAYER_NAME));
       if (match) {
         setSelectedPlayer(match);
       } else {

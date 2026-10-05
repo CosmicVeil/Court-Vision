@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import PlayerPredictionGrid from './PlayerPredictionGrid';
+import { samePlayerName } from '../utils/playerNames';
 import './Recommendations.css';
 
 const RecommendationChart = () => {
@@ -20,7 +21,7 @@ const RecommendationChart = () => {
         try {
             const response = await fetch(`${API_BASE_URL}/players/search-all?query=${encodeURIComponent(player.PLAYER_NAME || player.name)}`);
             const data = await response.json();
-            const match = (data.players || []).find(p => p.name.toLowerCase() === (player.PLAYER_NAME || player.name).toLowerCase());
+            const match = (data.players || []).find(p => samePlayerName(p.name, player.PLAYER_NAME || player.name));
             if (match) {
                 setSelectedPlayer(match);
             } else {

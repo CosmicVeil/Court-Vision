@@ -33,9 +33,7 @@ except ImportError:
     playergamelogs = None
     leaguedashplayerbiostats = None
 
-import unicodedata
-
-NAME_SUFFIXES = {'jr', 'sr', 'ii', 'iii', 'iv', 'v'}
+from player_names import fix_mojibake, normalize_player_name
 
 # Previous-season features copied from the same player's row one season earlier.
 PREV_FEATURE_SOURCES = {
@@ -50,25 +48,6 @@ GAME_LOG_FEATURES = (
     'PPG_TREND', 'APG_TREND', 'RPG_TREND',
     'PPG_STD', 'APG_STD', 'RPG_STD', 'CONSISTENCY_SCORE',
 )
-
-
-def normalize_player_name(name) -> str:
-    """Canonical name for matching Basketball Reference rows to NBA.com rows
-    ("Nikola Jokić" / "Nikola Jokic", "Gary Trent Jr." / "Gary Trent Jr")."""
-    if not name:
-        return ''
-    name = str(name)
-    try:
-        # Basketball Reference pages fetched via requests get decoded as Latin-1,
-        # turning "Dončić" into "DonÄ\x8diÄ\x87"; undo that before comparing.
-        name = name.encode('latin-1').decode('utf-8')
-    except (UnicodeEncodeError, UnicodeDecodeError):
-        pass
-    ascii_name = unicodedata.normalize('NFKD', name).encode('ascii', 'ignore').decode()
-    ascii_name = re.sub(r"[.'`*]", '', ascii_name.lower())
-    ascii_name = ascii_name.replace('-', ' ')
-    parts = [part for part in ascii_name.split() if part not in NAME_SUFFIXES]
-    return ' '.join(parts)
 
 
 def _season_slug(season_year: int) -> str:
@@ -176,9 +155,11 @@ class NBAWebScraper:
         # 1. Try fast standard HTTP request first
         try:
             res = self.session.get(url, timeout=12)
-            if res.status_code == 200 and len(res.text) > 10000:
+            res.encoding = 'utf-8'
+            html_text = res.text
+            if res.status_code == 200 and len(html_text) > 10000:
                 print(f"[OK] Successfully accessed via requests: {url}")
-                return res.text
+                return html_text
             else:
                 print(f"Requests returned status {res.status_code}, trying Playwright fallback...")
         except Exception as e:
@@ -205,6 +186,7 @@ class NBAWebScraper:
                         except Exception:
                             pass
 
+                        # Playwright returns browser-decoded Unicode from page.content().
                         html_content = page.content()
                         browser.close()
                         return html_content
@@ -496,7 +478,7 @@ class NBAWebScraper:
                                 
                                 # Map Basketball Reference headers to our format
                                 if header == 'Player':
-                                    player_data['PLAYER_NAME'] = value
+                                    player_data['PLAYER_NAME'] = fix_mojibake(value)
                                 elif header in ['Tm', 'Team']:
                                     player_data['TEAM'] = value
                                 elif header in ['Pos', 'Position']:
@@ -846,5 +828,3 @@ def test_scraper():
 
 if __name__ == "__main__":
     test_scraper()
-
-

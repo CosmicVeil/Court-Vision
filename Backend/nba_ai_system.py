@@ -12,9 +12,22 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error, r2_score
 
 from nba_web_scraper import NBAWebScraper
+from player_names import fix_mojibake, normalize_player_name
 
 STAT_SCALE = 1.0
 MODEL_SCHEMA_VERSION = 4
+
+
+def _repair_player_names(data):
+    """Repair cached names in memory without modifying the source pickle."""
+    seasons = data.values() if isinstance(data, dict) else [data]
+    for players in seasons:
+        if not isinstance(players, list):
+            continue
+        for player in players:
+            if isinstance(player, dict) and 'PLAYER_NAME' in player:
+                player['PLAYER_NAME'] = fix_mojibake(player['PLAYER_NAME'])
+    return data
 
 SEASONS_TO_SCRAPE = [2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023, 2024, 2025, 2026]
 
@@ -45,11 +58,11 @@ TARGET_SPECS = (
 
 def _build_xgboost_model():
     return MultiOutputRegressor(XGBRegressor(
-        n_estimators=10000,
-        max_depth=30,
-        learning_rate=0.01,
-        subsample=0.7,
-        colsample_bytree=0.7,
+        n_estimators=750,
+        max_depth=9,
+        learning_rate=0.03,
+        subsample=0.8,
+        colsample_bytree=0.8,
         random_state=42,
         n_jobs=1,
     ))
@@ -160,7 +173,7 @@ class NBAAISystem:
             data_file = os.path.join(os.path.dirname(__file__), 'nba_multi_season_data.pkl')
             if os.path.exists(data_file):
                 with open(data_file, 'rb') as f:
-                    self.data = pickle.load(f)
+                    self.data = _repair_player_names(pickle.load(f))
 
         if not self.model_trained or self.model is None:
             print("Model must be trained before calculating prediction differences.")
@@ -248,7 +261,7 @@ class NBAAISystem:
             print("Found existing data and model")
             # Load the multi-season data specifically
             with open(data_file, 'rb') as f:
-                self.data = pickle.load(f)
+                self.data = _repair_player_names(pickle.load(f))
             if self.data and self.load_model():
                 self.model_trained = True
                 return True
@@ -258,7 +271,7 @@ class NBAAISystem:
             print("No existing data or model found, proceeding to train.")
 
         print("🔄 Scraping NBA data for multiple seasons (2023-2026)...")
-        self.data = self.scraper.scrape_multiple_seasons(SEASONS_TO_SCRAPE)
+        self.data = _repair_player_names(self.scraper.scrape_multiple_seasons(SEASONS_TO_SCRAPE))
 
         if not self.data:
             print("❌ Failed to scrape NBA data")
@@ -293,7 +306,7 @@ class NBAAISystem:
 
         try:
             with open(data_file, 'rb') as f:
-                self.data = pickle.load(f)
+                self.data = _repair_player_names(pickle.load(f))
         except Exception as exc:
             print(f"Error loading cached training data: {exc}")
             return False
@@ -527,7 +540,12 @@ class NBAAISystem:
         else:
             df = pd.DataFrame(self.data)
             
-        player_data = df[df['PLAYER_NAME'].str.contains(player_name, case=False, na=False)]
+        normalized = normalize_player_name(player_name)
+        player_data = df[df['PLAYER_NAME'].map(normalize_player_name) == normalized]
+        if player_data.empty:
+            player_data = df[df['PLAYER_NAME'].str.contains(
+                player_name, case=False, na=False, regex=False
+            )]
         
         if player_data.empty:
             print(f"Player '{player_name}' not found.")

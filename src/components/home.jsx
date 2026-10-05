@@ -5,6 +5,8 @@ import AIPredictions from "./AIPredictions";
 import PlayerPredictionGrid from "./PlayerPredictionGrid";
 import { isAuthenticated, getUser, logout } from "../utils/auth";
 import { buildApiUrl } from "../config/api";
+import { samePlayerName } from "../utils/playerNames";
+import { extractWeeklyPraPlayer, formatPraGameDate } from "../utils/weeklyPra";
 
 /* Scroll-reveal hook using IntersectionObserver */
 function useScrollReveal() {
@@ -67,17 +69,20 @@ function PRACard({ player, onPlayerClick }) {
   return (
     <div
       className="featured-card pra-card clickable-pra-card"
-      onClick={() => onPlayerClick && onPlayerClick(player.name)}
+      onClick={() => onPlayerClick && onPlayerClick({ name: player.name, team: player.team, position: player.position })}
       style={{ cursor: 'pointer' }}
     >
-      <div className="featured-badge highlight">WEEK'S BEST PRA</div>
+      <div className="featured-badge highlight">
+        WEEK'S BEST PRA {player.is_live && <><span className="trend-live-dot" /> LIVE</>}
+      </div>
       <div className="featured-content">
         <h3 className="pra-name">{player.name}</h3>
         <p className="pra-meta">{player.team} · {player.position}</p>
+        <p className="pra-game-meta"><span>vs {player.opponent}</span> · {formatPraGameDate(player.game_date)}</p>
         <div className="pra-stats-row">
-          <div className="pra-stat"><span className="pra-val">{player.ppg}</span><span className="pra-lbl">PPG</span></div>
-          <div className="pra-stat"><span className="pra-val">{player.rpg}</span><span className="pra-lbl">RPG</span></div>
-          <div className="pra-stat"><span className="pra-val">{player.apg}</span><span className="pra-lbl">APG</span></div>
+          <div className="pra-stat"><span className="pra-val">{player.pts}</span><span className="pra-lbl">PTS</span></div>
+          <div className="pra-stat"><span className="pra-val">{player.reb}</span><span className="pra-lbl">REB</span></div>
+          <div className="pra-stat"><span className="pra-val">{player.ast}</span><span className="pra-lbl">AST</span></div>
           <div className="pra-stat pra-total"><span className="pra-val">{player.pra}</span><span className="pra-lbl">PRA</span></div>
         </div>
         <div className="featured-link">
@@ -118,7 +123,7 @@ function TrendingSection({ onPlayerClick }) {
           : [...todayF, ...upcomingGames].slice(0, 2);
 
         setLiveGames(gameCards);
-        setPraPlayer(pra.name ? pra : null);
+        setPraPlayer(praRes.ok ? extractWeeklyPraPlayer(pra) : null);
       } catch (e) {
         console.error("Trending fetch failed", e);
       } finally {
@@ -157,7 +162,7 @@ function TrendingSection({ onPlayerClick }) {
   ) : (
     <>
       {liveGames.map(g => <TrendingGameCard key={g.gameId} game={g} />)}
-      <PRACard player={praPlayer} onPlayerClick={onPlayerClick} />
+      {praPlayer && <PRACard player={praPlayer} onPlayerClick={onPlayerClick} />}
     </>
   );
 
@@ -233,7 +238,7 @@ const Home = () => {
       const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(playerName)}`));
       if (response.ok) {
         const data = await response.json();
-        const match = (data.players || []).find(p => p.name.toLowerCase() === playerName.toLowerCase());
+        const match = (data.players || []).find(p => samePlayerName(p.name, playerName));
         if (match) {
           setSelectedPlayer(match);
         }

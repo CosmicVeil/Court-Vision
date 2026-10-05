@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { isFavorite, toggleFavorite, getFavorites } from '../utils/favorites';
 import { isAuthenticated } from '../utils/auth';
 import { buildApiUrl } from '../config/api';
+import { samePlayerName } from '../utils/playerNames';
 import PlayerPredictionGrid from './PlayerPredictionGrid';
 import './Stats.css';
 
@@ -91,7 +92,7 @@ const Stats = () => {
       const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(player.name || player.PLAYER_NAME)}`));
       if (response.ok) {
         const data = await response.json();
-        const match = (data.players || []).find(p => p.name === (player.name || player.PLAYER_NAME));
+        const match = (data.players || []).find(p => samePlayerName(p.name, player.name || player.PLAYER_NAME));
         if (match) {
           setSelectedPlayer(match);
         }

@@ -1,4 +1,5 @@
 import { buildApiUrl } from '../config/api';
+import { samePlayerName } from './playerNames';
 
 export function buildPlayerFallback(player) {
   return {
@@ -20,6 +21,6 @@ export async function fetchPlayerDetails(player, signal) {
   const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(player.name)}`), { signal });
   if (!response.ok) throw new Error('Unable to load player details');
   const data = await response.json();
-  return (data.players || []).find(item => item.name.toLowerCase() === player.name.toLowerCase())
+  return (data.players || []).find(item => samePlayerName(item.name, player.name))
     || buildPlayerFallback(player);
 }

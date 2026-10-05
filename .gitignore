@@ -64,3 +64,9 @@ Backend/model_evaluation_report.json
 
 # Local backups of pre-enrichment data/model (too large for GitHub, not LFS-tracked)
 Backend/*.pre_enrich.pkl
+
+# Backups written by Backend/repair_player_names.py
+Backend/*.bak
+
+# Runtime cache rewritten by Backend/live_games.py (recreated automatically when missing)
+Backend/nba_upcoming_data.csv
