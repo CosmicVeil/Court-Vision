@@ -318,6 +318,7 @@ def get_player_stats_summary(player_data):
            'ft_pct_last': round(player_data.get('FT_PCT_LAST', player_data.get('ft_pct_last', 0)) * 100, 1),
            'games_played': int(player_data.get('GAMES_PLAYED_LAST', player_data.get('games_played_last', 0)) or 0)
        },
+
        'trends': {
            'ppg_trend': round(ppg_trend, 1),
            'apg_trend': round(apg_trend, 1),

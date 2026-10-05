@@ -1,6 +1,6 @@
 """Comprehensive tests for the XGBoost player-projection model in nba_ai_system.
 
-Training tests swap the production estimator (10k trees, depth 30) for a small
+Training tests swap the production estimator (2k trees, depth 20) for a small
 XGBoost model so the suite runs in seconds while exercising the real pipeline.
 """
 import gzip
@@ -286,14 +286,16 @@ class TrainingTests(unittest.TestCase):
         self.assertTrue(self.trained)
         self.assertEqual(set(self.system.validation_metrics), set(TARGET_KEYS))
         for key, metrics in self.system.validation_metrics.items():
-            self.assertEqual(set(metrics), {"mae", "r2"}, key)
-            self.assertTrue(np.isfinite(metrics["mae"]), key)
-            self.assertGreaterEqual(metrics["mae"], 0, key)
+            self.assertEqual(set(metrics), {"train_mae", "train_r2"}, key)
+            self.assertTrue(np.isfinite(metrics["train_mae"]), key)
+            self.assertGreaterEqual(metrics["train_mae"], 0, key)
 
     def test_model_learns_strong_season_to_season_signal(self):
-        # Stats only drift ~2% per season, so a working model should explain most variance.
+        # This is an in-sample fit check; honest held-out quality is tested walk-forward.
         for key, metrics in self.system.validation_metrics.items():
-            self.assertGreater(metrics["r2"], 0.8, f"{key} r2={metrics['r2']:.3f}")
+            self.assertGreater(
+                metrics["train_r2"], 0.8, f"{key} r2={metrics['train_r2']:.3f}"
+            )
 
     def test_beats_naive_mean_baseline(self):
         X, y, _ = self.combined
@@ -501,7 +503,7 @@ class PersistenceTests(unittest.TestCase):
             "schema_version": MODEL_SCHEMA_VERSION,
             "feature_columns": list(FEATURE_COLUMNS),
             "target_columns": [spec["target_column"] for spec in TARGET_SPECS],
-            "validation_metrics": {"ppg": {"mae": 1.0, "r2": 0.9}},
+            "validation_metrics": {"ppg": {"train_mae": 1.0, "train_r2": 0.9}},
             **overrides,
         }
 
@@ -528,7 +530,7 @@ class PersistenceTests(unittest.TestCase):
         self._write(self._valid_payload(), compress=False)
         system = NBAAISystem()
         self.assertTrue(system.load_model(str(self.path)))
-        self.assertEqual(system.validation_metrics["ppg"]["r2"], 0.9)
+        self.assertEqual(system.validation_metrics["ppg"]["train_r2"], 0.9)
 
     def test_rejects_incompatible_schemas(self):
         cases = {

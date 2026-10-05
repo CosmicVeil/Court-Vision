@@ -119,23 +119,23 @@ def _parse_espn_game(event: Dict) -> Optional[Dict]:
         else:
             status_num = 1
 
-        period  = status_obj.get("period", 0)
-        clock       = status_obj.get("displayClock", "")
+        period = status_obj.get("period", 0)
+        clock = status_obj.get("displayClock", "")
         status_text = status_type.get("shortDetail", status_type.get("description", ""))
 
         competitors = competition.get("competitors", [])
-        home_comp   = next((c for c in competitors if c.get("homeAway") == "home"), {})
-        away_comp   = next((c for c in competitors if c.get("homeAway") == "away"), {})
+        home_comp = next((c for c in competitors if c.get("homeAway") == "home"), {})
+        away_comp = next((c for c in competitors if c.get("homeAway") == "away"), {})
 
         def _parse_team(comp: Dict) -> Dict:
-            team    = comp.get("team", {})
-            tri     = _normalize_tricode(team.get("abbreviation", ""))
-            score   = int(comp.get("score", 0) or 0)
+            team = comp.get("team", {})
+            tri = _normalize_tricode(team.get("abbreviation", ""))
+            score = int(comp.get("score", 0) or 0)
             records = comp.get("records", [])
-            record  = records[0].get("summary", "") if records else ""
+            record = records[0].get("summary", "") if records else ""
 
             linescores = comp.get("linescores", [])
-            quarters   = [
+            quarters = [
                 {"q": i + 1, "score": int(ls.get("value", 0) or 0)}
                 for i, ls in enumerate(linescores)
             ]
@@ -144,10 +144,10 @@ def _parse_espn_game(event: Dict) -> Optional[Dict]:
             logo = TEAM_LOGOS.get(tri) or team.get("logo", "")
 
             return {
-                "tricode":  tri,
-                "name":     team.get("shortDisplayName", team.get("name", "")),
-                "city":     team.get("location", ""),
-                "score":    score,
+                "tricode": tri,
+                "name":    team.get("shortDisplayName", team.get("name", "")),
+                "city":    team.get("location", ""),
+                "score":   score,
                 "logo":     logo,
                 "quarters": quarters,
                 "record":   record,
@@ -338,8 +338,8 @@ def _attach_rosters(games: List[Dict], nba_data: Optional[List[Dict]]) -> List[D
         away_tri = game["away"]["tricode"]
         game["players"]["home"] = _roster_from_pkl(home_tri, nba_data)
         game["players"]["away"] = _roster_from_pkl(away_tri, nba_data)
-    return games
 
+    return games
 
 def _game_to_csv_row(cache_date: str, game: Dict) -> Dict[str, str]:
     home = game.get("home", {})

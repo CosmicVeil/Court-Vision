@@ -75,6 +75,14 @@ python app.py
 ```
 The server will initialize on [http://localhost:5000](http://localhost:5000) and load pickle datasets.
 
+#### Testing and evaluating the AI model
+From `Backend/`, run the offline model tests (about a second) and a quick accuracy (MAE) report:
+```bash
+python -m unittest test_nba_ai_model test_model_evaluation test_scraper_features test_expanded_predictions test_predictions_cache
+python model_evaluation.py --fast
+```
+See [Backend/README.md](Backend/README.md) for what each suite covers, how to read the MAE report, and how to tune the model.
+
 ### 3. Configure and Run Frontend
 Return to the project root directory and spin up the Vite development server:
 ```bash

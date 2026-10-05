@@ -9,8 +9,7 @@ from typing import Dict, List, Optional, Tuple
 from xgboost import XGBRegressor
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.metrics import mean_absolute_error, r2_score
 
 from nba_web_scraper import NBAWebScraper
 
@@ -46,10 +45,10 @@ TARGET_SPECS = (
 
 def _build_xgboost_model():
     return MultiOutputRegressor(XGBRegressor(
-        n_estimators=2000,
-        max_depth=20,
-        learning_rate=0.05,
-        subsample=0.8,
+        n_estimators=10000,
+        max_depth=30,
+        learning_rate=0.01,
+        subsample=0.7,
         colsample_bytree=0.7,
         random_state=42,
         n_jobs=1,
@@ -153,7 +152,10 @@ class NBAAISystem:
         return differences
 
     def print_season_accuracies(self) -> Optional[Dict]:
-        """Evaluate the trained model on each season transition and print avg stat differences."""
+        """Print in-sample errors for seasons used to train the fitted model.
+
+        Use model_evaluation.py for honest walk-forward, out-of-sample MAE.
+        """
         if not self.data:
             data_file = os.path.join(os.path.dirname(__file__), 'nba_multi_season_data.pkl')
             if os.path.exists(data_file):
@@ -169,7 +171,10 @@ class NBAAISystem:
             print("No season data available for prediction difference evaluation.")
             return None
 
-        print("\nAverage prediction difference by season (|predicted - actual|):")
+        print(
+            "\nIn-sample average prediction difference by season "
+            "(model trained on these seasons; use model_evaluation.py for out-of-sample MAE):"
+        )
         season_results = {}
         stat_totals = {spec['key']: [] for spec in TARGET_SPECS}
 
@@ -434,23 +439,27 @@ class NBAAISystem:
         if X is None:
             return False
 
-        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
-
         print("Training XGBoost model...")
         self.model = _build_xgboost_model()
-        self.model.fit(X_train, y_train)
+        self.model.fit(X, y)
 
-        val_pred = self.model.predict(X_val)
+        train_pred = self.model.predict(X)
 
         self.validation_metrics = {}
-        print("Training completed! Per-target validation metrics:")
+        print(
+            f"Training completed on {len(X)} rows (all season transitions). "
+            "In-sample metrics (not held out; run model_evaluation.py for honest MAE):"
+        )
         for index, spec in enumerate(TARGET_SPECS):
             metrics = {
-                'mae': float(mean_absolute_error(y_val[:, index], val_pred[:, index])),
-                'r2': float(r2_score(y_val[:, index], val_pred[:, index])),
+                'train_mae': float(mean_absolute_error(y[:, index], train_pred[:, index])),
+                'train_r2': float(r2_score(y[:, index], train_pred[:, index])),
             }
             self.validation_metrics[spec['key']] = metrics
-            print(f"  {spec['key'].upper()}: MAE {metrics['mae']:.4f}, R² {metrics['r2']:.4f}")
+            print(
+                f"  {spec['key'].upper()}: train MAE {metrics['train_mae']:.4f}, "
+                f"train R² {metrics['train_r2']:.4f}"
+            )
         return True
 
     def _clamp_predictions(self, predictions):
