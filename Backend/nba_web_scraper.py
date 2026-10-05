@@ -27,6 +27,132 @@ try:
 except ImportError:
     sync_playwright = None
 
+try:
+    from nba_api.stats.endpoints import playergamelogs, leaguedashplayerbiostats
+except ImportError:
+    playergamelogs = None
+    leaguedashplayerbiostats = None
+
+import unicodedata
+
+NAME_SUFFIXES = {'jr', 'sr', 'ii', 'iii', 'iv', 'v'}
+
+# Previous-season features copied from the same player's row one season earlier.
+PREV_FEATURE_SOURCES = {
+    'PPG_PREV': 'PPG_LAST', 'APG_PREV': 'APG_LAST', 'RPG_PREV': 'RPG_LAST',
+    'SPG_PREV': 'SPG_LAST', 'BPG_PREV': 'BPG_LAST', 'TOV_PREV': 'TOV_LAST',
+    'FG_PCT_PREV': 'FG_PCT_LAST', 'FG3_PCT_PREV': 'FG3_PCT_LAST', 'FT_PCT_PREV': 'FT_PCT_LAST',
+    'MIN_PREV': 'MIN_LAST', 'GAMES_PLAYED_PREV': 'GAMES_PLAYED_LAST',
+}
+
+GAME_LOG_FEATURES = (
+    'PPG_LAST_10', 'APG_LAST_10', 'RPG_LAST_10', 'FG_PCT_LAST_10',
+    'PPG_TREND', 'APG_TREND', 'RPG_TREND',
+    'PPG_STD', 'APG_STD', 'RPG_STD', 'CONSISTENCY_SCORE',
+)
+
+
+def normalize_player_name(name) -> str:
+    """Canonical name for matching Basketball Reference rows to NBA.com rows
+    ("Nikola Jokić" / "Nikola Jokic", "Gary Trent Jr." / "Gary Trent Jr")."""
+    if not name:
+        return ''
+    name = str(name)
+    try:
+        # Basketball Reference pages fetched via requests get decoded as Latin-1,
+        # turning "Dončić" into "DonÄ\x8diÄ\x87"; undo that before comparing.
+        name = name.encode('latin-1').decode('utf-8')
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        pass
+    ascii_name = unicodedata.normalize('NFKD', name).encode('ascii', 'ignore').decode()
+    ascii_name = re.sub(r"[.'`*]", '', ascii_name.lower())
+    ascii_name = ascii_name.replace('-', ' ')
+    parts = [part for part in ascii_name.split() if part not in NAME_SUFFIXES]
+    return ' '.join(parts)
+
+
+def _season_slug(season_year: int) -> str:
+    return f"{season_year - 1}-{str(season_year)[-2:]}"
+
+
+def _trend(values: np.ndarray) -> float:
+    """Least-squares slope of a stat over the season's games (stat per game, per game played)."""
+    if len(values) < 2:
+        return 0.0
+    return float(np.polyfit(np.arange(len(values)), values, 1)[0])
+
+
+def compute_game_log_features(logs: pd.DataFrame) -> Dict[int, Dict]:
+    """Per-player form/volatility features from one season of league-wide game logs."""
+    features = {}
+    if logs is None or logs.empty:
+        return features
+
+    logs = logs.sort_values(['PLAYER_ID', 'GAME_DATE', 'GAME_ID'])
+    for player_id, games in logs.groupby('PLAYER_ID', sort=False):
+        pts = games['PTS'].astype(float).to_numpy()
+        ast = games['AST'].astype(float).to_numpy()
+        reb = games['REB'].astype(float).to_numpy()
+        last_10 = games.tail(10)
+        fga_10 = float(last_10['FGA'].sum())
+        ppg_mean = float(pts.mean())
+        ppg_std = float(pts.std())
+
+        features[int(player_id)] = {
+            'NBA_PLAYER_ID': int(player_id),
+            'PPG_LAST_10': float(last_10['PTS'].mean()),
+            'APG_LAST_10': float(last_10['AST'].mean()),
+            'RPG_LAST_10': float(last_10['REB'].mean()),
+            'FG_PCT_LAST_10': float(last_10['FGM'].sum()) / fga_10 if fga_10 else 0.0,
+            'PPG_TREND': _trend(pts),
+            'APG_TREND': _trend(ast),
+            'RPG_TREND': _trend(reb),
+            'PPG_STD': ppg_std,
+            'APG_STD': float(ast.std()),
+            'RPG_STD': float(reb.std()),
+            # 1 - coefficient of variation of scoring: 1 = identical output every night.
+            'CONSISTENCY_SCORE': float(np.clip(1 - ppg_std / ppg_mean, 0, 1)) if ppg_mean > 0 else 0.0,
+        }
+    return features
+
+
+def build_name_index(frame: pd.DataFrame) -> Dict[str, int]:
+    """normalized name -> NBA PLAYER_ID, dropping names shared by two players."""
+    index, ambiguous = {}, set()
+    if frame is None or frame.empty:
+        return index
+    for player_id, name in frame[['PLAYER_ID', 'PLAYER_NAME']].drop_duplicates().itertuples(index=False):
+        key = normalize_player_name(name)
+        if key in index and index[key] != int(player_id):
+            ambiguous.add(key)
+        index[key] = int(player_id)
+    for key in ambiguous:
+        index.pop(key, None)
+    return index
+
+
+def add_previous_season_features(all_season_data: Dict[int, List[Dict]]) -> None:
+    """Fill *_PREV columns in place from each player's row in the prior season.
+
+    Players with no prior-season row (rookies, missed seasons) get GAMES_PLAYED_PREV=0
+    and missing (NaN) values for the rest, which XGBoost treats as 'unknown'.
+    When the prior season itself isn't in the data, every *_PREV stays NaN.
+    """
+    for season_year, players in all_season_data.items():
+        previous = all_season_data.get(season_year - 1)
+        previous_by_name = {
+            normalize_player_name(p.get('PLAYER_NAME')): p for p in (previous or [])
+        }
+        for player in players:
+            prior = previous_by_name.get(normalize_player_name(player.get('PLAYER_NAME')))
+            for prev_column, source_column in PREV_FEATURE_SOURCES.items():
+                if prior is not None:
+                    player[prev_column] = prior.get(source_column, np.nan)
+                elif previous and prev_column == 'GAMES_PLAYED_PREV':
+                    player[prev_column] = 0
+                else:
+                    player[prev_column] = np.nan
+
 class NBAWebScraper:
     """Web scraper for NBA player statistics"""
 
@@ -159,6 +285,81 @@ class NBAWebScraper:
 
             time.sleep(1)
 
+        return self.enrich_multiple_seasons(all_season_data)
+
+    def _fetch_nba_frame(self, endpoint, retries=3, **params) -> Optional[pd.DataFrame]:
+        if endpoint is None:
+            print("nba_api is not installed; skipping NBA.com enrichment")
+            return None
+        for attempt in range(retries):
+            try:
+                return endpoint(timeout=60, **params).get_data_frames()[0]
+            except Exception as e:
+                print(f"NBA.com request failed ({attempt + 1}/{retries}): {e}")
+                time.sleep(2 * (attempt + 1))
+        return None
+
+    def fetch_season_game_logs(self, season_year: int) -> Optional[pd.DataFrame]:
+        """Every regular-season player game log for a season, in one request."""
+        return self._fetch_nba_frame(
+            playergamelogs.PlayerGameLogs if playergamelogs else None,
+            season_nullable=_season_slug(season_year),
+            season_type_nullable='Regular Season',
+        )
+
+    def fetch_season_bios(self, season_year: int) -> Optional[pd.DataFrame]:
+        """Height (inches) and weight (lbs) for every player in a season."""
+        return self._fetch_nba_frame(
+            leaguedashplayerbiostats.LeagueDashPlayerBioStats if leaguedashplayerbiostats else None,
+            season=_season_slug(season_year),
+        )
+
+    def enrich_season(self, season_year: int, players: List[Dict]) -> List[Dict]:
+        """Add HEIGHT, WEIGHT and game-log features (last 10, trend, std, consistency)
+        to one season of Basketball Reference rows. Unmatched players keep NaN."""
+        logs = self.fetch_season_game_logs(season_year)
+        time.sleep(0.6)
+        bios = self.fetch_season_bios(season_year)
+
+        log_features = compute_game_log_features(logs)
+        bio_by_id = {}
+        if bios is not None and not bios.empty:
+            for row in bios.itertuples(index=False):
+                bio_by_id[int(row.PLAYER_ID)] = {
+                    'HEIGHT': pd.to_numeric(row.PLAYER_HEIGHT_INCHES, errors='coerce'),
+                    'WEIGHT': pd.to_numeric(row.PLAYER_WEIGHT, errors='coerce'),
+                }
+        name_frames = [
+            frame[['PLAYER_ID', 'PLAYER_NAME']]
+            for frame in (logs, bios)
+            if frame is not None and not frame.empty
+        ]
+        name_index = build_name_index(pd.concat(name_frames)) if name_frames else {}
+
+        matched = 0
+        for player in players:
+            player_id = name_index.get(normalize_player_name(player.get('PLAYER_NAME')))
+            features = {column: np.nan for column in GAME_LOG_FEATURES}
+            features.update({'HEIGHT': np.nan, 'WEIGHT': np.nan})
+            if player_id is not None:
+                matched += 1
+                player['NBA_PLAYER_ID'] = player_id
+                features.update(log_features.get(player_id, {}))
+                features.update(bio_by_id.get(player_id, {}))
+            for column, value in features.items():
+                if column != 'NBA_PLAYER_ID':
+                    player[column] = float(value) if pd.notna(value) else np.nan
+
+        print(f"  {_season_slug(season_year)}: matched {matched}/{len(players)} players to NBA.com")
+        return players
+
+    def enrich_multiple_seasons(self, all_season_data: Dict[int, List[Dict]]) -> Dict[int, List[Dict]]:
+        """Add every model feature the per-game table doesn't have, in place."""
+        print("📈 Enriching seasons with NBA.com game logs and bio data...")
+        for season_year in sorted(all_season_data):
+            self.enrich_season(season_year, all_season_data[season_year])
+            time.sleep(0.6)
+        add_previous_season_features(all_season_data)
         return all_season_data
 
     

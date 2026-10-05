@@ -15,7 +15,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from nba_web_scraper import NBAWebScraper
 
 STAT_SCALE = 1.0
-MODEL_SCHEMA_VERSION = 3
+MODEL_SCHEMA_VERSION = 4
 
 SEASONS_TO_SCRAPE = [2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023, 2024, 2025, 2026]
 
@@ -54,6 +54,14 @@ def _build_xgboost_model():
         random_state=42,
         n_jobs=1,
     ))
+
+
+def _feature_value(player: Dict, column: str) -> float:
+    try:
+        value = float(player.get(column))
+    except (TypeError, ValueError):
+        return np.nan
+    return value
 
 
 class NBAAISystem:
@@ -108,7 +116,7 @@ class NBAAISystem:
                     continue
 
                 next_player = next_data_by_name[player_name]
-                feature_vector = [player.get(col, 0) for col in self.feature_columns]
+                feature_vector = [_feature_value(player, col) for col in self.feature_columns]
 
                 try:
                     target_vector = [
@@ -308,44 +316,19 @@ class NBAAISystem:
         else:
             df = pd.DataFrame(self.data)
 
-        df = df.fillna(0)
-
+        # Features absent from the data stay NaN, exactly as in training, so the
+        # model sees the same inputs it was fit on (XGBoost routes NaN natively).
         self.feature_columns = list(FEATURE_COLUMNS)
-
-        # Add missing columns with default values
         for col in self.feature_columns:
             if col not in df.columns:
-                # Set appropriate default values based on column type
-                if col in ['HEIGHT']:
-                    df[col] = 75  # Average NBA player height in inches
-                elif col in ['WEIGHT']:
-                    df[col] = 220  # Average NBA player weight in lbs
-                elif col in ['PPG_PREV', 'APG_PREV', 'RPG_PREV', 'SPG_PREV', 'BPG_PREV', 'TOV_PREV']:
-                    df[col] = df.get(col.replace('_PREV', '_LAST'), 0)  # Use last season as previous
-                elif col in ['FG_PCT_PREV', 'FG3_PCT_PREV', 'FT_PCT_PREV']:
-                    df[col] = df.get(col.replace('_PREV', '_LAST'), 0.5)  # Default 50% shooting
-                elif col in ['MIN_PREV']:
-                    df[col] = df.get('MIN_LAST', 25)  # Default minutes
-                elif col in ['GAMES_PLAYED_PREV']:
-                    df[col] = df.get('GAMES_PLAYED_LAST', 50)  # Default games played
-                elif col in ['PPG_LAST_10', 'APG_LAST_10', 'RPG_LAST_10', 'FG_PCT_LAST_10']:
-                    df[col] = df.get(col.replace('_LAST_10', '_LAST'), 0)  # Use last season as 10-game avg
-                elif col in ['PPG_TREND', 'APG_TREND', 'RPG_TREND']:
-                    df[col] = 0  # No trend data available
-                elif col in ['PPG_STD', 'APG_STD', 'RPG_STD']:
-                    df[col] = df.get(col.replace('_STD', '_LAST'), 0) * 0.3  # Estimate variability
-                elif col in ['CONSISTENCY_SCORE']:
-                    df[col] = 0.5  # Moderate consistency
-                else:
-                    df[col] = 0  # Default fallback
-
-        self.feature_columns = [col for col in self.feature_columns if col in df.columns]
+                df[col] = np.nan
+        X = df[self.feature_columns].apply(pd.to_numeric, errors='coerce').values.astype(float)
+        df = df.fillna(0)
 
         for spec in TARGET_SPECS:
             if spec['target_column'] not in df.columns:
                 df[spec['target_column']] = df[spec['last_column']]
 
-        X = df[self.feature_columns].values
         y = df[self.target_columns].values
         if self.model_trained:
             X_scaled = self.scaler.transform(X)
