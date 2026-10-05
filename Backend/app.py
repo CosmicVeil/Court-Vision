@@ -165,7 +165,7 @@ def get_upcoming():
 
         page = request.args.get('page', 1, type=int)
         page = max(1,page)
-        per_page = 20
+        per_page = 10
 
         start = (page - 1) * per_page
         end = start + per_page
@@ -185,7 +185,10 @@ def get_upcoming():
 def get_game_detail(game_id):
    try:
        games = get_todays_games(nba_data=nba_data)
-       game = next((g for g in games if g['gameId'] == game_id), None)
+       game = next((g for g in games if str(g.get('gameId')) == game_id), None)
+       if not game:
+           upcoming_games = get_upcoming_games(nba_data=nba_data)
+           game = next((g for g in upcoming_games if str(g.get('gameId')) == game_id), None)
        if not game:
            return jsonify({'error': 'Game not found'}), 404
        return jsonify(game), 200
@@ -898,5 +901,6 @@ if AI_AVAILABLE and not IS_RENDER:
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5001))
+    default_port=5001
+    port = int(os.environ.get("PORT", default_port))
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)

@@ -90,7 +90,6 @@ function PRACard({ player, onPlayerClick }) {
 
 function TrendingSection({ onPlayerClick }) {
   const [liveGames, setLiveGames] = useState([]);
-  const [futureGames, setFutureGames] = useState([]);
   const [praPlayer, setPraPlayer] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -119,7 +118,6 @@ function TrendingSection({ onPlayerClick }) {
           : [...todayF, ...upcomingGames].slice(0, 2);
 
         setLiveGames(gameCards);
-        setFutureGames(upcomingGames);
         setPraPlayer(pra.name ? pra : null);
       } catch (e) {
         console.error("Trending fetch failed", e);
@@ -187,7 +185,7 @@ const Home = () => {
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => isAuthenticated());
   const [user, setUser] = useState(null);
 
   // States for search and popup modal
@@ -827,11 +825,10 @@ const Home = () => {
         </div>
       </section>
 
-      <section className="cta-section scroll-reveal">
-        <div className="cta-container">
-          <div className="cv-section-badge-wrapper">
-            <span className="cv-section-badge">GET STARTED</span>
-          </div>
+      {!isLoggedIn && (
+      <section className="cta-section">
+        <div className="cta-container scroll-reveal">
+          <div className="cv-section-badge-wrapper"><span className="cv-section-badge">GET STARTED</span></div>
           <h2 className="cta-title">ELEVATE YOUR <span className="text-ember">COURT VISION</span></h2>
           <p className="cta-description">Join thousands of analysts, bettors, and basketball fanatics leveraging AI to discover winning insights.</p>
           <div className="cta-buttons">
@@ -840,6 +837,21 @@ const Home = () => {
           </div>
         </div>
       </section>
+      )}
+      {isLoggedIn && (
+      <section className="cta-section">
+        <div className="cta-container">
+          <div className="cv-section-badge-wrapper">
+            <span className="cv-section-badge">GET STARTED</span>
+          </div>
+          <h2 className="cta-title">ELEVATE YOUR <span className="text-ember">COURT VISION</span></h2>
+          <p className="cta-description">Join thousands of analysts, bettors, and basketball fanatics leveraging AI to discover winning insights.</p>
+          <div className="cta-buttons">
+            <Link to="/stats" className="cta-button primary large">START ANALYZING</Link>
+          </div>
+        </div>
+      </section>
+      )}
 
       {/* Interactive Glassmorphic Stats Popup Modal */}
       {(selectedPlayer || loadingPlayer) && (

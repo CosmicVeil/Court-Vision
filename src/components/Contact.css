@@ -13,6 +13,11 @@
   font-family: var(--font-body, 'Inter', sans-serif);
 }
 
+.contact-shell {
+  width: min(calc(100% - 2rem), 1160px);
+  margin: 0 auto;
+}
+
 .contact-header {
   text-align: center;
   margin-bottom: 24px;

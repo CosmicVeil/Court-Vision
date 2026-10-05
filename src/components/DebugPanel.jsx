@@ -19,7 +19,7 @@ export default function DebugPanel() {
             const res = await fetch(e.url, { method: "GET" });
             const ok = res.ok;
             let body = null;
-            try { body = await res.json(); } catch {}
+            try { body = await res.json(); } catch { body = null; }
             return { label: e.label, url: e.url, ok, status: res.status, body };
           } catch (err) {
             return { label: e.label, url: e.url, ok: false, error: String(err) };
@@ -48,4 +48,3 @@ export default function DebugPanel() {
     </div>
   );
 }
-

@@ -13,6 +13,7 @@ function Contact() {
       <div className="contact-ambient contact-ambient-one" />
       <div className="contact-ambient contact-ambient-two" />
 
+      <div className="contact-shell">
       <header className="contact-header">
         <div className="stats-nav-top">
           <Link to="/" className="back-to-home">← HOME</Link>
@@ -27,7 +28,10 @@ function Contact() {
         </p>
       </section>
 
-
+      <article className="contact-project-card">
+        <div><p className="contact-label">LIVE PROJECT</p><h2>Court Vision Analytics</h2><p>Explore the public NBA intelligence platform.</p></div>
+        <a className="contact-domain" href="https://courtvision.works" target="_blank" rel="noreferrer"><span>courtvision.works</span><small>VISIT PLATFORM ↗</small></a>
+      </article>
 
       <section className="contact-team" aria-labelledby="team-title">
         <div className="contact-section-heading">
@@ -73,7 +77,7 @@ function Contact() {
             <div className="team-card-content">
               <p className="contact-label">BACKEND &amp; FRONTEND</p>
               <h3>Varun Uday</h3>
-              <p className="team-role">Backend Developer</p>
+              <p className="team-role">Frontend/Backend Developer</p>
               <p className="team-bio">
                 Varun develops and maintains the Flask API layer, real-time NBA data collection, and
                 prediction-serving endpoints that power Court Vision's live outcome forecasts.
@@ -101,6 +105,7 @@ function Contact() {
         <span>COURT VISION</span>
         <span>NBA analytics, made clear.</span>
       </footer>
+      </div>
     </main>
   );
 }

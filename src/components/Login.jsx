@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./Login.css";
-import { login } from "../utils/auth";
+import { isAuthenticated, login } from "../utils/auth";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -85,12 +85,12 @@ const Login = () => {
           </button>
         </form>
         <div className="login-footer">
-          <p>
+          {!isAuthenticated() && <p>
             Don't have an account?{" "}
             <Link to="/create-account" className="login-link">
               Create Account
             </Link>
-          </p>
+          </p>}
           <Link to="/" className="login-link">
             Back to Home
           </Link>
@@ -101,4 +101,3 @@ const Login = () => {
 };
 
 export default Login;
-

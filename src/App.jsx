@@ -6,6 +6,7 @@ import Favourites from "./components/Favourites.jsx";
 import Login from "./components/Login.jsx";
 import SignUp from "./components/SignUp.jsx";
 import LiveGames from "./components/LiveGames.jsx"; // adjust path
+import LiveGameDetail from "./components/LiveGameDetail.jsx";
 import RecommendationChart from "./components/RecommendationChart.jsx";
 import Predictions from "./components/Predictions.jsx";
 import Contact from "./components/Contact.jsx";
@@ -22,6 +23,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/create-account" element={<SignUp />} />
         <Route path="/games" element={<LiveGames />} />
+        <Route path="/games/:gameId" element={<LiveGameDetail />} />
         <Route path="/predictions" element={<Predictions />} />
         <Route path="/contact" element={<Contact />} />
         <Route
