@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import PlayerPredictionGrid from './PlayerPredictionGrid';
 import { buildApiUrl } from '../config/api';
+import { samePlayerName } from '../utils/playerNames';
 import './Recommendations.css';
 
 const FALLBACK_PLAYERS = {
@@ -66,12 +67,7 @@ const Recommendations = () => {
       const pName = player.name || player.PLAYER_NAME || '';
       const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(pName)}`));
       const data = await response.json();
-      const pLower = pName.toLowerCase();
-      const pNorm = pLower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      const match = (data.players || []).find(p => {
-        const name = (p.name || '').toLowerCase();
-        return name === pLower || name.normalize("NFD").replace(/[\u0300-\u036f]/g, "") === pNorm;
-      }) || (data.players && data.players[0]);
+      const match = (data.players || []).find(p => samePlayerName(p.name, player.name || player.PLAYER_NAME));
       if (match) {
         setSelectedPlayer(match);
       } else {
@@ -215,8 +211,6 @@ const Recommendations = () => {
                   {['PPG', 'APG', 'RPG'].map((s) => {
                     const player = topPerformers[s] || FALLBACK_PLAYERS[s];
                     const improvement = player[`${s}_IMPROVEMENT`] || 0;
-                    const last = player[`${s}_LAST`] || 0;
-                    const predicted = player[`PREDICTED_${s}`] || 0;
                     const label = s === 'PPG' ? 'Scoring Outbreak' : s === 'APG' ? 'Playmaking Visionary' : 'Glass Dominator';
                     
                     return (
@@ -295,44 +289,6 @@ const Recommendations = () => {
           </div>
         )}
 
-        {selectedCategory === 'games' && (
-          <div className="recommendations-section">
-            <h2 className="section-heading">Recommended Games to Watch</h2>
-            <p className="section-description">
-              AI predictions for upcoming games based on team performance and matchups
-            </p>
-            <div className="games-grid">
-              {upcomingGames.map((game) => (
-                <div key={game.id} className="game-card">
-                  <div className="game-header">
-                    <div className="game-teams">
-                      <span className="team-name">{game.team1}</span>
-                      <span className="vs">VS</span>
-                      <span className="team-name">{game.team2}</span>
-                    </div>
-                    <div className="game-prediction">
-                      <span className="prediction-label">AI Prediction</span>
-                      <span className="prediction-value">{game.prediction}</span>
-                    </div>
-                  </div>
-                  <div className="game-body">
-                    <div className="game-date">{game.date}</div>
-                    <div className="game-matchup">
-                      <span className="matchup-label">Key Matchup:</span>
-                      <span className="matchup-value">{game.keyMatchup}</span>
-                    </div>
-                    <p className="game-reason">{game.reason}</p>
-                  </div>
-                  <div className="game-footer">
-                    <Link to="/stats" className="view-details-link">
-                      View Details →
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Player Details Popup Modal */}

@@ -12,7 +12,8 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from functools import wraps
 from db import init_db, get_db, create_user_from_json, authenticate_user_from_json, get_user_by_id, get_saved_players, save_player, remove_saved_player
-from live_games import get_todays_games, get_upcoming_games, get_top_pra_player
+from live_games import get_todays_games, get_upcoming_games, get_weekly_top_pra
+from player_names import fix_mojibake, normalize_player_name
 from recommendations import get_top_performers
 import math
 
@@ -45,12 +46,63 @@ SORT_KEY_MAP = {
 }
 
 
+def _repair_names(players):
+   for player in players or []:
+       if isinstance(player, dict) and 'PLAYER_NAME' in player:
+           player['PLAYER_NAME'] = fix_mojibake(player['PLAYER_NAME'])
+   return players
+
+
+def _repair_predictions_cache(cache):
+   if not isinstance(cache, dict):
+       return cache
+   for player in cache.get('all_players_list', []):
+       if isinstance(player, dict):
+           for key in ('name', 'PLAYER_NAME'):
+               if key in player:
+                   player[key] = fix_mojibake(player[key])
+   bundle = cache.get('bundle', {})
+   if isinstance(bundle, dict):
+       bundle_values = bundle.values()
+   elif isinstance(bundle, list):
+       bundle_values = bundle
+   else:
+       bundle_values = []
+   for entry in bundle_values:
+       entries = entry if isinstance(entry, list) else [entry]
+       for player in entries:
+           if isinstance(player, dict):
+               for key in ('name', 'PLAYER_NAME'):
+                   if key in player:
+                       player[key] = fix_mojibake(player[key])
+   recommendations = cache.get('recommendations', {})
+   if isinstance(recommendations, dict):
+       for entries in recommendations.values():
+           if not isinstance(entries, list):
+               continue
+           for player in entries:
+               if isinstance(player, dict):
+                   for key in ('name', 'PLAYER_NAME'):
+                       if key in player:
+                           player[key] = fix_mojibake(player[key])
+   repaired_players = {}
+   for key, value in cache.get('players', {}).items():
+       if isinstance(value, dict):
+           for name_key in ('name', 'PLAYER_NAME'):
+               if name_key in value:
+                   value[name_key] = fix_mojibake(value[name_key])
+       repaired_players[normalize_player_name(key)] = value
+   if 'players' in cache:
+       cache['players'] = repaired_players
+   return cache
+
+
 if IS_RENDER:
     print("Running in low-memory environment (Render). Loading static AI predictions instead of full model.")
     try:
         cache_path = os.path.join(os.path.dirname(__file__), 'predictions_cache.json')
         with open(cache_path, 'r') as f:
-            predictions_cache = json.load(f)
+            predictions_cache = _repair_predictions_cache(json.load(f))
             AI_AVAILABLE = True
             print("Successfully loaded static predictions cache.")
     except Exception as e:
@@ -114,6 +166,8 @@ mysql = None
 
 nba_data = None
 multi_season_data = None
+_nba_name_index = {}
+_multi_season_name_indexes = {}
 
 
 def create_token(user_id: int) -> str:
@@ -209,7 +263,10 @@ def get_upcoming():
 def get_game_detail(game_id):
    try:
        games = get_todays_games(nba_data=nba_data)
-       game = next((g for g in games if g['gameId'] == game_id), None)
+       game = next((g for g in games if str(g.get('gameId')) == game_id), None)
+       if not game:
+           upcoming_games = get_upcoming_games(nba_data=nba_data)
+           game = next((g for g in upcoming_games if str(g.get('gameId')) == game_id), None)
        if not game:
            return jsonify({'error': 'Game not found'}), 404
        return jsonify(game), 200
@@ -221,13 +278,10 @@ def get_game_detail(game_id):
 @app.route('/api/stats/top-pra', methods=['GET'])
 def get_top_pra():
    try:
-       player = get_top_pra_player(nba_data)
-       if not player:
-           return jsonify({'error': 'No data available'}), 404
-       return jsonify(player), 200
+       return jsonify(get_weekly_top_pra()), 200
    except Exception as e:
        print(f"Error fetching top PRA: {e}")
-       return jsonify({'error': 'Failed to fetch top PRA player'}), 500
+       return jsonify({'error': 'Failed to fetch top PRA player', 'player': None}), 500
 
 
 def validate_pagination(page: any, limit: any) -> tuple:
@@ -245,7 +299,7 @@ def validate_pagination(page: any, limit: any) -> tuple:
 
 
 def load_nba_data():
-   global nba_data
+   global nba_data, _nba_name_index
    try:
        filepath = os.path.join(os.path.dirname(__file__), 'nba_2025_26_data.pkl')
        with open(filepath, 'rb') as f:
@@ -259,16 +313,21 @@ def load_nba_data():
        if isinstance(seasonal_data, dict):
            # Get the most recent season
            most_recent_season = max(seasonal_data.keys())
-           nba_data = seasonal_data[most_recent_season]
+           nba_data = _repair_names(seasonal_data[most_recent_season])
            print(f"Loaded {len(nba_data)} NBA players from {most_recent_season} season data")
        elif isinstance(seasonal_data, list):
-           nba_data = seasonal_data
+           nba_data = _repair_names(seasonal_data)
            print(f"Loaded {len(nba_data)} NBA players from pickle file")
        else:
            print(f"Unexpected data format in pickle file: {type(seasonal_data)}")
            return False
 
 
+       _nba_name_index = {
+           normalize_player_name(player.get('PLAYER_NAME')): player
+           for player in nba_data
+           if player.get('PLAYER_NAME')
+       }
        return True
    except FileNotFoundError:
        print("NBA data file 'nba_2025_26_data.pkl' not found.")
@@ -279,12 +338,22 @@ def load_nba_data():
 
 
 def load_multi_season_data():
-   global multi_season_data
+   global multi_season_data, _multi_season_name_indexes
    try:
        data_file = os.path.join(os.path.dirname(__file__), 'nba_multi_season_data.pkl')
        if os.path.exists(data_file):
            with open(data_file, 'rb') as f:
                multi_season_data = pickle.load(f)
+           for players in multi_season_data.values():
+               _repair_names(players)
+           _multi_season_name_indexes = {
+               season: {
+                   normalize_player_name(player.get('PLAYER_NAME')): player
+                   for player in players
+                   if player.get('PLAYER_NAME')
+               }
+               for season, players in multi_season_data.items()
+           }
            print(f"Loaded multi-season data for years: {list(multi_season_data.keys())}")
            return True
        else:
@@ -342,6 +411,7 @@ def get_player_stats_summary(player_data):
            'ft_pct_last': round(player_data.get('FT_PCT_LAST', player_data.get('ft_pct_last', 0)) * 100, 1),
            'games_played': int(player_data.get('GAMES_PLAYED_LAST', player_data.get('games_played_last', 0)) or 0)
        },
+
        'trends': {
            'ppg_trend': round(ppg_trend, 1),
            'apg_trend': round(apg_trend, 1),
@@ -402,6 +472,9 @@ def verify():
 @require_auth
 def get_saved():
    players = get_saved_players(request.user_id)
+   for player in players:
+       if isinstance(player, dict) and 'player_name' in player:
+           player['player_name'] = fix_mojibake(player['player_name'])
    return jsonify({'success': True, 'saved_players': players}), 200
 @app.route('/api/players/saved', methods=['POST'])
 @require_auth
@@ -552,30 +625,35 @@ def search_players_all():
    if not nba_data:
        return jsonify({'error': 'NBA data not loaded'}), 500
   
-   query = sanitize_string(request.args.get('query', ''), 50).lower()
-   if not query:
+   raw_query = sanitize_string(request.args.get('query', ''), 50)
+   query = raw_query.lower()
+   normalized_query = normalize_player_name(raw_query)
+   if not raw_query:
        return jsonify({'players': []})
   
    matching_names = set()
    for player in nba_data:
-       if query in player.get('PLAYER_NAME', '').lower():
+       name = player.get('PLAYER_NAME', '')
+       if query in name.lower() or (normalized_query and normalized_query in normalize_player_name(name)):
            matching_names.add(player.get('PLAYER_NAME'))
           
    if not matching_names and multi_season_data:
        for season, players in multi_season_data.items():
            for p in players:
-               if query in p.get('PLAYER_NAME', '').lower():
+               name = p.get('PLAYER_NAME', '')
+               if query in name.lower() or (normalized_query and normalized_query in normalize_player_name(name)):
                    matching_names.add(p.get('PLAYER_NAME'))
                   
    matching_names = sorted(list(matching_names))[:15]
   
    results = []
    for name in matching_names:
-       curr_player = next((p for p in nba_data if p.get('PLAYER_NAME') == name), None)
+       name_key = normalize_player_name(name)
+       curr_player = _nba_name_index.get(name_key)
       
        if not curr_player and multi_season_data:
            for season in sorted(multi_season_data.keys(), reverse=True):
-               curr_player = next((p for p in multi_season_data[season] if p.get('PLAYER_NAME') == name), None)
+               curr_player = _multi_season_name_indexes.get(season, {}).get(name_key)
                if curr_player:
                    break
                   
@@ -585,7 +663,7 @@ def search_players_all():
        history = {}
        if multi_season_data:
            for season in sorted(multi_season_data.keys()):
-               season_player = next((p for p in multi_season_data[season] if p.get('PLAYER_NAME') == name), None)
+               season_player = _multi_season_name_indexes.get(season, {}).get(name_key)
                if season_player:
                    fg_pct = season_player.get('FG_PCT_LAST', 0)
                    fg3_pct = season_player.get('FG3_PCT_LAST', 0)
@@ -924,5 +1002,6 @@ if AI_AVAILABLE and not IS_RENDER:
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5001))
+    default_port=5001
+    port = int(os.environ.get("PORT", default_port))
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)

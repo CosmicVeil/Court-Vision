@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getFavorites, removeFavorite } from '../utils/favorites';
+import { getFavorites, normalizeFavoritePlayer, removeFavorite } from '../utils/favorites';
 import { isAuthenticated } from '../utils/auth';
 import { buildApiUrl } from '../config/api';
 import PlayerPredictionGrid from './PlayerPredictionGrid';
+import { samePlayerName } from '../utils/playerNames';
 import './Favourites.css';
 
 const Favourites = () => {
@@ -29,12 +30,7 @@ const Favourites = () => {
       const pName = player.name || '';
       const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(pName)}`));
       const data = await response.json();
-      const pLower = pName.toLowerCase();
-      const pNorm = pLower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      const match = (data.players || []).find(p => {
-        const name = (p.name || '').toLowerCase();
-        return name === pLower || name.normalize("NFD").replace(/[\u0300-\u036f]/g, "") === pNorm;
-      }) || (data.players && data.players[0]);
+      const match = (data.players || []).find(p => samePlayerName(p.name, player.name));
       if (match) {
         setSelectedPlayer(match);
       } else {
@@ -43,17 +39,17 @@ const Favourites = () => {
           team: player.team || 'UNK',
           position: player.position || 'UNK',
           current_stats: {
-            ppg: player.stats?.ppg_last || 0,
-            rpg: player.stats?.rpg_last || 0,
-            apg: player.stats?.apg_last || 0,
-            spg: player.stats?.spg_last || 0,
-            bpg: player.stats?.bpg_last || 0,
-            tov: player.stats?.tov_last || 0,
-            mpg: player.stats?.minutes || 0,
-            fg_pct: player.stats?.fg_pct_last || 0,
-            fg3_pct: player.stats?.fg3_pct_last || 0,
-            ft_pct: player.stats?.ft_pct_last || 0,
-            games_played: player.stats?.games_played || 0,
+            ppg: player.stats?.ppg_last ?? 0,
+            rpg: player.stats?.rpg_last ?? 0,
+            apg: player.stats?.apg_last ?? 0,
+            spg: player.stats?.spg_last ?? 0,
+            bpg: player.stats?.bpg_last ?? 0,
+            tov: player.stats?.tov_last ?? 0,
+            mpg: player.stats?.minutes ?? 0,
+            fg_pct: player.stats?.fg_pct_last ?? 0,
+            fg3_pct: player.stats?.fg3_pct_last ?? 0,
+            ft_pct: player.stats?.ft_pct_last ?? 0,
+            games_played: player.stats?.games_played ?? 0,
             minutes: 0
           },
           ml_stats: null,
@@ -74,7 +70,7 @@ const Favourites = () => {
   const loadFavorites = () => {
     try {
       const favList = getFavorites();
-      setFavorites(favList);
+      setFavorites(favList.map(normalizeFavoritePlayer));
     } catch (error) {
       console.error('Error loading favorites:', error);
     } finally {
@@ -179,6 +175,7 @@ const Favourites = () => {
                     className="favorite-btn-fav favorited"
                     onClick={(e) => { e.stopPropagation(); handleRemoveFavorite(player.id); }}
                     title="Remove from favorites"
+                    aria-label={`Remove ${player.name} from favourites`}
                   >
                     FAVORITED
                   </button>
@@ -186,12 +183,12 @@ const Favourites = () => {
                 
                 <div className="player-info-fav">
                   <div className="player-details-fav">
-                    <span>Age: {player.age}</span>
-                    {player.height && (
-                      <span>Height: {Math.floor(player.height / 12)}'{player.height % 12}"</span>
+                    {player.age !== null && player.age !== undefined && <span className="player-detail-item-fav">Age: {player.age}</span>}
+                    {player.height !== null && player.height !== undefined && (
+                      <span className="player-detail-item-fav">Height: {Math.floor(player.height / 12)}'{player.height % 12}"</span>
                     )}
-                    {player.weight && (
-                      <span>Weight: {player.weight} lbs</span>
+                    {player.weight !== null && player.weight !== undefined && (
+                      <span className="player-detail-item-fav">Weight: {player.weight} lbs</span>
                     )}
                   </div>
                 </div>
@@ -224,19 +221,19 @@ const Favourites = () => {
                         <span className="stat-label-fav">FG%</span>
                         <span className="stat-value-fav">{player.stats?.fg_pct_last?.toFixed(1) || '0.0'}%</span>
                       </div>
-                      {player.stats?.fg3_pct_last && (
+                      {player.stats?.fg3_pct_last !== null && player.stats?.fg3_pct_last !== undefined && (
                         <div className="stat-item-fav">
                           <span className="stat-label-fav">3P%</span>
                           <span className="stat-value-fav">{player.stats.fg3_pct_last.toFixed(1)}%</span>
                         </div>
                       )}
-                      {player.stats?.ft_pct_last && (
+                      {player.stats?.ft_pct_last !== null && player.stats?.ft_pct_last !== undefined && (
                         <div className="stat-item-fav">
                           <span className="stat-label-fav">FT%</span>
                           <span className="stat-value-fav">{player.stats.ft_pct_last.toFixed(1)}%</span>
                         </div>
                       )}
-                      {player.stats?.games_played && (
+                      {player.stats?.games_played !== null && player.stats?.games_played !== undefined && (
                         <div className="stat-item-fav">
                           <span className="stat-label-fav">Games</span>
                           <span className="stat-value-fav">{player.stats.games_played}</span>
@@ -246,21 +243,42 @@ const Favourites = () => {
                   </div>
                 )}
 
-                {player.trends && (
+                {player.trends && [
+                  player.trends.consistency_score,
+                  player.trends.ppg_trend,
+                  player.trends.apg_trend,
+                  player.trends.rpg_trend,
+                ].some(value => value !== null && value !== undefined) && (
                   <div className="player-trends-fav">
                     <h4 className="trends-title">Performance Trends</h4>
                     <div className="trends-grid-fav">
-                      {player.trends.consistency_score && (
+                      {player.trends.consistency_score !== null && player.trends.consistency_score !== undefined && (
                         <div className="trend-item-fav">
                           <span className="trend-label-fav">Consistency</span>
                           <span className="trend-value-fav">{player.trends.consistency_score.toFixed(2)}</span>
                         </div>
                       )}
-                      {player.trends.ppg_trend !== undefined && (
+                      {player.trends.ppg_trend !== null && player.trends.ppg_trend !== undefined && (
                         <div className="trend-item-fav">
                           <span className="trend-label-fav">PPG Trend</span>
                           <span className={`trend-value-fav ${(player.trends.ppg_trend || 0) > 0 ? 'positive' : 'negative'}`}>
                             {(player.trends.ppg_trend || 0) > 0 ? '+' : ''}{player.trends.ppg_trend.toFixed(1)}
+                          </span>
+                        </div>
+                      )}
+                      {player.trends.apg_trend !== null && player.trends.apg_trend !== undefined && (
+                        <div className="trend-item-fav">
+                          <span className="trend-label-fav">APG Trend</span>
+                          <span className={`trend-value-fav ${player.trends.apg_trend > 0 ? 'positive' : 'negative'}`}>
+                            {player.trends.apg_trend > 0 ? '+' : ''}{player.trends.apg_trend.toFixed(1)}
+                          </span>
+                        </div>
+                      )}
+                      {player.trends.rpg_trend !== null && player.trends.rpg_trend !== undefined && (
+                        <div className="trend-item-fav">
+                          <span className="trend-label-fav">RPG Trend</span>
+                          <span className={`trend-value-fav ${player.trends.rpg_trend > 0 ? 'positive' : 'negative'}`}>
+                            {player.trends.rpg_trend > 0 ? '+' : ''}{player.trends.rpg_trend.toFixed(1)}
                           </span>
                         </div>
                       )}

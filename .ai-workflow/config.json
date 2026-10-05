@@ -1,0 +1,14 @@
+{
+  "max_fix_rounds": 2,
+  "agent_timeout_seconds": 1800,
+  "check_timeout_seconds": 300,
+  "setup": [["npm", "ci", "--ignore-scripts"]],
+  "checks": [
+    {"name": "Frontend tests", "command": ["node", "--test", "tests/*.test.mjs"], "required": true},
+    {"name": "Production build", "command": ["npm", "run", "build"], "required": true},
+    {"name": "Frontend lint", "command": ["./node_modules/.bin/eslint", "src", "vite.config.js", "eslint.config.js"], "required": true}
+  ],
+  "constraints": "CourtVision is a React/Vite frontend and Python/Flask backend. Keep backend/model/data changes scoped to the task. Do not retrain models, scrape live services, or modify pickle datasets unless the task explicitly asks. Backend integration/ML tests require separate dependencies and sometimes live services; these are NOT covered by the default checks. For backend changes, add and run relevant offline tests and report missing validation. Existing unrelated test/lint failures must be reported, not concealed or broadly repaired without task scope. Never weaken assertions to get a pass.",
+  "claude_model": null,
+  "codex_model": null
+}

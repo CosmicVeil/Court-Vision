@@ -175,7 +175,7 @@
 .spotlight-growth-badge.negative {
   background: rgba(239, 83, 80, 0.15);
   border: 1px solid rgba(239, 83, 80, 0.4);
-  color: #ef5350;
+  color: #f87171;
 }
 
 .spotlight-stats-list {
@@ -236,7 +236,7 @@
 }
 
 .spotlight-stat-growth.positive { color: #4caf50; }
-.spotlight-stat-growth.negative { color: #ef5350; }
+.spotlight-stat-growth.negative { color: #f87171; }
 
 /* ---------- Basketball Insights & Trends Cards ---------- */
 .section-heading {
@@ -430,7 +430,7 @@
 .growth-callout.negative {
   background: rgba(239, 83, 80, 0.15);
   border: 1px solid rgba(239, 83, 80, 0.4);
-  color: #ef5350;
+  color: #f87171;
 }
 
 /* Stats Comparison Bars */

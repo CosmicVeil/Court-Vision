@@ -5,6 +5,8 @@ import AIPredictions from "./AIPredictions";
 import PlayerPredictionGrid from "./PlayerPredictionGrid";
 import { isAuthenticated, getUser, logout } from "../utils/auth";
 import { buildApiUrl } from "../config/api";
+import { samePlayerName } from "../utils/playerNames";
+import { extractWeeklyPraPlayer, formatPraGameDate } from "../utils/weeklyPra";
 
 /* Scroll-reveal hook using IntersectionObserver */
 function useScrollReveal() {
@@ -63,81 +65,36 @@ function TrendingGameCard({ game }) {
 }
 
 function PRACard({ player, onPlayerClick }) {
-  const [showHistory, setShowHistory] = useState(false);
-
-  const pastWinners = [
-    { name: "Jalen Brunson", team: "NYK", position: "G", ppg: 35.5, rpg: 4.5, apg: 9.0, pra: 49.0 },
-    { name: "Victor Wembanyama", team: "SAS", position: "C", ppg: 25.2, rpg: 12.5, apg: 5.5, pra: 43.2 }
-  ];
-
   if (!player) return null;
-
   return (
-    <>
-      <div
-        className="featured-card pra-card clickable-pra-card"
-        onClick={() => setShowHistory(true)}
-        style={{ cursor: 'pointer' }}
-      >
-        <div className="featured-badge highlight">WEEK'S BEST PRA</div>
-        <div className="featured-content">
-          {player.no_games ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
-              <h3 className="pra-name" style={{ fontSize: '1.2rem', color: 'white' }}>No Recent NBA Games</h3>
-              <p className="pra-meta" style={{ fontSize: '0.9rem', color: '#aaa' }}>Check back when the season resumes!</p>
-              <div className="featured-link" style={{ marginTop: 'auto' }}>
-                Click for Past Winners →
-              </div>
-            </div>
-          ) : (
-            <>
-              <h3 className="pra-name">{player.name}</h3>
-              <p className="pra-meta">{player.team} · {player.position}</p>
-              <div className="pra-stats-row">
-                <div className="pra-stat"><span className="pra-val">{player.ppg}</span><span className="pra-lbl">PPG</span></div>
-                <div className="pra-stat"><span className="pra-val">{player.rpg}</span><span className="pra-lbl">RPG</span></div>
-                <div className="pra-stat"><span className="pra-val">{player.apg}</span><span className="pra-lbl">APG</span></div>
-                <div className="pra-stat pra-total"><span className="pra-val">{player.pra}</span><span className="pra-lbl">PRA</span></div>
-              </div>
-              <div className="featured-link">
-                Click for Past Winners →
-              </div>
-            </>
-          )}
+    <div
+      className="featured-card pra-card clickable-pra-card"
+      onClick={() => onPlayerClick && onPlayerClick({ name: player.name, team: player.team, position: player.position })}
+      style={{ cursor: 'pointer' }}
+    >
+      <div className="featured-badge highlight">
+        WEEK'S BEST PRA {player.is_live && <><span className="trend-live-dot" /> LIVE</>}
+      </div>
+      <div className="featured-content">
+        <h3 className="pra-name">{player.name}</h3>
+        <p className="pra-meta">{player.team} · {player.position}</p>
+        <p className="pra-game-meta"><span>vs {player.opponent}</span> · {formatPraGameDate(player.game_date)}</p>
+        <div className="pra-stats-row">
+          <div className="pra-stat"><span className="pra-val">{player.pts}</span><span className="pra-lbl">PTS</span></div>
+          <div className="pra-stat"><span className="pra-val">{player.reb}</span><span className="pra-lbl">REB</span></div>
+          <div className="pra-stat"><span className="pra-val">{player.ast}</span><span className="pra-lbl">AST</span></div>
+          <div className="pra-stat pra-total"><span className="pra-val">{player.pra}</span><span className="pra-lbl">PRA</span></div>
+        </div>
+        <div className="featured-link">
+          Click for Full Stats →
         </div>
       </div>
-
-      {showHistory && (
-        <div className="modal-overlay" onClick={() => setShowHistory(false)} style={{ zIndex: 10000 }}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
-            <button className="modal-close" onClick={() => setShowHistory(false)}>✕</button>
-            <h2 style={{ marginBottom: '20px', color: 'white', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '15px' }}>Past Weekly PRA Winners</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              {pastWinners.map((winner, idx) => (
-                <div key={idx} style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <h3 style={{ fontSize: '1.1rem', margin: '0 0 5px 0', color: '#ff6436' }}>{winner.name}</h3>
-                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#aaa' }}>{winner.team} · {winner.position}</p>
-                  </div>
-                  <div style={{ display: 'flex', gap: '15px', textAlign: 'center' }}>
-                    <div><div style={{ fontSize: '1.1rem', fontWeight: 600 }}>{winner.ppg}</div><div style={{ fontSize: '0.7rem', color: '#888' }}>PPG</div></div>
-                    <div><div style={{ fontSize: '1.1rem', fontWeight: 600 }}>{winner.rpg}</div><div style={{ fontSize: '0.7rem', color: '#888' }}>RPG</div></div>
-                    <div><div style={{ fontSize: '1.1rem', fontWeight: 600 }}>{winner.apg}</div><div style={{ fontSize: '0.7rem', color: '#888' }}>APG</div></div>
-                    <div><div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#ff6436' }}>{winner.pra}</div><div style={{ fontSize: '0.7rem', color: '#ff6436' }}>PRA</div></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+    </div>
   );
 }
 
 function TrendingSection({ onPlayerClick }) {
   const [liveGames, setLiveGames] = useState([]);
-  const [futureGames, setFutureGames] = useState([]);
   const [praPlayer, setPraPlayer] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -166,8 +123,7 @@ function TrendingSection({ onPlayerClick }) {
           : [...todayF, ...upcomingGames].slice(0, 2);
 
         setLiveGames(gameCards);
-        setFutureGames(upcomingGames);
-        setPraPlayer(pra.name || pra.no_games ? pra : null);
+        setPraPlayer(praRes.ok ? extractWeeklyPraPlayer(pra) : null);
       } catch (e) {
         console.error("Trending fetch failed", e);
       } finally {
@@ -206,7 +162,7 @@ function TrendingSection({ onPlayerClick }) {
   ) : (
     <>
       {liveGames.map(g => <TrendingGameCard key={g.gameId} game={g} />)}
-      <PRACard player={praPlayer || { no_games: true }} onPlayerClick={onPlayerClick} />
+      {praPlayer && <PRACard player={praPlayer} onPlayerClick={onPlayerClick} />}
     </>
   );
 
@@ -234,7 +190,7 @@ const Home = () => {
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => isAuthenticated());
   const [user, setUser] = useState(null);
 
   // States for search and popup modal
@@ -282,12 +238,7 @@ const Home = () => {
       const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(playerName)}`));
       if (response.ok) {
         const data = await response.json();
-        const pLower = playerName.toLowerCase();
-        const pNorm = pLower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const match = (data.players || []).find(p => {
-          const name = (p.name || '').toLowerCase();
-          return name === pLower || name.normalize("NFD").replace(/[\u0300-\u036f]/g, "") === pNorm;
-        }) || (data.players && data.players[0]);
+        const match = (data.players || []).find(p => samePlayerName(p.name, playerName));
         if (match) {
           setSelectedPlayer(match);
         }
@@ -879,11 +830,10 @@ const Home = () => {
         </div>
       </section>
 
-      <section className="cta-section scroll-reveal">
-        <div className="cta-container">
-          <div className="cv-section-badge-wrapper">
-            <span className="cv-section-badge">GET STARTED</span>
-          </div>
+      {!isLoggedIn && (
+      <section className="cta-section">
+        <div className="cta-container scroll-reveal">
+          <div className="cv-section-badge-wrapper"><span className="cv-section-badge">GET STARTED</span></div>
           <h2 className="cta-title">ELEVATE YOUR <span className="text-ember">COURT VISION</span></h2>
           <p className="cta-description">Join thousands of analysts, bettors, and basketball fanatics leveraging AI to discover winning insights.</p>
           <div className="cta-buttons">
@@ -892,6 +842,21 @@ const Home = () => {
           </div>
         </div>
       </section>
+      )}
+      {isLoggedIn && (
+      <section className="cta-section">
+        <div className="cta-container">
+          <div className="cv-section-badge-wrapper">
+            <span className="cv-section-badge">GET STARTED</span>
+          </div>
+          <h2 className="cta-title">ELEVATE YOUR <span className="text-ember">COURT VISION</span></h2>
+          <p className="cta-description">Join thousands of analysts, bettors, and basketball fanatics leveraging AI to discover winning insights.</p>
+          <div className="cta-buttons">
+            <Link to="/stats" className="cta-button primary large">START ANALYZING</Link>
+          </div>
+        </div>
+      </section>
+      )}
 
       {/* Interactive Glassmorphic Stats Popup Modal */}
       {(selectedPlayer || loadingPlayer) && (

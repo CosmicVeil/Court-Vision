@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { isFavorite, toggleFavorite, getFavorites } from '../utils/favorites';
 import { isAuthenticated } from '../utils/auth';
 import { buildApiUrl } from '../config/api';
+import { samePlayerName } from '../utils/playerNames';
 import PlayerPredictionGrid from './PlayerPredictionGrid';
 import './Stats.css';
 
@@ -92,12 +93,7 @@ const Stats = () => {
       const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(pName)}`));
       if (response.ok) {
         const data = await response.json();
-        const pLower = pName.toLowerCase();
-        const pNorm = pLower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const match = (data.players || []).find(p => {
-          const name = (p.name || '').toLowerCase();
-          return name === pLower || name.normalize("NFD").replace(/[\u0300-\u036f]/g, "") === pNorm;
-        }) || (data.players && data.players[0]);
+        const match = (data.players || []).find(p => samePlayerName(p.name, player.name || player.PLAYER_NAME));
         if (match) {
           setSelectedPlayer(match);
         }

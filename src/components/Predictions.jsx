@@ -5,6 +5,7 @@ import { PREDICTION_STATS } from '../config/predictionStats';
 import { getFavorites, toggleFavorite } from '../utils/favorites';
 import { isAuthenticated } from '../utils/auth';
 import { buildApiUrl } from '../config/api';
+import { samePlayerName } from '../utils/playerNames';
 import './Predictions.css';
 
 const MAIN_PREDICTION_STATS = [
@@ -100,12 +101,7 @@ const Predictions = () => {
     try {
       const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(player.name)}`));
       const data = await response.json();
-      const pLower = (player.name || '').toLowerCase();
-      const pNorm = pLower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      const match = (data.players || []).find(p => {
-        const name = (p.name || '').toLowerCase();
-        return name === pLower || name.normalize("NFD").replace(/[\u0300-\u036f]/g, "") === pNorm;
-      }) || (data.players && data.players[0]);
+      const match = (data.players || []).find(p => samePlayerName(p.name, player.name));
       if (match) {
         setSelectedPlayer(match);
       } else {

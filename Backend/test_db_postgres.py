@@ -1,7 +1,9 @@
 import importlib.util
 import os
 from pathlib import Path
+import shutil
 import sys
+import tempfile
 import types
 import unittest
 from unittest.mock import patch
@@ -54,13 +56,13 @@ class FakePsycopg(types.ModuleType):
         return connection
 
 
-def load_db_module():
+def load_db_module(module_path=DB_MODULE_PATH):
     fake_psycopg = FakePsycopg()
     fake_rows = types.ModuleType("psycopg.rows")
     fake_rows.dict_row = object()
 
     module_name = "courtvision_db_under_test"
-    spec = importlib.util.spec_from_file_location(module_name, DB_MODULE_PATH)
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
     module = importlib.util.module_from_spec(spec)
     with patch.dict(
         sys.modules,
@@ -87,6 +89,37 @@ class PostgresDatabaseTests(unittest.TestCase):
         with patch.dict(os.environ, {}, clear=True):
             with self.assertRaisesRegex(RuntimeError, "DATABASE_URL"):
                 self.db.get_db()
+
+    def test_backend_dotenv_supplies_database_url_when_process_env_is_missing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            local_db_path = Path(directory) / "db.py"
+            shutil.copyfile(DB_MODULE_PATH, local_db_path)
+            (Path(directory) / ".env").write_text(
+                f"DATABASE_URL={self.database_url}\n",
+                encoding="utf-8",
+            )
+
+            with patch.dict(os.environ, {}, clear=True):
+                local_db, _, _ = load_db_module(local_db_path)
+                connection = local_db.get_db()
+
+        self.assertEqual(connection.database_url, self.database_url)
+
+    def test_process_database_url_takes_precedence_over_backend_dotenv(self):
+        local_database_url = "postgresql:///courtvision"
+        with tempfile.TemporaryDirectory() as directory:
+            local_db_path = Path(directory) / "db.py"
+            shutil.copyfile(DB_MODULE_PATH, local_db_path)
+            (Path(directory) / ".env").write_text(
+                f"DATABASE_URL={local_database_url}\n",
+                encoding="utf-8",
+            )
+
+            with patch.dict(os.environ, {"DATABASE_URL": self.database_url}, clear=True):
+                local_db, _, _ = load_db_module(local_db_path)
+                connection = local_db.get_db()
+
+        self.assertEqual(connection.database_url, self.database_url)
 
     def test_get_user_by_email_uses_postgres_parameters_and_returns_a_dict(self):
         expected_user = {

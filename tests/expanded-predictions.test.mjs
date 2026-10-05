@@ -21,7 +21,7 @@ test("shared grid labels percentage changes as percentage points", () => {
 const consumers = [
   "home.jsx",
   "Stats.jsx",
-  "LiveGames.jsx",
+  "PlayerStatsModal.jsx",
   "Favourites.jsx",
   "Recommendations.jsx",
   "RecommendationChart.jsx",

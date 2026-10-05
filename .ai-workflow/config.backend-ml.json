@@ -1,0 +1,118 @@
+{
+  "max_fix_rounds": 2,
+  "agent_timeout_seconds": 1800,
+  "check_timeout_seconds": 600,
+  "setup": [
+    [
+      "python3",
+      "-m",
+      "venv",
+      "Backend/.venv"
+    ],
+    [
+      "Backend/.venv/bin/python",
+      "-m",
+      "pip",
+      "install",
+      "--quiet",
+      "-r",
+      "Backend/requirements.txt"
+    ]
+  ],
+  "checks": [
+    {
+      "name": "Model unit tests",
+      "command": [
+        "Backend/.venv/bin/python",
+        "-W",
+        "ignore",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "Backend",
+        "-p",
+        "test_nba_ai_model.py"
+      ],
+      "required": true
+    },
+    {
+      "name": "Model evaluation tests",
+      "command": [
+        "Backend/.venv/bin/python",
+        "-W",
+        "ignore",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "Backend",
+        "-p",
+        "test_model_evaluation.py"
+      ],
+      "required": true
+    },
+    {
+      "name": "Scraper feature tests",
+      "command": [
+        "Backend/.venv/bin/python",
+        "-W",
+        "ignore",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "Backend",
+        "-p",
+        "test_scraper_features.py"
+      ],
+      "required": true
+    },
+    {
+      "name": "Expanded prediction tests",
+      "command": [
+        "Backend/.venv/bin/python",
+        "-W",
+        "ignore",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "Backend",
+        "-p",
+        "test_expanded_predictions.py"
+      ],
+      "required": true
+    },
+    {
+      "name": "Predictions cache tests",
+      "command": [
+        "Backend/.venv/bin/python",
+        "-W",
+        "ignore",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "Backend",
+        "-p",
+        "test_predictions_cache.py"
+      ],
+      "required": true
+    },
+    {
+      "name": "Fast evaluation smoke run",
+      "command": [
+        "Backend/.venv/bin/python",
+        "Backend/model_evaluation.py",
+        "--fast",
+        "--seasons",
+        "1"
+      ],
+      "required": true
+    }
+  ],
+  "constraints": "Backend-only ML evaluation task in CourtVision (Python, Backend/). Do not touch the React frontend. Do not scrape live services, do not retrain or overwrite Backend/nba_ai_model.pkl, and do not modify any .pkl dataset. Hyperparameters in _build_xgboost_model are owned by the user: do not change them. All tests must be offline and fast (use a small XGBoost model in tests, never the production 10k-tree config). Never weaken or delete existing assertions to get a pass; if an existing test encodes behaviour the task intentionally changes, update it and say why.",
+  "claude_model": "opus",
+  "codex_model": null
+}

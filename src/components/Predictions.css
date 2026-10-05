@@ -192,6 +192,16 @@
   color: #ffffff;
 }
 
+.sort-direction-btn:focus-visible {
+  outline: 2px solid var(--color-ember-orange, #ff6436);
+  outline-offset: 3px;
+}
+
+.prediction-favorite-btn:focus-visible {
+  outline: 2px solid var(--color-ember-orange, #ff6436);
+  outline-offset: 3px;
+}
+
 /* ---------- Predictions Grid & Obsidian Cards ---------- */
 .predictions-grid {
   display: grid;
@@ -216,6 +226,11 @@
   flex-direction: column;
   justify-content: space-between;
 }
+
+.prediction-card .card-header { display: block; position: relative; padding-top: 38px; }
+.prediction-card .player-meta { flex-direction: column; align-items: center; text-align: center; }
+.prediction-card .player-badges { justify-content: center; }
+.team-badge, .position-badge, .age-badge { display: inline-flex; align-items: center; justify-content: center; }
 
 .prediction-card:hover {
   transform: translateY(-6px);
@@ -311,7 +326,7 @@
 
 .prediction-card-main-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.05);
@@ -364,7 +379,7 @@
 
 .prediction-shooting-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   text-align: center;
 }
@@ -540,4 +555,9 @@
 .prediction-auth-secondary:hover {
   background: rgba(255, 100, 54, 0.15);
   border-color: var(--color-ember-orange, #ff6436);
+}
+
+@media (max-width: 768px) {
+  .sort-control-group { width: 100%; justify-content: center; flex-wrap: wrap; }
+  .prediction-card { padding: 20px; }
 }

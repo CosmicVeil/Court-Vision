@@ -9,13 +9,25 @@ from typing import Dict, List, Optional, Tuple
 from xgboost import XGBRegressor
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.metrics import mean_absolute_error, r2_score
 
 from nba_web_scraper import NBAWebScraper
+from player_names import fix_mojibake, normalize_player_name
 
 STAT_SCALE = 1.0
-MODEL_SCHEMA_VERSION = 3
+MODEL_SCHEMA_VERSION = 4
+
+
+def _repair_player_names(data):
+    """Repair cached names in memory without modifying the source pickle."""
+    seasons = data.values() if isinstance(data, dict) else [data]
+    for players in seasons:
+        if not isinstance(players, list):
+            continue
+        for player in players:
+            if isinstance(player, dict) and 'PLAYER_NAME' in player:
+                player['PLAYER_NAME'] = fix_mojibake(player['PLAYER_NAME'])
+    return data
 
 SEASONS_TO_SCRAPE = [2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023, 2024, 2025, 2026]
 
@@ -46,14 +58,22 @@ TARGET_SPECS = (
 
 def _build_xgboost_model():
     return MultiOutputRegressor(XGBRegressor(
-        n_estimators=2000,
-        max_depth=20,
-        learning_rate=0.05,
+        n_estimators=750,
+        max_depth=9,
+        learning_rate=0.03,
         subsample=0.8,
-        colsample_bytree=0.7,
+        colsample_bytree=0.8,
         random_state=42,
         n_jobs=1,
     ))
+
+
+def _feature_value(player: Dict, column: str) -> float:
+    try:
+        value = float(player.get(column))
+    except (TypeError, ValueError):
+        return np.nan
+    return value
 
 
 class NBAAISystem:
@@ -108,7 +128,7 @@ class NBAAISystem:
                     continue
 
                 next_player = next_data_by_name[player_name]
-                feature_vector = [player.get(col, 0) for col in self.feature_columns]
+                feature_vector = [_feature_value(player, col) for col in self.feature_columns]
 
                 try:
                     target_vector = [
@@ -145,12 +165,15 @@ class NBAAISystem:
         return differences
 
     def print_season_accuracies(self) -> Optional[Dict]:
-        """Evaluate the trained model on each season transition and print avg stat differences."""
+        """Print in-sample errors for seasons used to train the fitted model.
+
+        Use model_evaluation.py for honest walk-forward, out-of-sample MAE.
+        """
         if not self.data:
             data_file = os.path.join(os.path.dirname(__file__), 'nba_multi_season_data.pkl')
             if os.path.exists(data_file):
                 with open(data_file, 'rb') as f:
-                    self.data = pickle.load(f)
+                    self.data = _repair_player_names(pickle.load(f))
 
         if not self.model_trained or self.model is None:
             print("Model must be trained before calculating prediction differences.")
@@ -161,7 +184,10 @@ class NBAAISystem:
             print("No season data available for prediction difference evaluation.")
             return None
 
-        print("\nAverage prediction difference by season (|predicted - actual|):")
+        print(
+            "\nIn-sample average prediction difference by season "
+            "(model trained on these seasons; use model_evaluation.py for out-of-sample MAE):"
+        )
         season_results = {}
         stat_totals = {spec['key']: [] for spec in TARGET_SPECS}
 
@@ -235,7 +261,7 @@ class NBAAISystem:
             print("Found existing data and model")
             # Load the multi-season data specifically
             with open(data_file, 'rb') as f:
-                self.data = pickle.load(f)
+                self.data = _repair_player_names(pickle.load(f))
             if self.data and self.load_model():
                 self.model_trained = True
                 return True
@@ -245,7 +271,7 @@ class NBAAISystem:
             print("No existing data or model found, proceeding to train.")
 
         print("🔄 Scraping NBA data for multiple seasons (2023-2026)...")
-        self.data = self.scraper.scrape_multiple_seasons(SEASONS_TO_SCRAPE)
+        self.data = _repair_player_names(self.scraper.scrape_multiple_seasons(SEASONS_TO_SCRAPE))
 
         if not self.data:
             print("❌ Failed to scrape NBA data")
@@ -280,7 +306,7 @@ class NBAAISystem:
 
         try:
             with open(data_file, 'rb') as f:
-                self.data = pickle.load(f)
+                self.data = _repair_player_names(pickle.load(f))
         except Exception as exc:
             print(f"Error loading cached training data: {exc}")
             return False
@@ -308,44 +334,19 @@ class NBAAISystem:
         else:
             df = pd.DataFrame(self.data)
 
-        df = df.fillna(0)
-
+        # Features absent from the data stay NaN, exactly as in training, so the
+        # model sees the same inputs it was fit on (XGBoost routes NaN natively).
         self.feature_columns = list(FEATURE_COLUMNS)
-
-        # Add missing columns with default values
         for col in self.feature_columns:
             if col not in df.columns:
-                # Set appropriate default values based on column type
-                if col in ['HEIGHT']:
-                    df[col] = 75  # Average NBA player height in inches
-                elif col in ['WEIGHT']:
-                    df[col] = 220  # Average NBA player weight in lbs
-                elif col in ['PPG_PREV', 'APG_PREV', 'RPG_PREV', 'SPG_PREV', 'BPG_PREV', 'TOV_PREV']:
-                    df[col] = df.get(col.replace('_PREV', '_LAST'), 0)  # Use last season as previous
-                elif col in ['FG_PCT_PREV', 'FG3_PCT_PREV', 'FT_PCT_PREV']:
-                    df[col] = df.get(col.replace('_PREV', '_LAST'), 0.5)  # Default 50% shooting
-                elif col in ['MIN_PREV']:
-                    df[col] = df.get('MIN_LAST', 25)  # Default minutes
-                elif col in ['GAMES_PLAYED_PREV']:
-                    df[col] = df.get('GAMES_PLAYED_LAST', 50)  # Default games played
-                elif col in ['PPG_LAST_10', 'APG_LAST_10', 'RPG_LAST_10', 'FG_PCT_LAST_10']:
-                    df[col] = df.get(col.replace('_LAST_10', '_LAST'), 0)  # Use last season as 10-game avg
-                elif col in ['PPG_TREND', 'APG_TREND', 'RPG_TREND']:
-                    df[col] = 0  # No trend data available
-                elif col in ['PPG_STD', 'APG_STD', 'RPG_STD']:
-                    df[col] = df.get(col.replace('_STD', '_LAST'), 0) * 0.3  # Estimate variability
-                elif col in ['CONSISTENCY_SCORE']:
-                    df[col] = 0.5  # Moderate consistency
-                else:
-                    df[col] = 0  # Default fallback
-
-        self.feature_columns = [col for col in self.feature_columns if col in df.columns]
+                df[col] = np.nan
+        X = df[self.feature_columns].apply(pd.to_numeric, errors='coerce').values.astype(float)
+        df = df.fillna(0)
 
         for spec in TARGET_SPECS:
             if spec['target_column'] not in df.columns:
                 df[spec['target_column']] = df[spec['last_column']]
 
-        X = df[self.feature_columns].values
         y = df[self.target_columns].values
         if self.model_trained:
             X_scaled = self.scaler.transform(X)
@@ -451,23 +452,27 @@ class NBAAISystem:
         if X is None:
             return False
 
-        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
-
         print("Training XGBoost model...")
         self.model = _build_xgboost_model()
-        self.model.fit(X_train, y_train)
+        self.model.fit(X, y)
 
-        val_pred = self.model.predict(X_val)
+        train_pred = self.model.predict(X)
 
         self.validation_metrics = {}
-        print("Training completed! Per-target validation metrics:")
+        print(
+            f"Training completed on {len(X)} rows (all season transitions). "
+            "In-sample metrics (not held out; run model_evaluation.py for honest MAE):"
+        )
         for index, spec in enumerate(TARGET_SPECS):
             metrics = {
-                'mae': float(mean_absolute_error(y_val[:, index], val_pred[:, index])),
-                'r2': float(r2_score(y_val[:, index], val_pred[:, index])),
+                'train_mae': float(mean_absolute_error(y[:, index], train_pred[:, index])),
+                'train_r2': float(r2_score(y[:, index], train_pred[:, index])),
             }
             self.validation_metrics[spec['key']] = metrics
-            print(f"  {spec['key'].upper()}: MAE {metrics['mae']:.4f}, R² {metrics['r2']:.4f}")
+            print(
+                f"  {spec['key'].upper()}: train MAE {metrics['train_mae']:.4f}, "
+                f"train R² {metrics['train_r2']:.4f}"
+            )
         return True
 
     def _clamp_predictions(self, predictions):
@@ -535,7 +540,12 @@ class NBAAISystem:
         else:
             df = pd.DataFrame(self.data)
             
-        player_data = df[df['PLAYER_NAME'].str.contains(player_name, case=False, na=False)]
+        normalized = normalize_player_name(player_name)
+        player_data = df[df['PLAYER_NAME'].map(normalize_player_name) == normalized]
+        if player_data.empty:
+            player_data = df[df['PLAYER_NAME'].str.contains(
+                player_name, case=False, na=False, regex=False
+            )]
         
         if player_data.empty:
             print(f"Player '{player_name}' not found.")

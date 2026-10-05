@@ -73,7 +73,15 @@ pip install -r requirements.txt
 # Start Flask Server
 python app.py
 ```
-The server will initialize on [http://localhost:5000](http://localhost:5000) and load pickle datasets.
+The server will initialize on [http://localhost:5001](http://localhost:5001) and load pickle datasets.
+
+#### Testing and evaluating the AI model
+From `Backend/`, run the offline model tests (about a second) and a quick accuracy (MAE) report:
+```bash
+python -m unittest test_game_detail_api test_nba_ai_model test_model_evaluation test_scraper_features test_expanded_predictions test_predictions_cache
+python model_evaluation.py --fast
+```
+See [Backend/README.md](Backend/README.md) for what each suite covers, how to read the MAE report, and how to tune the model.
 
 ### 3. Configure and Run Frontend
 Return to the project root directory and spin up the Vite development server:
@@ -95,3 +103,11 @@ To compile the application bundle for production environments (assets compiled, 
 npm run build
 ```
 Compiled production files are outputted inside the `/dist` directory, ready to serve or deploy to Netlify/Vercel.
+
+## Testing
+
+```bash
+npm test
+npm run lint
+npm run build
+```

@@ -49,14 +49,15 @@ const AIPredictions = ({ onPlayerClick, lazy = true }) => {
       const baseDelay = 5000; // 5 seconds between retries
 
       for (let attempt = 0; attempt < maxRetries; attempt++) {
+        let timeoutId;
         try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout per attempt
-          
-          const response = await fetch(API_ENDPOINTS.aiPredictions, {
-            signal: controller.signal
-          });
-          clearTimeout(timeoutId);
+          const timeoutPromise = new Promise((_, reject) =>
+            { timeoutId = setTimeout(() => reject(new Error('Request timed out')), 60000); }
+          );
+          const response = await Promise.race([
+            fetch(API_ENDPOINTS.aiPredictions),
+            timeoutPromise,
+          ]);
           
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -77,6 +78,8 @@ const AIPredictions = ({ onPlayerClick, lazy = true }) => {
           } else {
             setError("Failed to connect to AI server. Make sure the backend is running.");
           }
+        } finally {
+          clearTimeout(timeoutId);
         }
       }
       if (!cancelled) {
