@@ -19,7 +19,8 @@ const RecommendationChart = () => {
         setLoadingPlayer(true);
         setModalTab('current');
         try {
-            const response = await fetch(`${API_BASE_URL}/players/search-all?query=${encodeURIComponent(player.PLAYER_NAME || player.name)}`);
+            const pName = player.PLAYER_NAME || player.name || '';
+            const response = await fetch(`${API_BASE_URL}/players/search-all?query=${encodeURIComponent(pName)}`);
             const data = await response.json();
             const match = (data.players || []).find(p => samePlayerName(p.name, player.PLAYER_NAME || player.name));
             if (match) {

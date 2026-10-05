@@ -204,7 +204,7 @@ a { color: inherit; text-decoration: none; }
 
 .cv-hero-wrapper {
   position: relative;
-  height: 240vh;
+  height: 320vh;
   background: #080806;
 }
 
@@ -460,14 +460,14 @@ a { color: inherit; text-decoration: none; }
   letter-spacing: -2px;
   will-change: transform, opacity;
 
-  --l-start: calc(var(--l-idx) * 0.10);
-  --l-p: clamp(0, (var(--cv-fold-p, 0) - var(--l-start)) / 0.22, 1);
+  --l-start: calc(var(--l-idx) * 0.11);
+  --l-p: clamp(0, (var(--cv-fold-p, 0) - var(--l-start)) / 0.40, 1);
 
   transform: 
-    translateX(calc(var(--l-p) * 55px * var(--word-dir, 1))) 
-    rotateY(calc(var(--l-p) * 180deg * var(--word-dir, 1))) 
-    rotateZ(calc(var(--l-p) * 260deg * var(--word-dir, 1))) 
-    scale(calc(1 - var(--l-p) * 0.95));
+    translateX(calc(var(--l-p) * 60px * var(--word-dir, 1))) 
+    rotateY(calc(var(--l-p) * 220deg * var(--word-dir, 1))) 
+    rotateZ(calc(var(--l-p) * 280deg * var(--word-dir, 1))) 
+    scale(calc(1 - var(--l-p) * 0.96));
   opacity: calc(1 - var(--l-p));
 }
 

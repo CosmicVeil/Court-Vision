@@ -27,7 +27,8 @@ const Favourites = () => {
     setLoadingPlayer(true);
     setModalTab('current');
     try {
-      const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(player.name)}`));
+      const pName = player.name || '';
+      const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(pName)}`));
       const data = await response.json();
       const match = (data.players || []).find(p => samePlayerName(p.name, player.name));
       if (match) {

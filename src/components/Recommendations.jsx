@@ -64,7 +64,8 @@ const Recommendations = () => {
     setLoadingPlayer(true);
     setModalTab('current');
     try {
-      const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(player.name || player.PLAYER_NAME)}`));
+      const pName = player.name || player.PLAYER_NAME || '';
+      const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(pName)}`));
       const data = await response.json();
       const match = (data.players || []).find(p => samePlayerName(p.name, player.name || player.PLAYER_NAME));
       if (match) {

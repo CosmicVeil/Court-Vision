@@ -46,7 +46,7 @@ test("pagination view reports boundaries and the ten-game range", () => {
     previousDisabled: false,
     nextDisabled: false,
     pageLabel: "Page 2 of 3",
-    countLabel: "Showing 11 - 20 of 23 games",
+    countLabel: "Showing 21 - 23 of 23 games",
   });
 
   assert.equal(getUpcomingPaginationView({

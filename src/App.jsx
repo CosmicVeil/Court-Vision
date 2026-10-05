@@ -10,6 +10,7 @@ import LiveGameDetail from "./components/LiveGameDetail.jsx";
 import RecommendationChart from "./components/RecommendationChart.jsx";
 import Predictions from "./components/Predictions.jsx";
 import Contact from "./components/Contact.jsx";
+import NotFound from "./components/NotFound.jsx";
 
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
           path="/recommendations/:stat"
           element={<RecommendationChart />}
         />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
   );
