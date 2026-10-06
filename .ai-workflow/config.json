@@ -1,14 +1,82 @@
 {
   "max_fix_rounds": 2,
-  "agent_timeout_seconds": 1800,
-  "check_timeout_seconds": 300,
-  "setup": [["npm", "ci", "--ignore-scripts"]],
-  "checks": [
-    {"name": "Frontend tests", "command": ["node", "--test", "tests/*.test.mjs"], "required": true},
-    {"name": "Production build", "command": ["npm", "run", "build"], "required": true},
-    {"name": "Frontend lint", "command": ["./node_modules/.bin/eslint", "src", "vite.config.js", "eslint.config.js"], "required": true}
+  "agent_timeout_seconds": 2400,
+  "check_timeout_seconds": 600,
+  "setup": [
+    [
+      "npm",
+      "--prefix",
+      "frontend",
+      "ci",
+      "--ignore-scripts"
+    ],
+    [
+      "python3",
+      "-m",
+      "venv",
+      "backend/.venv"
+    ],
+    [
+      "backend/.venv/bin/python",
+      "-m",
+      "pip",
+      "install",
+      "--quiet",
+      "-r",
+      "backend/requirements.txt"
+    ]
   ],
-  "constraints": "CourtVision is a React/Vite frontend and Python/Flask backend. Keep backend/model/data changes scoped to the task. Do not retrain models, scrape live services, or modify pickle datasets unless the task explicitly asks. Backend integration/ML tests require separate dependencies and sometimes live services; these are NOT covered by the default checks. For backend changes, add and run relevant offline tests and report missing validation. Existing unrelated test/lint failures must be reported, not concealed or broadly repaired without task scope. Never weaken assertions to get a pass.",
-  "claude_model": null,
+  "checks": [
+    {
+      "name": "Frontend tests",
+      "command": [
+        "npm",
+        "--prefix",
+        "frontend",
+        "test"
+      ],
+      "required": true
+    },
+    {
+      "name": "Production build",
+      "command": [
+        "npm",
+        "--prefix",
+        "frontend",
+        "run",
+        "build"
+      ],
+      "required": true
+    },
+    {
+      "name": "Frontend lint",
+      "command": [
+        "npm",
+        "--prefix",
+        "frontend",
+        "run",
+        "lint"
+      ],
+      "required": true
+    },
+    {
+      "name": "Backend tests",
+      "command": [
+        "backend/.venv/bin/python",
+        "-W",
+        "ignore",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "backend/tests",
+        "-t",
+        "backend"
+      ],
+      "required": true
+    }
+  ],
+  "constraints": "CourtVision layout: frontend/ (React/Vite; pages in src/pages, shared components in src/components, tests in frontend/tests) and backend/ (Flask app package in backend/app with routes in app/api/routes, services, ml, scraping; data files in backend/data; CLI scripts in backend/scripts; tests in backend/tests; entry point backend/main.py). Keep changes scoped to the task. Do not retrain models, scrape live services, start Postgres, or modify files in backend/data unless the task explicitly asks. Backend tests must be offline: build the app with create_app(load_data=False) and mock live NBA data fetchers. Match the existing visual language (dark glassmorphic cards, ember-orange accents, existing CSS variables/class conventions). Never weaken, skip, or delete existing test assertions to get a pass; if a test is genuinely obsolete, explain why before changing it.",
+  "claude_model": "opus",
   "codex_model": null
 }

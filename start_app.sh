@@ -1,80 +1,80 @@
 #!/bin/bash
+# Start the Court-Vision backend (Flask, :5001) and frontend (Vite, :5173) together
+# in this terminal. Ctrl+C stops both. Dependencies install on the first run only.
 
-# Resolve script's own directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VENV="$SCRIPT_DIR/Backend/.venv"
-PYTHON="$VENV/bin/python"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACKEND="$ROOT/backend"
+FRONTEND="$ROOT/frontend"
+PYTHON="$BACKEND/.venv/bin/python"
 
-echo "🏀 Starting NBA Sports Website..."
-echo ""
+echo "🏀 Starting Court-Vision..."
 
-# Use one venv so pip install and app.py use the same Python (avoids conda vs system mismatch)
+# --- One-time setup -----------------------------------------------------------
 if [ ! -x "$PYTHON" ]; then
-    echo "📦 Creating Python virtual environment..."
-    python3 -m venv "$VENV"
-    if [ $? -ne 0 ]; then
-        echo "❌ Failed to create virtual environment (is python3 installed?)"
-        read -p "Press Enter to exit..."
-        exit 1
-    fi
+    echo "📦 Creating backend virtual environment..."
+    python3 -m venv "$BACKEND/.venv" || { echo "❌ Could not create the venv (is python3 installed?)"; exit 1; }
 fi
 
-echo "📦 Installing backend dependencies into .venv..."
-"$PYTHON" -m pip install --upgrade pip -q
-"$PYTHON" -m pip install -r "$SCRIPT_DIR/Backend/requirements.txt"
-if [ $? -ne 0 ]; then
-    echo "❌ Failed to install backend dependencies"
-    read -p "Press Enter to exit..."
-    exit 1
+if ! "$PYTHON" -c "import flask, flask_cors, psycopg, pandas" 2>/dev/null; then
+    echo "📦 Installing backend dependencies..."
+    "$PYTHON" -m pip install -q --upgrade pip
+    "$PYTHON" -m pip install -q -r "$BACKEND/requirements.txt" || { echo "❌ Backend dependency install failed"; exit 1; }
 fi
 
 # XGBoost on macOS needs OpenMP (libomp)
 if [[ "$(uname)" == "Darwin" ]] && ! "$PYTHON" -c "from xgboost import XGBRegressor" 2>/dev/null; then
     if command -v brew &>/dev/null; then
-        echo "📦 Installing libomp for XGBoost (macOS)..."
+        echo "📦 Installing libomp for XGBoost..."
         brew install libomp
     else
-        echo "⚠️  XGBoost needs OpenMP. Install Homebrew from https://brew.sh then run: brew install libomp"
-        echo "    (App will use sklearn fallback until libomp is installed.)"
+        echo "⚠️  XGBoost needs OpenMP. Install Homebrew (https://brew.sh), then run: brew install libomp"
     fi
 fi
 
-echo "🌐 Installing Playwright Chromium (required for NBA scraping)..."
-"$PYTHON" -m playwright install chromium
-if [ $? -ne 0 ]; then
-    echo "❌ Failed to install Playwright browsers"
-    read -p "Press Enter to exit..."
+if [ ! -d "$FRONTEND/node_modules" ]; then
+    echo "📦 Installing frontend dependencies..."
+    (cd "$FRONTEND" && npm install) || { echo "❌ Frontend dependency install failed"; exit 1; }
+fi
+
+# --- Pre-flight checks --------------------------------------------------------
+if command -v pg_isready &>/dev/null && ! pg_isready -q; then
+    echo "❌ PostgreSQL isn't running, and the backend needs it."
+    echo "   Start it with: brew services start postgresql@16"
     exit 1
 fi
 
-echo ""
-echo "🚀 Starting Flask API server..."
-osascript -e 'tell app "Terminal" to do script "cd '"$SCRIPT_DIR"'/Backend && '"$PYTHON"' app.py"'
+for port in 5001 5173; do
+    if lsof -iTCP:$port -sTCP:LISTEN &>/dev/null; then
+        echo "❌ Port $port is already in use (an old server still running?). Stop it and try again."
+        exit 1
+    fi
+done
+
+# --- Run both -----------------------------------------------------------------
+(cd "$BACKEND" && PYTHONUNBUFFERED=1 exec "$PYTHON" main.py) > >(sed -u 's/^/[backend]  /') 2>&1 &
+BACKEND_PID=$!
+(cd "$FRONTEND" && exec ./node_modules/.bin/vite --port 5173 --strictPort) > >(sed -u 's/^/[frontend] /') 2>&1 &
+FRONTEND_PID=$!
+
+stop() {
+    trap - INT TERM
+    echo ""
+    echo "🛑 Stopping backend and frontend..."
+    kill "$BACKEND_PID" "$FRONTEND_PID" 2>/dev/null
+    wait "$BACKEND_PID" "$FRONTEND_PID" 2>/dev/null
+    exit 0
+}
+trap stop INT TERM
 
 echo ""
-echo "⏳ Waiting for API server to start..."
-sleep 3
+echo "🔧 Backend API: http://localhost:5001   (loading data and the model takes a few seconds)"
+echo "🌐 Frontend:    http://localhost:5173"
+echo "   Press Ctrl+C to stop both."
+echo ""
 
-echo ""
-echo "📦 Installing frontend dependencies..."
-cd "$SCRIPT_DIR"
-npm install
-if [ $? -ne 0 ]; then
-    echo "❌ Failed to install frontend dependencies"
-    read -p "Press Enter to exit..."
-    exit 1
-fi
-
-echo ""
-echo "🌐 Starting React frontend..."
-osascript -e 'tell app "Terminal" to do script "cd '"$SCRIPT_DIR"' && npm run dev"'
-
-echo ""
-echo "✅ NBA Sports Website started successfully!"
-echo ""
-echo "🌐 Frontend: http://localhost:5173"
-echo "🔧 Backend API: http://localhost:5000"
-echo ""
-echo "Click STATS in the navigation to view NBA players!"
-echo ""
-read -p "Press Enter to exit..."
+# If either server exits on its own, stop the other one too.
+while kill -0 "$BACKEND_PID" 2>/dev/null && kill -0 "$FRONTEND_PID" 2>/dev/null; do
+    sleep 1
+done
+echo "⚠️  One of the servers stopped; shutting down the other."
+stop

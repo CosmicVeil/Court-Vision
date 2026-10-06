@@ -1,6 +1,8 @@
 # Netlify configuration for NBA Sports Website Frontend
 
 [build]
+  # The frontend lives in frontend/; command and publish are relative to it
+  base = "frontend"
   # Build command for Vite
   command = "npm run build"
   # Output directory where Vite builds the production files
