@@ -1,0 +1,76 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { readSource as readComponent } from "./helpers.mjs";
+
+test("AI prediction cards show all current-season shooting percentages", () => {
+  const source = readComponent("Predictions.jsx");
+
+  for (const [field, label] of [
+    ["fg_pct_last", "FG%"],
+    ["fg3_pct_last", "3P%"],
+    ["ft_pct_last", "FT%"],
+  ]) {
+    assert.match(source, new RegExp(`key: ['"]${field}['"], label: ['"]${label}`));
+  }
+  assert.match(source, /This Season Shooting/);
+  assert.match(source, /Number\(player\[stat\.key\]\) \|\| 0\)\.toFixed\(1\)/);
+  assert.match(source, /prediction-shooting-value[\s\S]*%/);
+});
+
+test("AI prediction favourites are authenticated, isolated from card clicks, and stateful", () => {
+  const source = readComponent("Predictions.jsx");
+
+  assert.match(source, /import \{ getFavorites, toggleFavorite \} from '\.\.\/utils\/favorites'/);
+  assert.match(source, /import \{ isAuthenticated \} from '\.\.\/utils\/auth'/);
+  assert.match(source, /const \[favoriteIds, setFavoriteIds\] = useState\(new Set\(\)\)/);
+  assert.match(source, /event\.stopPropagation\(\)/);
+  assert.match(source, /if \(!isAuthenticated\(\)\) \{[\s\S]*setShowAuthModal\(true\)/);
+  assert.match(source, /toggleFavorite\(toFavoritePlayer\(player\)\)/);
+  assert.match(source, /aria-pressed=\{favoriteIds\.has\(player\.id\)\}/);
+  assert.match(source, /'FAVORITED' : 'ADD FAV'/);
+  assert.match(source, /showAuthModal &&/);
+  assert.match(source, /to="\/login"/);
+  assert.match(source, /to="\/create-account"/);
+});
+
+test("prediction favourites are normalized for the Favourites page", () => {
+  const source = readComponent("Predictions.jsx");
+  const normalizer = source.match(/const toFavoritePlayer = \(player\) => \(\{[\s\S]*?\n\}\);/)?.[0] || "";
+
+  for (const field of [
+    "ppg_last",
+    "apg_last",
+    "rpg_last",
+    "spg_last",
+    "bpg_last",
+    "tov_last",
+    "fg_pct_last",
+    "fg3_pct_last",
+    "ft_pct_last",
+  ]) {
+    assert.match(normalizer, new RegExp(`${field}: toNumber\\(player\\.${field}\\)`));
+  }
+  assert.match(normalizer, /stats: \{/);
+  assert.match(normalizer, /minutes: toNumber\(player\.mpg_last\)/);
+});
+
+test("Favourites empty state names both places where players can be saved", () => {
+  const source = readComponent("Favourites.jsx");
+  assert.match(source, /Stats or AI Predictions/);
+});
+
+test("prediction shooting and favourite controls are styled responsively", () => {
+  const css = readComponent("Predictions.css");
+
+  assert.match(css, /\.prediction-card \.card-header\s*\{[^}]*position:\s*relative[^}]*padding-top:\s*38px/s);
+  assert.match(css, /\.prediction-favorite-btn\s*\{/);
+  assert.match(css, /\.prediction-favorite-btn\.favorited\s*\{/);
+  assert.match(css, /\.prediction-favorite-btn:focus-visible\s*\{/);
+  assert.match(css, /\.prediction-shooting-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
+  assert.match(css, /@media \(max-width: 768px\)[\s\S]*\.prediction-card\s*\{[^}]*padding:\s*20px/s);
+});
+
+test("prediction identity overrides the global flex card-header alignment", () => {
+  const css = readComponent("Predictions.css");
+  assert.match(css, /\.prediction-card \.card-header\s*\{[^}]*display:\s*block/s);
+});

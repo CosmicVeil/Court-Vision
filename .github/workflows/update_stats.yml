@@ -31,15 +31,15 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip setuptools wheel
-        pip install -r Backend/requirements_production.txt --extra-index-url https://download.pytorch.org/whl/cpu
+        pip install -r backend/requirements_production.txt --extra-index-url https://download.pytorch.org/whl/cpu
 
     - name: Run Web Scraper (Update Season Averages)
       run: |
-        python Backend/nba_web_scraper.py
+        python backend/scripts/scrape_season_stats.py
 
     - name: Run AI Predictions Generator (Update predictions_cache.json)
       run: |
-        python Backend/generate_predictions_cache.py
+        python backend/scripts/generate_predictions_cache.py
 
     - name: Check for modified files
       id: git-check
@@ -52,6 +52,6 @@ jobs:
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git add Backend/nba_2025_26_data.pkl Backend/predictions_cache.json
+        git add backend/data/nba_2025_26_data.pkl backend/data/predictions_cache.json
         git commit -m "chore: Auto-update NBA season stats and AI predictions [skip ci]"
         git push origin HEAD:${{ github.ref_name }} || git push

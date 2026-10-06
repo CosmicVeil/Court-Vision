@@ -32,8 +32,8 @@ This flag also excludes new/uncommitted tests. It does not stash, commit, or cop
 ## What a run does
 
 1. Creates `CourtVision-ai-runs/<timestamp>/checkout` alongside CourtVision, on a new `ai/<timestamp>` branch based on the current HEAD.
-2. Runs `npm ci --ignore-scripts` in that checkout. Dependencies are isolated; this requires network access. No Python environments, ignored files, or `.env` secrets are copied from your main checkout.
-3. Records baseline tests, build and scoped frontend lint.
+2. Runs the configured `setup` commands in that checkout (`npm ci` in `frontend/` and a fresh `backend/.venv`). Dependencies are isolated; this requires network access. No Python environments, ignored files, or `.env` secrets are copied from your main checkout.
+3. Records baseline results for every configured check.
 4. Claude reads the code and produces `plan.md` with acceptance criteria.
 5. Codex edits the isolated checkout with the workspace-write sandbox and no interactive approval prompts. Operations outside its sandbox fail rather than being automatically escalated.
 6. The controller runs configured checks and saves logs. Claude independently reads the Git diff, new files, surrounding source, plan, and check results, and returns structured review findings.
@@ -41,17 +41,14 @@ This flag also excludes new/uncommitted tests. It does not stash, commit, or cop
 
 Claude receives only Read, Glob and Grep tools in safe mode. Its hooks, plugins and custom instructions are disabled by that mode; prompts explicitly ask it to read applicable AGENTS.md/CLAUDE.md. Codex is instructed not to commit/push/merge/deploy. No controller step performs these actions. This is a personal local development workflow, not a hostile-code sandbox or proof of correctness. Run it only against projects you trust.
 
-## CourtVision verification and existing failures
+## CourtVision verification
 
-The defaults in `config.json` are:
+Two configs ship with CourtVision:
 
-- `node --test tests/*.test.mjs`
-- `npm run build`
-- ESLint on `src`, `vite.config.js`, and `eslint.config.js`
+- `config.json` (default, full stack): `npm --prefix frontend test`, `npm --prefix frontend run build`, `npm --prefix frontend run lint`, and the offline backend suite (`python -m unittest discover -s backend/tests -t backend`).
+- `config.backend-ml.json` (model work): the backend suite plus a fast `backend/scripts/evaluate_model.py` smoke run. Use it with `--config .ai-workflow/config.backend-ml.json`.
 
-Lint is scoped because `npm run lint` currently traverses Python virtual-environment dependencies. During setup, the current main checkout's frontend tests and lint already failed, including pagination and source/style assertions. Baseline logs distinguish existing failures from results after implementation. Existing failures are NOT waived; they may prevent an unrelated task from passing. Start by addressing baseline failures as an explicit task if needed. The new checkout starts at committed HEAD, so its baseline can differ from your current edited files.
-
-These checks do not cover the Flask API, ML correctness, or live NBA integrations. For backend work, add appropriate offline tests and Python environment setup to the configuration. Avoid automatically running scripts that hit live services or retrain models. An AI review is useful evidence, not a guarantee.
+All checks pass on the current code, so a failing check after a run means the run broke something. Backend tests are offline (no Postgres, no live NBA services). These checks do not cover live NBA integrations or real model quality; avoid automatically running scripts that hit live services or retrain models. An AI review is useful evidence, not a guarantee.
 
 ## Progress, interruptions, and review
 

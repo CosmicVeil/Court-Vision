@@ -2,13 +2,13 @@
 
 # Resolve script's own directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VENV="$SCRIPT_DIR/Backend/.venv"
+VENV="$SCRIPT_DIR/backend/.venv"
 PYTHON="$VENV/bin/python"
 
 echo "🏀 Starting NBA Sports Website..."
 echo ""
 
-# Use one venv so pip install and app.py use the same Python (avoids conda vs system mismatch)
+# Use one venv so pip install and main.py use the same Python (avoids conda vs system mismatch)
 if [ ! -x "$PYTHON" ]; then
     echo "📦 Creating Python virtual environment..."
     python3 -m venv "$VENV"
@@ -21,7 +21,7 @@ fi
 
 echo "📦 Installing backend dependencies into .venv..."
 "$PYTHON" -m pip install --upgrade pip -q
-"$PYTHON" -m pip install -r "$SCRIPT_DIR/Backend/requirements.txt"
+"$PYTHON" -m pip install -r "$SCRIPT_DIR/backend/requirements.txt"
 if [ $? -ne 0 ]; then
     echo "❌ Failed to install backend dependencies"
     read -p "Press Enter to exit..."
@@ -49,7 +49,7 @@ fi
 
 echo ""
 echo "🚀 Starting Flask API server..."
-osascript -e 'tell app "Terminal" to do script "cd '"$SCRIPT_DIR"'/Backend && '"$PYTHON"' app.py"'
+osascript -e 'tell app "Terminal" to do script "cd '"$SCRIPT_DIR"'/backend && '"$PYTHON"' main.py"'
 
 echo ""
 echo "⏳ Waiting for API server to start..."
@@ -57,7 +57,7 @@ sleep 3
 
 echo ""
 echo "📦 Installing frontend dependencies..."
-cd "$SCRIPT_DIR"
+cd "$SCRIPT_DIR/frontend"
 npm install
 if [ $? -ne 0 ]; then
     echo "❌ Failed to install frontend dependencies"
@@ -67,13 +67,13 @@ fi
 
 echo ""
 echo "🌐 Starting React frontend..."
-osascript -e 'tell app "Terminal" to do script "cd '"$SCRIPT_DIR"' && npm run dev"'
+osascript -e 'tell app "Terminal" to do script "cd '"$SCRIPT_DIR"'/frontend && npm run dev"'
 
 echo ""
 echo "✅ NBA Sports Website started successfully!"
 echo ""
 echo "🌐 Frontend: http://localhost:5173"
-echo "🔧 Backend API: http://localhost:5000"
+echo "🔧 Backend API: http://localhost:5001"
 echo ""
 echo "Click STATS in the navigation to view NBA players!"
 echo ""

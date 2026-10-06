@@ -3,7 +3,7 @@ setlocal
 echo 🏀 Starting NBA Sports Website...
 echo.
 
-cd /d "%~dp0Backend"
+cd /d "%~dp0backend"
 
 if not exist ".venv\Scripts\python.exe" (
     echo 📦 Creating Python virtual environment...
@@ -15,7 +15,7 @@ if not exist ".venv\Scripts\python.exe" (
     )
 )
 
-set "PY=%~dp0Backend\.venv\Scripts\python.exe"
+set "PY=%~dp0backend\.venv\Scripts\python.exe"
 
 echo 📦 Installing backend dependencies into .venv...
 "%PY%" -m pip install --upgrade pip -q
@@ -36,7 +36,7 @@ if errorlevel 1 (
 
 echo.
 echo 🚀 Starting Flask API server...
-start "NBA API Server" cmd /k "cd /d "%~dp0Backend" && "%PY%" app.py"
+start "NBA API Server" cmd /k "cd /d "%~dp0backend" && "%PY%" main.py"
 
 echo.
 echo ⏳ Waiting for API server to start...
@@ -44,7 +44,7 @@ timeout /t 3 /nobreak > nul
 
 echo.
 echo 📦 Installing frontend dependencies...
-cd /d "%~dp0"
+cd /d "%~dp0frontend"
 call npm install
 if errorlevel 1 (
     echo ❌ Failed to install frontend dependencies
@@ -54,13 +54,13 @@ if errorlevel 1 (
 
 echo.
 echo 🌐 Starting React frontend...
-start "NBA Frontend" cmd /k "cd /d "%~dp0" && npm run dev"
+start "NBA Frontend" cmd /k "cd /d "%~dp0frontend" && npm run dev"
 
 echo.
 echo ✅ NBA Sports Website started successfully!
 echo.
 echo 🌐 Frontend: http://localhost:5173
-echo 🔧 Backend API: http://localhost:5000
+echo 🔧 Backend API: http://localhost:5001
 echo.
 echo Click STATS in the navigation to view NBA players!
 echo.

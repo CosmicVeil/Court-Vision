@@ -31,21 +31,37 @@ Court-Vision is a premium, high-fidelity sports analytics web application design
 
 ```
 Court-Vision/
-├── Backend/                    # Flask Backend & ML Engine
-│   ├── app.py                  # Main API Router & Server
-│   ├── PlayerPerformancePredictor.py # ML Prediction Functions
-│   ├── nba_multi_season_data.pkl # 2020-2026 Career Statistics Pickle
-│   ├── player_performance_model.pkl # Trained XGBoost Model
-│   └── requirements.txt        # Backend dependencies
-├── src/                        # React Frontend App
-│   ├── App.jsx                 # Router Declarations
-│   ├── main.jsx                # Render Mounting & Global Styling
-│   ├── components/             # UI Views & Layout Styles
-│   │   ├── home.jsx / home.css # Hero screen & Search Dropdown
-│   │   ├── Stats.jsx / Stats.css # Filters Grid & Stats Tables
-│   │   ├── Recommendations.jsx # AI Radar & Spotlight breakups
-│   │   └── Favourites.jsx      # Golden favorite player tracking
-└── index.html                  # Core HTML Entrypoint
+├── backend/                     # Flask API & ML engine
+│   ├── app/
+│   │   ├── __init__.py          # create_app(): Flask setup, CORS, route registration
+│   │   ├── config.py            # Environment flags, data file paths, port
+│   │   ├── state.py             # Data and predictions loaded at startup, shared by routes
+│   │   ├── auth.py              # Bearer tokens and @require_auth
+│   │   ├── db.py                # PostgreSQL users and saved players
+│   │   ├── api/routes/          # One file per area: auth, games, health, players,
+│   │   │                        #   predictions, saved_players, stats
+│   │   ├── services/            # Live games (ESPN) and recommendations
+│   │   ├── ml/                  # XGBoost model and walk-forward evaluation
+│   │   ├── scraping/            # Basketball Reference + NBA.com scraper
+│   │   └── utils/               # Player name helpers
+│   ├── data/                    # .pkl datasets, trained model, predictions cache
+│   ├── scripts/                 # CLI tools: evaluate, retrain, regenerate cache, repair names
+│   ├── tests/                   # Offline backend tests
+│   ├── main.py                  # Entry point (python main.py / gunicorn main:app)
+│   └── requirements.txt
+├── frontend/                    # React + Vite app
+│   ├── src/
+│   │   ├── pages/               # One component per route (Home, Stats, Predictions, ...)
+│   │   ├── components/          # Shared UI (prediction grid, box score, stats modal, ...)
+│   │   ├── config/              # API endpoints and stat definitions
+│   │   ├── utils/               # Auth, favourites, formatting helpers
+│   │   ├── App.jsx              # Routes
+│   │   └── main.jsx             # Entry point
+│   ├── public/
+│   ├── tests/                   # Frontend tests
+│   └── package.json
+├── docs/                        # Design specs and plans
+└── .github/workflows/           # Daily stats + predictions update
 ```
 
 ---
@@ -56,9 +72,9 @@ Court-Vision/
 Ensure you have **Node.js (v18+)** and **Python (v3.10+)** installed on your workstation.
 
 ### 2. Configure and Run Backend
-Navigate to the `Backend` directory and set up a Python virtual environment:
+Set up a Python virtual environment in `backend/`:
 ```bash
-cd Backend
+cd backend
 python -m venv .venv
 
 # Activate Virtual Environment (Windows PowerShell)
@@ -71,21 +87,23 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 # Start Flask Server
-python app.py
+python main.py
 ```
-The server will initialize on [http://localhost:5001](http://localhost:5001) and load pickle datasets.
+The server will initialize on [http://localhost:5001](http://localhost:5001) and load the datasets in `backend/data/`.
 
 #### Testing and evaluating the AI model
-From `Backend/`, run the offline model tests (about a second) and a quick accuracy (MAE) report:
+From `backend/`, run the offline backend tests (about a second) and a quick accuracy (MAE) report:
 ```bash
-python -m unittest test_game_detail_api test_nba_ai_model test_model_evaluation test_scraper_features test_expanded_predictions test_predictions_cache
-python model_evaluation.py --fast
+python -m unittest discover -s tests -t .
+python scripts/evaluate_model.py --fast
 ```
-See [Backend/README.md](Backend/README.md) for what each suite covers, how to read the MAE report, and how to tune the model.
+See [backend/README.md](backend/README.md) for what each suite covers, how to read the MAE report, and how to tune the model.
 
 ### 3. Configure and Run Frontend
-Return to the project root directory and spin up the Vite development server:
+In a second terminal, start the Vite development server from `frontend/`:
 ```bash
+cd frontend
+
 # Install NPM packages
 npm install
 
@@ -98,16 +116,21 @@ Open [http://localhost:5173](http://localhost:5173) in your browser to experienc
 
 ## 📦 Production Builds
 
-To compile the application bundle for production environments (assets compiled, minified, and optimized):
+To compile the application bundle for production environments (assets compiled, minified, and optimized), from `frontend/`:
 ```bash
 npm run build
 ```
-Compiled production files are outputted inside the `/dist` directory, ready to serve or deploy to Netlify/Vercel.
+Compiled production files are outputted inside `frontend/dist`, ready to serve or deploy to Netlify/Vercel.
 
 ## Testing
 
+Frontend, from `frontend/`:
 ```bash
 npm test
 npm run lint
 npm run build
+```
+Backend, from `backend/`:
+```bash
+python -m unittest discover -s tests -t .
 ```
