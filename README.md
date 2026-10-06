@@ -71,7 +71,16 @@ Court-Vision/
 ### 1. Prerequisites
 Ensure you have **Node.js (v18+)** and **Python (v3.10+)** installed on your workstation.
 
-### 2. Configure and Run Backend
+### 2. Run Everything at Once (macOS/Linux)
+From the repository root:
+```bash
+./start_app.sh
+```
+This starts the backend on [http://localhost:5001](http://localhost:5001) and the frontend on [http://localhost:5173](http://localhost:5173) in one terminal, with output labelled `[backend]` and `[frontend]`. **Ctrl+C stops both.** The first run creates the Python virtual environment and installs dependencies; later runs start straight away. PostgreSQL must be running (`brew services start postgresql@16`). On Windows, `start_app.bat` opens each server in its own window.
+
+To run the servers separately instead, follow steps 3 and 4.
+
+### 3. Configure and Run Backend
 Set up a Python virtual environment in `backend/`:
 ```bash
 cd backend
@@ -97,9 +106,9 @@ From `backend/`, run the offline backend tests (about a second) and a quick accu
 python -m unittest discover -s tests -t .
 python scripts/evaluate_model.py --fast
 ```
-See [backend/README.md](backend/README.md) for what each suite covers, how to read the MAE report, and how to tune the model.
+See [backend/README.md](backend/README.md) for what each suite covers, how to read the MAE report, how to tune the model, and the other scripts (retraining, regenerating the predictions cache, repairing names).
 
-### 3. Configure and Run Frontend
+### 4. Configure and Run Frontend
 In a second terminal, start the Vite development server from `frontend/`:
 ```bash
 cd frontend

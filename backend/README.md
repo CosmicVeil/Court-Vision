@@ -1,4 +1,23 @@
-# Sports-Website
+# Court-Vision Backend
+
+Flask API and ML engine. To start the backend and frontend together, run `./start_app.sh` from the
+repository root (see the main [README](../README.md)). To run only the backend, from `backend/`:
+
+```bash
+.venv/bin/python main.py
+```
+
+## Scripts
+
+Command-line tools in `scripts/`. Run them from `backend/`:
+
+| Command | What it does |
+|---|---|
+| `.venv/bin/python scripts/evaluate_model.py --fast` | Walk-forward MAE report for the model settings (see [Evaluating the model](#evaluating-the-model-mae)). |
+| `.venv/bin/python scripts/retrain_nba_ai.py` | Retrain the model on `data/nba_multi_season_data.pkl` and save `data/nba_ai_model.pkl`. |
+| `.venv/bin/python scripts/generate_predictions_cache.py` | Rebuild `data/predictions_cache.json` (what Render serves) from the saved model. Run after retraining. |
+| `.venv/bin/python scripts/repair_player_names.py --dry-run` | Report garbled accented player names in the data files; drop `--dry-run` to fix them (writes a backup first). |
+| `.venv/bin/python scripts/scrape_season_stats.py` | Load or refresh the current-season stats (the daily GitHub Action runs this). |
 
 ## Model tests
 
