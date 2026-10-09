@@ -8,6 +8,8 @@ from app.utils.player_names import normalize_player_name
 
 bp = Blueprint('players', __name__, url_prefix='/api')
 
+MAX_GAME_LOG_LIMIT = 200
+
 
 @bp.route('/players', methods=['GET'])
 def get_all_players():
@@ -93,7 +95,7 @@ def get_player_by_id(player_id):
 @bp.route('/players/<int:player_id>/games', methods=['GET'])
 def get_player_games(player_id):
     """Per-game stats from the game archive, for the player popup's Game Log tab."""
-    limit = min(max(request.args.get('limit', 10, type=int), 1), 100)
+    limit = min(max(request.args.get('limit', 10, type=int), 1), MAX_GAME_LOG_LIMIT)
     conn = None
     try:
         conn = db.get_db()

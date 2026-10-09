@@ -35,7 +35,8 @@ The running backend archives each game in the background once `/api/games/today`
 | `player_game_features` (view) | played game, plus rest days, back-to-back, and last-5 / last-10 / season-to-date averages from *earlier* games only |
 
 `GET /api/players/<id>/games?limit=10` serves a player's latest-season game log with last-5 / last-10 /
-season averages; it powers the **Game Log** tab in the player popup.
+season averages. The limit defaults to 10 and is clamped to 200; the player popup requests 200 so its
+**Game Log** tab can show the full season.
 
 ## Player IDs
 

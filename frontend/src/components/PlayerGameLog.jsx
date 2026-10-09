@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { buildApiUrl } from '../config/api';
 import './PlayerGameLog.css';
 
-const GAME_LIMIT = 10;
+// Matches the backend clamp and fits a full season including preseason, play-in, and playoffs.
+const SEASON_GAME_LIMIT = 200;
 const AVERAGE_ROWS = [['last5', 'Last 5'], ['last10', 'Last 10'], ['season', 'Season']];
 
 const formatDate = iso => new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -16,7 +17,7 @@ export default function PlayerGameLog({ playerId }) {
   useEffect(() => {
     if (!playerId) return undefined;
     const controller = new AbortController();
-    fetch(buildApiUrl(`players/${playerId}/games?limit=${GAME_LIMIT}`), { signal: controller.signal })
+    fetch(buildApiUrl(`players/${playerId}/games?limit=${SEASON_GAME_LIMIT}`), { signal: controller.signal })
       .then(response => {
         if (!response.ok) throw new Error('Game log unavailable');
         return response.json();
@@ -58,8 +59,8 @@ export default function PlayerGameLog({ playerId }) {
         </table>
       </div>
 
-      <h3 className="secondary-stats-title game-log-title">Last {games.length} Games</h3>
-      <div className="stats-history-scroll-box">
+      <h3 className="secondary-stats-title game-log-title">All Games ({games.length})</h3>
+      <div className="stats-history-scroll-box game-log-scroll" tabIndex={0} role="region" aria-label="Season game log">
         <table className="stats-history-table">
           <thead><tr><th>Date</th><th>Opp</th><th>Result</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>TOV</th><th>FG</th><th>3PT</th><th>FT</th><th>+/-</th></tr></thead>
           <tbody>

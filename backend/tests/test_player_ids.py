@@ -90,7 +90,25 @@ class GameLogRouteTests(unittest.TestCase):
              patch.object(players_routes.game_archive, "player_game_log", return_value=payload) as log:
             response = self.client.get("/api/players/2544/games?limit=500")
         self.assertEqual(response.get_json(), payload)
-        self.assertEqual(log.call_args.args[1:], (2544, 100))  # limit clamped
+        self.assertEqual(log.call_args.args[1:], (2544, 200))  # limit clamped
+
+    def test_full_season_limit_passes_through(self):
+        payload = {"player_id": 2544, "games": [], "averages": {}}
+        with patch.object(players_routes.db, "get_db"), \
+             patch.object(players_routes.game_archive, "player_game_log", return_value=payload) as log:
+            for limit in (200, 150):
+                with self.subTest(limit=limit):
+                    self.client.get(f"/api/players/2544/games?limit={limit}")
+                    self.assertEqual(log.call_args.args[1:], (2544, limit))
+
+    def test_limit_lower_bound_and_default(self):
+        payload = {"player_id": 2544, "games": [], "averages": {}}
+        with patch.object(players_routes.db, "get_db"), \
+             patch.object(players_routes.game_archive, "player_game_log", return_value=payload) as log:
+            for query, expected in (("?limit=0", 1), ("?limit=-5", 1), ("", 10)):
+                with self.subTest(query=query):
+                    self.client.get(f"/api/players/2544/games{query}")
+                    self.assertEqual(log.call_args.args[1:], (2544, expected))
 
     def test_database_error_is_503(self):
         with patch.object(players_routes.db, "get_db", side_effect=RuntimeError("down")):
