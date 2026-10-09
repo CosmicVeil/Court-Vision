@@ -133,6 +133,11 @@ def code(state, instructions, name):
     args += ['-']
     prompt = f'''Work on this task: {state['task']}
 Read applicable AGENTS.md and CLAUDE.md. Implement only the requested scope.
+Add or update automated tests for every behavior you build or change, in the project's
+existing test locations and style: cover the main path, edge cases and error handling, and
+add a regression test for each bug you fix. Tests must run offline and pass. Never weaken,
+skip or delete existing assertions; if one is genuinely obsolete, replace it and explain why.
+If something cannot reasonably be tested automatically, say so and why in your report.
 Do not commit, push, merge, deploy, modify git history, or change other checkouts.
 Do not weaken checks or edit workflow control files. Do not read secrets.
 Project constraints: {state['config'].get('constraints', '')}
@@ -180,6 +185,7 @@ Constraints: {state['config'].get('constraints', '')}
 Baseline checks: {(root / 'baseline.json').read_text()}
 Inspect baseline logs where needed. Identify pre-existing failures separately.
 Provide a concise implementation plan, acceptance criteria, files and verification.
+List the specific tests to add or update (file, cases) so every new or changed behavior is covered.
 Do not expand scope to unrelated baseline failures; flag them as blockers.
 ''', {'type': 'object', 'properties': {'plan': {'type': 'string'}},
       'required': ['plan'], 'additionalProperties': False}, 'plan')
@@ -213,6 +219,8 @@ Read these new files as well (they are not in the diff):\n{new}
 Read baseline check results: {root / 'baseline.json'}
 Read current check results and relevant logs: {root / f'checks-{n}.json'}
 Assess correctness, regressions, security, tests and all acceptance criteria.
+New or changed behavior without meaningful automated tests is an actionable finding, as are
+tests that would pass without the change or weakened/deleted existing assertions.
 Report actionable findings with file/line references where possible, distinguish baseline issues.
 Approved must be false if any required check fails, implementation is incomplete,
 there are unresolved findings, or evidence is insufficient. Findings=[] only if none.

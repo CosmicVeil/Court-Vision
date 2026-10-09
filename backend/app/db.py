@@ -42,6 +42,8 @@ def init_db(app=None):
             UNIQUE(user_id, player_id)
         )
     ''')
+    from app.services.game_archive import init_archive_tables
+    init_archive_tables(conn)
     conn.commit()
     conn.close()
     print("PostgreSQL database initialized")

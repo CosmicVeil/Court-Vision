@@ -1,0 +1,44 @@
+.game-log-empty {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  padding: 2rem; text-align: center; color: var(--text-secondary);
+}
+
+.game-log-spinner { width: 20px; height: 20px; }
+
+.game-log-title { margin-top: 28px; }
+
+.game-log-averages { margin-bottom: 4px; }
+
+.stats-history-scroll-box.game-log-scroll {
+  max-height: 360px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+}
+
+.game-log-scroll:focus-visible {
+  outline: 2px solid var(--color-ember-orange, #ff6436);
+  outline-offset: 2px;
+}
+
+.game-log-scroll .stats-history-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: linear-gradient(rgba(255, 100, 54, 0.08), rgba(255, 100, 54, 0.08)), var(--color-graphite, #1c1c22);
+  box-shadow: inset 0 -1px 0 rgba(255, 100, 54, 0.2);
+}
+
+.stats-history-table td.game-log-highlight { color: var(--accent-primary); font-weight: 700; }
+
+.game-log-win { color: #4ade80; font-weight: 700; }
+.game-log-loss { color: #f87171; font-weight: 700; }
+
+.stats-history-table td.game-log-dnp { font-style: italic; color: var(--color-stone); text-transform: capitalize; }
+
+.game-log-tag {
+  margin-left: 6px; padding: 1px 5px; border-radius: 4px;
+  font-size: 9px; letter-spacing: 1px; font-family: var(--font-mono);
+  color: var(--color-stone); border: 1px solid rgba(255, 255, 255, 0.12);
+}

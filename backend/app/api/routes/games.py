@@ -3,6 +3,7 @@ import math
 from flask import Blueprint, jsonify, request
 
 from app import state
+from app.services.game_archive import archive_finished_games
 from app.services.live_games import get_todays_games, get_upcoming_games
 
 bp = Blueprint('games', __name__, url_prefix='/api/games')
@@ -14,6 +15,7 @@ UPCOMING_GAMES_PER_PAGE = 20
 def get_today_games():
     try:
         games = get_todays_games(nba_data=state.nba_data)
+        archive_finished_games(games)
         return jsonify({'games': games, 'count': len(games)}), 200
     except Exception as e:
         print(f"Error fetching today's games: {e}")

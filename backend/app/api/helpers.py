@@ -1,6 +1,8 @@
 """Request parsing and response-shaping helpers shared by the routes."""
 import hashlib
 
+from app.utils.player_ids import player_id_for
+
 SORT_KEY_MAP = {
     'name': ('PLAYER_NAME', str),
     'team': ('TEAM', str),
@@ -65,7 +67,7 @@ def get_player_stats_summary(player_data):
     consistency = player_data.get('CONSISTENCY_SCORE', _deterministic_consistency(name, ppg_current))
 
     return {
-        'id': player_data.get('PLAYER_ID', player_data.get('player_id', abs(hash(name)) % (10**9))),
+        'id': player_data.get('PLAYER_ID') or player_id_for(name),
         'name': name,
         'team': player_data.get('TEAM', player_data.get('team', 'UNK')),
         'position': player_data.get('POSITION', player_data.get('position', 'UNK')),

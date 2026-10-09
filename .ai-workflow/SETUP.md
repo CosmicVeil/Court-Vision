@@ -35,7 +35,7 @@ This flag also excludes new/uncommitted tests. It does not stash, commit, or cop
 2. Runs the configured `setup` commands in that checkout (`npm ci` in `frontend/` and a fresh `backend/.venv`). Dependencies are isolated; this requires network access. No Python environments, ignored files, or `.env` secrets are copied from your main checkout.
 3. Records baseline results for every configured check.
 4. Claude reads the code and produces `plan.md` with acceptance criteria.
-5. Codex edits the isolated checkout with the workspace-write sandbox and no interactive approval prompts. Operations outside its sandbox fail rather than being automatically escalated.
+5. Codex edits the isolated checkout with the workspace-write sandbox and no interactive approval prompts. Operations outside its sandbox fail rather than being automatically escalated. It must add or update tests for everything it builds or changes (the plan lists them, and the reviewer treats missing tests as a finding).
 6. The controller runs configured checks and saves logs. Claude independently reads the Git diff, new files, surrounding source, plan, and check results, and returns structured review findings.
 7. Up to two fix/review rounds run. Success requires both zero unresolved review findings and every required check passing. Otherwise the run ends with `needs-attention` and exit code 2.
 

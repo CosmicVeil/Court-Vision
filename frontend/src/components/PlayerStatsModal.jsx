@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import PlayerGameLog from './PlayerGameLog';
 import PlayerPredictionGrid from './PlayerPredictionGrid';
 
 const TABS = [
   ['current', 'Current Stats'],
+  ['games', 'Game Log'],
   ['predictions', 'AI Predictions'],
   ['history', 'Career History'],
 ];
@@ -95,6 +97,7 @@ export default function PlayerStatsModal({ player, loading, onClose }) {
                   </div>
                 </div>
               )}
+              {tab === 'games' && <PlayerGameLog playerId={player.id} />}
               {tab === 'predictions' && (player.ml_stats ? (
                 <PlayerPredictionGrid currentStats={player.current_stats} predictionStats={player.ml_stats.predicted_stats} improvements={player.ml_stats.improvements} />
               ) : <div className="no-data">AI Prediction model is currently loading or unavailable for this player.</div>)}

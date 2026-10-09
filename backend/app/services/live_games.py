@@ -23,6 +23,7 @@ from typing import Dict, List, Optional, Any
 from zoneinfo import ZoneInfo
 
 from app import config
+from app.utils.player_ids import player_id_for
 
 # ---------------------------------------------------------------------------
 # ESPN API endpoints
@@ -250,7 +251,8 @@ def _fetch_boxscore(game_id: str, home_tri: str, away_tri: str) -> Dict[str, Lis
                         break
 
                 team_players.append({
-                    "personId":  int(ath.get("id", 0) or 0),
+                    "personId":  player_id_for(ath.get("displayName", "")),
+                    "espnId":    int(ath.get("id", 0) or 0),
                     "name":      ath.get("displayName", ""),
                     "jerseyNum": ath.get("jersey", ""),
                     "position":  position,
@@ -289,7 +291,7 @@ def _roster_from_pkl(tricode: str, nba_data: Optional[List[Dict]]) -> List[Dict]
     for p in players:
         name = p.get("PLAYER_NAME", "")
         result.append({
-            "personId":   p.get("PLAYER_ID", abs(hash(name)) % 10 ** 7),
+            "personId":   p.get("PLAYER_ID") or player_id_for(name),
             "name":       name,
             "jerseyNum":  "",
             "position":   p.get("POSITION", ""),

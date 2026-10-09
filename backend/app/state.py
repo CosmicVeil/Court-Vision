@@ -4,6 +4,8 @@ import pickle
 import unicodedata
 
 from app import config, db
+from app.services import game_archive
+from app.utils import player_ids
 from app.utils.player_names import fix_mojibake, normalize_player_name
 
 is_render = False
@@ -32,6 +34,8 @@ def _repair_predictions_cache(cache):
             for key in ('name', 'PLAYER_NAME'):
                 if key in player:
                     player[key] = fix_mojibake(player[key])
+            if player.get('name'):
+                player['id'] = player_ids.player_id_for(player['name'])
     bundle = cache.get('bundle', {})
     if isinstance(bundle, dict):
         bundle_values = bundle.values()
@@ -62,6 +66,8 @@ def _repair_predictions_cache(cache):
             for name_key in ('name', 'PLAYER_NAME'):
                 if name_key in value:
                     value[name_key] = fix_mojibake(value[name_key])
+            if value.get('name'):
+                value['id'] = player_ids.player_id_for(value['name'])
         repaired_players[normalize_player_name(key)] = value
     if 'players' in cache:
         cache['players'] = repaired_players
@@ -173,14 +179,26 @@ def load_multi_season_data():
         return False
 
 
+def assign_player_ids():
+    """Give every player the NBA.com ID (see app.utils.player_ids) as PLAYER_ID."""
+    player_ids.reset_index()
+    seasons = (multi_season_data or {}).values()
+    for players in [nba_data or [], *seasons]:
+        for player in players:
+            if player.get('PLAYER_NAME'):
+                player['PLAYER_ID'] = player_ids.player_id_for(player['PLAYER_NAME'])
+
+
 def initialize():
     """Load everything the routes need. Runs once per process (including under Gunicorn)."""
-    load_ai()
     print("Loading NBA data...")
     load_nba_data()
     load_multi_season_data()
+    assign_player_ids()
+    load_ai()  # after the season data: the predictions cache is re-keyed by player ID
     db.init_db()
     print("Database initialized")
+    game_archive.auto_archive_enabled = True
 
     if ai_available and not is_render:
         try:

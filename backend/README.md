@@ -18,6 +18,33 @@ Command-line tools in `scripts/`. Run them from `backend/`:
 | `.venv/bin/python scripts/generate_predictions_cache.py` | Rebuild `data/predictions_cache.json` (what Render serves) from the saved model. Run after retraining. |
 | `.venv/bin/python scripts/repair_player_names.py --dry-run` | Report garbled accented player names in the data files; drop `--dry-run` to fix them (writes a backup first). |
 | `.venv/bin/python scripts/scrape_season_stats.py` | Load or refresh the current-season stats (the daily GitHub Action runs this). |
+| `.venv/bin/python scripts/archive_games.py` | Store finished games (yesterday + today) in PostgreSQL. `--date`, `--start/--end` or `--season 2025-26` to backfill. |
+
+## Game archive
+
+Finished games are stored in PostgreSQL for training a per-game model (`app/services/game_archive.py`).
+The running backend archives each game in the background once `/api/games/today` sees it go final;
+`scripts/archive_games.py` catches up on anything missed and backfills past seasons.
+
+| Table / view | One row per |
+|---|---|
+| `games` | game: date, teams, final and per-quarter score, overtime, venue, attendance, officials, closing spread/total/moneylines |
+| `team_game_stats` | team per game: shooting, rebounds, turnovers, fouls, points in the paint / off turnovers / fast break, largest lead |
+| `player_game_stats` | player per game: full box score, minutes, starter, DNP and reason, ejection |
+| `game_raw_summaries` | game: trimmed ESPN JSON incl. play-by-play, for extracting new features later |
+| `player_game_features` (view) | played game, plus rest days, back-to-back, and last-5 / last-10 / season-to-date averages from *earlier* games only |
+
+`GET /api/players/<id>/games?limit=10` serves a player's latest-season game log with last-5 / last-10 /
+season averages. The limit defaults to 10 and is clamped to 200; the player popup requests 200 so its
+**Game Log** tab can show the full season.
+
+## Player IDs
+
+Every player is identified by their **NBA.com person ID** (LeBron James = 2544) in the season data,
+API responses, predictions, live box scores (`personId`; ESPN's ID is kept as `espnId`) and the game
+archive (`nba_player_id`). `app/utils/player_ids.py` resolves names using the NBA.com IDs in the
+multi-season data first, then `nba_api`'s bundled player list. Names it cannot resolve get a stable
+fallback ID of 900,000,000 or more; add a spelling to `NAME_ALIASES` to fix one.
 
 ## Model tests
 

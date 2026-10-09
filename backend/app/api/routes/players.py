@@ -1,10 +1,14 @@
 from flask import Blueprint, jsonify, request
 
-from app import state
+from app import db, state
 from app.api.helpers import SORT_KEY_MAP, get_player_stats_summary, sanitize_string, validate_pagination
+from app.services import game_archive
+from app.utils.player_ids import player_id_for
 from app.utils.player_names import normalize_player_name
 
 bp = Blueprint('players', __name__, url_prefix='/api')
+
+MAX_GAME_LOG_LIMIT = 200
 
 
 @bp.route('/players', methods=['GET'])
@@ -78,14 +82,30 @@ def get_player_by_id(player_id):
     if not state.nba_data:
         return jsonify({'error': 'NBA data not loaded'}), 500
 
-    if player_id < 0 or player_id > 9999999:
+    if player_id <= 0 or player_id > 999_999_999:
         return jsonify({'error': 'Invalid player ID'}), 400
 
-    player = next((p for p in state.nba_data if p['PLAYER_ID'] == player_id), None)
+    player = next((p for p in state.nba_data if p.get('PLAYER_ID') == player_id), None)
     if not player:
         return jsonify({'error': 'Player not found'}), 404
 
     return jsonify(get_player_stats_summary(player))
+
+
+@bp.route('/players/<int:player_id>/games', methods=['GET'])
+def get_player_games(player_id):
+    """Per-game stats from the game archive, for the player popup's Game Log tab."""
+    limit = min(max(request.args.get('limit', 10, type=int), 1), MAX_GAME_LOG_LIMIT)
+    conn = None
+    try:
+        conn = db.get_db()
+        return jsonify(game_archive.player_game_log(conn, player_id, limit))
+    except Exception as e:
+        print(f"Error loading game log for {player_id}: {e}")
+        return jsonify({'error': 'Game log unavailable', 'games': []}), 503
+    finally:
+        if conn:
+            conn.close()
 
 
 def _season_line(season_player):
@@ -172,6 +192,7 @@ def search_players_all():
 
         current = _season_line(curr_player)
         results.append({
+            'id': curr_player.get('PLAYER_ID') or player_id_for(name),
             'name': name,
             'team': curr_player.get('TEAM', 'UNK'),
             'position': curr_player.get('POSITION', 'UNK'),
