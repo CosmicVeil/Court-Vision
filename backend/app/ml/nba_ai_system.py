@@ -69,6 +69,9 @@ def _build_xgboost_model():
         colsample_bytree=0.8,
         random_state=42,
         n_jobs=1,
+        objective= 'reg:absoluteerror',
+        reg_lambda=0.5,
+        reg_alpha=1,
     ))
 
 
