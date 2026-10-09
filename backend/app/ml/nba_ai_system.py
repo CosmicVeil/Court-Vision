@@ -20,6 +20,20 @@ DATA_DIR = str(config.DATA_DIR)
 
 STAT_SCALE = 1.0
 MODEL_SCHEMA_VERSION = 4
+SCRAPE_SCRIPT = "scripts/scrape_training_data.py"
+
+
+def default_data_file():
+    return os.path.join(DATA_DIR, config.MULTI_SEASON_DATA_FILE)
+
+
+def production_model_file():
+    return os.path.join(DATA_DIR, config.MODEL_FILE)
+
+
+def resolve_model_file():
+    configured = os.environ.get(config.MODEL_FILE_ENV, '').strip()
+    return os.path.abspath(configured) if configured else production_model_file()
 
 
 def _repair_player_names(data):
@@ -82,7 +96,7 @@ def _feature_value(player: Dict, column: str) -> float:
 
 class NBAAISystem:
     def __init__(self):
-        self.scraper = NBAWebScraper()
+        self.scraper = None
         self.model = None
         self.scaler = StandardScaler()
         self.feature_columns = list(FEATURE_COLUMNS)
@@ -91,6 +105,11 @@ class NBAAISystem:
         self.model_trained = False
         self.validation_metrics = {}
         self._predictions_df = None
+
+    def _get_scraper(self):
+        if self.scraper is None:
+            self.scraper = NBAWebScraper()
+        return self.scraper
 
     def clear_predictions_cache(self):
         self._predictions_df = None
@@ -174,7 +193,7 @@ class NBAAISystem:
         Use model_evaluation.py for honest walk-forward, out-of-sample MAE.
         """
         if not self.data:
-            data_file = os.path.join(DATA_DIR, 'nba_multi_season_data.pkl')
+            data_file = default_data_file()
             if os.path.exists(data_file):
                 with open(data_file, 'rb') as f:
                     self.data = _repair_player_names(pickle.load(f))
@@ -249,82 +268,92 @@ class NBAAISystem:
         return X_scaled, y, None
         
     def initialize_system(self, force_refresh=False):
-
         if self.model_trained and not force_refresh:
             return True
-        
-        if force_refresh:
-            self.clear_predictions_cache()
 
         print("Initializing NBA AI System...")
+        if force_refresh:
+            self.clear_predictions_cache()
+            return self.train_from_cache()
 
-        data_file = os.path.join(DATA_DIR, 'nba_multi_season_data.pkl')
-        model_file = os.path.join(DATA_DIR, 'nba_ai_model.pkl')
-
-        if os.path.exists(data_file) and os.path.exists(model_file) and not force_refresh:
-            print("Found existing data and model")
-            # Load the multi-season data specifically
-            with open(data_file, 'rb') as f:
-                self.data = _repair_player_names(pickle.load(f))
-            if self.data and self.load_model():
-                self.model_trained = True
-                return True
-            print("Saved model schema is incompatible; retraining from cached data.")
-            return self.retrain_from_cache()
-        else:
-            print("No existing data or model found, proceeding to train.")
-
-        print("🔄 Scraping NBA data for multiple seasons (2023-2026)...")
-        self.data = _repair_player_names(self.scraper.scrape_multiple_seasons(SEASONS_TO_SCRAPE))
-
-        if not self.data:
-            print("❌ Failed to scrape NBA data")
+        if not self.load_training_data():
             return False
-
-        # Prepare combined dataset for training
-        combined_data = self.prepare_combined_data()
-        if combined_data is None:
-            print("❌ Failed to prepare combined data")
-            return False
-
-        # Save the multi-season data for future use
-        with open(data_file, 'wb') as f:
-            pickle.dump(self.data, f)
-
-        print("🧠 Training XGBoost model...")
-        if self.train_model(combined_data):
-            self.save_model()
+        if self.load_saved_model():
             self.model_trained = True
-            print("System initialized successfully!")
             return True
-        else:
-            print("Failed to train model")
-        return False
 
-    def retrain_from_cache(self):
-        """Retrain the configured model using the cached multi-season dataset."""
-        data_file = os.path.join(DATA_DIR, 'nba_multi_season_data.pkl')
-        if not os.path.exists(data_file):
-            print(f"Cached training data not found at {data_file}")
+        model_file = resolve_model_file()
+        print(
+            f"Model at {model_file} is missing or schema-incompatible; "
+            "training from cached data (no network)."
+        )
+        return self._train_loaded_data()
+
+    def acquire_training_data(self, seasons=SEASONS_TO_SCRAPE, data_file=None):
+        """Scrape and cache training data. This is the explicit network stage."""
+        destination = os.path.abspath(data_file) if data_file else default_data_file()
+        data = _repair_player_names(self._get_scraper().scrape_multiple_seasons(seasons))
+        if not data:
+            print("Failed to scrape NBA training data")
             return False
+        os.makedirs(os.path.dirname(destination), exist_ok=True)
+        with open(destination, 'wb') as handle:
+            pickle.dump(data, handle)
+        self.data = data
+        print(f"Training data saved to {destination}")
+        return True
 
+    def load_training_data(self, data_file=None):
+        """Load the cached training dataset without using the network."""
+        data_file = os.path.abspath(data_file) if data_file else default_data_file()
+        if not os.path.exists(data_file):
+            print(
+                f"Cached training data not found at {data_file}. "
+                f"Run {SCRAPE_SCRIPT} to download it."
+            )
+            return False
         try:
             with open(data_file, 'rb') as f:
                 self.data = _repair_player_names(pickle.load(f))
         except Exception as exc:
-            print(f"Error loading cached training data: {exc}")
+            print(
+                f"Error loading cached training data at {data_file}: {exc}. "
+                f"Run {SCRAPE_SCRIPT} to download it again."
+            )
             return False
+        if not self.data:
+            print(
+                f"Cached training data at {data_file} is empty. "
+                f"Run {SCRAPE_SCRIPT} to download it again."
+            )
+            return False
+        return True
 
+    def _train_loaded_data(self, model_file=None):
+        """Fit and save from data already loaded into memory."""
         combined_data = self.prepare_combined_data()
         if combined_data is None or not self.train_model(combined_data):
             return False
-
-        if not self.save_model():
+        destination = os.path.abspath(model_file) if model_file else resolve_model_file()
+        if not self.save_model(destination):
             return False
-
         self.model_trained = True
         self.clear_predictions_cache()
         return True
+
+    def train_from_cache(self, data_file=None, model_file=None):
+        """Fit and save a model from cached data, without using the network."""
+        if not self.load_training_data(data_file):
+            return False
+        return self._train_loaded_data(model_file)
+
+    def retrain_from_cache(self, data_file=None, model_file=None):
+        """Backward-compatible alias for the offline training stage."""
+        return self.train_from_cache(data_file=data_file, model_file=model_file)
+
+    def load_saved_model(self, model_file=None):
+        """Load the configured serving model without training or scraping."""
+        return self.load_model(model_file or resolve_model_file())
 
     def prepare_data(self):
         if not self.data:
@@ -593,7 +622,7 @@ class NBAAISystem:
             'improvements': improvements,
         }
 
-    def save_model(self, filename='nba_ai_model.pkl'):
+    def save_model(self, filename=config.MODEL_FILE):
         if self.model is None:
             print("No model to save!")
             return False
@@ -609,12 +638,15 @@ class NBAAISystem:
         }
         
         filepath = filename if os.path.isabs(filename) else os.path.join(DATA_DIR, filename)
+        directory = os.path.dirname(filepath)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
         with gzip.open(filepath, 'wb', compresslevel=6) as f:
             pickle.dump(model_data, f)
         print(f"Model saved to {filepath}")
         return True
     
-    def load_model(self, filename='nba_ai_model.pkl'):
+    def load_model(self, filename=config.MODEL_FILE):
         filepath = filename if os.path.isabs(filename) else os.path.join(DATA_DIR, filename)
         if os.path.exists(filepath):
             try:
