@@ -9,6 +9,7 @@ from app import config
 print("Loading ML models and generating predictions... This may take a moment.")
 from app.ml.nba_ai_system import initialize_nba_ai, get_ai_predictions_bundle, nba_ai_system
 from app.services.recommendations import get_top_performers
+from app.utils.player_ids import player_id_for
 
 
 RECOMMENDATION_STATS = ("PPG", "APG", "RPG", "PRA")
@@ -35,7 +36,7 @@ def main():
             
             # Formulate specific player prediction response format
             prediction = {
-                'id': int(row.get('PLAYER_ID', abs(hash(player_name)) % (10**9))),
+                'id': player_id_for(player_name),
                 'name': player_name,
                 'team': row.get('TEAM', 'UNK'),
                 'position': row.get('POSITION', 'UNK'),

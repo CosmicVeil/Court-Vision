@@ -30,10 +30,17 @@ const consumers = [
 ];
 
 test("every player popup uses the shared prediction grid", () => {
-  for (const filename of consumers) {
+  assert.match(readSource("PlayerStatsModal.jsx"), /PlayerPredictionGrid/);
+  for (const filename of consumers.filter(name => name !== "PlayerStatsModal.jsx")) {
     const source = readSource(filename);
-    assert.match(source, /PlayerPredictionGrid/, filename);
+    assert.match(source, /<PlayerStatsModal\b/, filename);
+    assert.doesNotMatch(source, /stats-modal-tab-btn/, `${filename} should not inline the popup`);
   }
+});
+
+test("player popup has a game log tab backed by the per-player games endpoint", () => {
+  assert.match(readSource("PlayerStatsModal.jsx"), /\['games', 'Game Log'\][\s\S]*<PlayerGameLog playerId=\{player\.id\}/);
+  assert.match(readSource("PlayerGameLog.jsx"), /players\/\$\{playerId\}\/games/);
 });
 
 test("legacy three-stat popup loops are gone", () => {

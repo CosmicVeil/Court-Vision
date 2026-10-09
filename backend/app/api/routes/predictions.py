@@ -5,6 +5,7 @@ from flask import Blueprint, jsonify, request
 from app import state
 from app.api.helpers import sanitize_string, validate_pagination
 from app.services.recommendations import get_top_performers
+from app.utils.player_ids import player_id_for
 
 bp = Blueprint('predictions', __name__, url_prefix='/api')
 
@@ -47,7 +48,7 @@ def _prediction_rows_from_model():
     for _, row in predictions_df.iterrows():
         player_name = row['PLAYER_NAME']
         result = {
-            'id': int(row.get('PLAYER_ID', abs(hash(player_name)) % (10**9))),
+            'id': player_id_for(player_name),
             'name': player_name,
             'team': row.get('TEAM', 'UNK'),
             'position': row.get('POSITION', 'UNK'),

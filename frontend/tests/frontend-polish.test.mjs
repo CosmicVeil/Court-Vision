@@ -32,7 +32,7 @@ test("AI prediction list cards show the three main predicted stats", () => {
     assert.match(source, new RegExp(`key: ['"]${field}['"]`));
   }
   assert.match(source, /prediction-card-main-stats/);
-  assert.match(source, /modalTab === 'predictions'[\s\S]*PlayerPredictionGrid/);
+  assert.match(source, /<PlayerStatsModal\b/);
   assert.doesNotMatch(source, /toPredictionPageStats/);
 });
 
