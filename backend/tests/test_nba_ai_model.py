@@ -4,6 +4,7 @@ Training tests swap the production estimator (2k trees, depth 20) for a small
 XGBoost model so the suite runs in seconds while exercising the real pipeline.
 """
 import gzip
+import os
 import pickle
 import tempfile
 import unittest
@@ -16,6 +17,7 @@ from sklearn.multioutput import MultiOutputRegressor
 from xgboost import XGBRegressor
 
 import app.ml.nba_ai_system as nba_module
+from app import config
 from app.ml.nba_ai_system import (
     FEATURE_COLUMNS,
     MODEL_SCHEMA_VERSION,
@@ -559,6 +561,10 @@ class InitializationTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
+        env_patch = patch.dict(os.environ, {}, clear=False)
+        env_patch.start()
+        self.addCleanup(env_patch.stop)
+        os.environ.pop(config.MODEL_FILE_ENV, None)
         self.dir = Path(self.tmp.name)
         dir_patch = patch.object(nba_module, "DATA_DIR", str(self.dir))
         dir_patch.start()
@@ -578,21 +584,30 @@ class InitializationTests(unittest.TestCase):
         self.assertTrue(system.initialize_system())
         system.scraper.scrape_multiple_seasons.assert_not_called()
 
-    def test_scrape_failure_returns_false(self):
+    def test_missing_cached_data_fails_cleanly_without_scraping(self):
         system = self._system_with_scraper({})
-        self.assertFalse(system.initialize_system())
+        with patch("builtins.print") as output:
+            self.assertFalse(system.initialize_system())
         self.assertFalse(system.model_trained)
+        system.scraper.scrape_multiple_seasons.assert_not_called()
+        self.assertIn("scrape_training_data.py", " ".join(str(call) for call in output.call_args_list))
+        self.assertEqual(list(self.dir.iterdir()), [])
 
-    def test_cold_start_scrapes_trains_and_persists(self):
-        system = self._system_with_scraper(make_synthetic_league(n_players=40))
+    def test_cold_start_trains_from_cache_without_scraping(self):
+        with open(self.data_file, "wb") as handle:
+            pickle.dump(make_synthetic_league(n_players=40), handle)
+        original_data = self.data_file.read_bytes()
+        system = self._system_with_scraper({})
         with fast_model():
             self.assertTrue(system.initialize_system())
         self.assertTrue(system.model_trained)
-        self.assertTrue(self.data_file.exists())
         self.assertTrue(self.model_file.exists())
+        self.assertEqual(self.data_file.read_bytes(), original_data)
+        system.scraper.scrape_multiple_seasons.assert_not_called()
 
         warm = self._system_with_scraper({})
-        self.assertTrue(warm.initialize_system())
+        with patch.object(warm, "train_model", side_effect=AssertionError("must load")):
+            self.assertTrue(warm.initialize_system())
         warm.scraper.scrape_multiple_seasons.assert_not_called()
         self.assertIsNotNone(warm.build_predictions_df())
 
@@ -613,10 +628,29 @@ class InitializationTests(unittest.TestCase):
 
     def test_force_refresh_clears_cached_predictions(self):
         system = self._system_with_scraper({})
+        with open(self.data_file, "wb") as handle:
+            pickle.dump(make_synthetic_league(n_players=20), handle)
         system.model_trained = True
         system._predictions_df = pd.DataFrame()
-        system.initialize_system(force_refresh=True)
+        with fast_model():
+            self.assertTrue(system.initialize_system(force_refresh=True))
         self.assertIsNone(system._predictions_df)
+        system.scraper.scrape_multiple_seasons.assert_not_called()
+
+    def test_force_refresh_without_cache_fails_without_scraping(self):
+        system = self._system_with_scraper({})
+        system.model_trained = True
+        self.assertFalse(system.initialize_system(force_refresh=True))
+        system.scraper.scrape_multiple_seasons.assert_not_called()
+
+    def test_empty_cached_data_fails_with_scrape_instruction(self):
+        with open(self.data_file, "wb") as handle:
+            pickle.dump({}, handle)
+        system = self._system_with_scraper({})
+        with patch("builtins.print") as output:
+            self.assertFalse(system.initialize_system())
+        system.scraper.scrape_multiple_seasons.assert_not_called()
+        self.assertIn("scrape_training_data.py", " ".join(str(call) for call in output.call_args_list))
 
 
 class SeasonAccuracyReportTests(unittest.TestCase):

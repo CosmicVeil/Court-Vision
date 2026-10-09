@@ -14,7 +14,8 @@ Command-line tools in `scripts/`. Run them from `backend/`:
 | Command | What it does |
 |---|---|
 | `.venv/bin/python scripts/evaluate_model.py --fast` | Walk-forward MAE report for the model settings (see [Evaluating the model](#evaluating-the-model-mae)). |
-| `.venv/bin/python scripts/retrain_nba_ai.py` | Retrain the model on `data/nba_multi_season_data.pkl` and save `data/nba_ai_model.pkl`. |
+| `.venv/bin/python scripts/scrape_training_data.py [--output PATH] [--seasons YEARS...]` | Fetch multi-season training data. This is the only model-pipeline script that uses the network or writes `data/nba_multi_season_data.pkl`. |
+| `.venv/bin/python scripts/retrain_nba_ai.py [--data PATH] [--output PATH]` | Retrain offline from cached data, print elapsed time, and save to the requested path (default `data/nba_ai_model.pkl`). The existing model does not need to be deleted. |
 | `.venv/bin/python scripts/generate_predictions_cache.py` | Rebuild `data/predictions_cache.json` (what Render serves) from the saved model. Run after retraining. |
 | `.venv/bin/python scripts/repair_player_names.py --dry-run` | Report garbled accented player names in the data files; drop `--dry-run` to fix them (writes a backup first). |
 | `.venv/bin/python scripts/scrape_season_stats.py` | Load or refresh the current-season stats (the daily GitHub Action runs this). |
@@ -45,7 +46,8 @@ Add `-v` to list each test as it runs. Add `-W ignore` to hide the expected
 
 | Suite | Tests | What it checks |
 |---|---|---|
-| `test_nba_ai_model.py` | 62 | Season-to-season training pairs: back-to-back seasons only, players matched across seasons, bad targets dropped. Feature preparation and that training and inference build identical feature vectors. Clamping predictions to valid ranges. Training learns a real signal, beats a mean baseline, and is deterministic. Improvement and PRA calculations, breakout and top-N rankings, single-player lookup. Save/load round-trips and rejection of outdated or corrupt model files. Startup and retraining flows (run in a temp folder). |
+| `test_nba_ai_model.py` | 64 | Season-to-season training pairs: back-to-back seasons only, players matched across seasons, bad targets dropped. Feature preparation and that training and inference build identical feature vectors. Clamping predictions to valid ranges. Training learns a real signal, beats a mean baseline, and is deterministic. Improvement and PRA calculations, breakout and top-N rankings, single-player lookup. Save/load round-trips and rejection of outdated or corrupt model files. Startup and retraining flows (run in a temp folder). |
+| `test_training_pipeline.py` | 16 | Offline acquisition/training/loading separation, scraper isolation, acquisition CLI behavior, alternate and default retraining outputs, missing-data errors, startup helpers, and `NBA_MODEL_FILE` candidate models. |
 | `test_model_evaluation.py` | 8 | The MAE evaluator itself: it never trains on the season it scores or any later season, 2025-26 is evaluated by default, MAE/RMSE/R²/baseline match a hand-checked example, percentages are reported in points, the JSON report shape is correct, CLI flags override hyperparameters, the model beats the "same as last season" baseline on learnable data, and production training uses every row. |
 | `test_scraper_features.py` | 16 | NBA.com feature enrichment, using mocked responses: name matching (accents, suffixes, garbled Basketball Reference names), last-10 averages, trends, std devs, consistency, height/weight, previous-season stats, and that unmatched players get missing values rather than made-up defaults. |
 | `test_expanded_predictions.py` | 8 | The 10-stat prediction schema, prediction payloads, and the in-sample per-season report. |
@@ -97,6 +99,10 @@ The **headline ratio** at the bottom is the average of MAE ÷ naive MAE across a
 10 stats. Lower is better, and below 1 means the model beats "same as last season".
 That is the single number to push down when tuning. When a setting improves it,
 put that setting in `_build_xgboost_model` and run `scripts/retrain_nba_ai.py`, then `scripts/generate_predictions_cache.py`.
+
+Set `NBA_MODEL_FILE=/path/to/candidate.pkl` to load a candidate model in the app
+without replacing the production model. If that path does not exist, startup trains it
+from the cached multi-season data; startup never scrapes.
 
 The evaluator only reads `data/nba_multi_season_data.pkl` and never writes a pickle.
 Each run also writes `data/model_evaluation_report.json`, which is git-ignored.
