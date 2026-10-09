@@ -638,6 +638,9 @@ class NBAAISystem:
         }
         
         filepath = filename if os.path.isabs(filename) else os.path.join(DATA_DIR, filename)
+        directory = os.path.dirname(filepath)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
         with gzip.open(filepath, 'wb', compresslevel=6) as f:
             pickle.dump(model_data, f)
         print(f"Model saved to {filepath}")

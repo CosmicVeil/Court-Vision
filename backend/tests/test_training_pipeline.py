@@ -255,6 +255,48 @@ class ModelPathOverrideTests(unittest.TestCase):
             self.assertTrue(candidate.exists())
             self.assertEqual(production.read_bytes(), b"production")
 
+    def test_initialize_system_creates_missing_model_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            data = root / config.MULTI_SEASON_DATA_FILE
+            candidate = root / "candidates" / "x.pkl"
+            production = root / config.MODEL_FILE
+            production.write_bytes(b"production sentinel")
+            with open(data, "wb") as handle:
+                pickle.dump(make_synthetic_league(n_players=20), handle)
+
+            system = NBAAISystem()
+            system.scraper = Mock()
+            self.assertFalse(candidate.parent.exists())
+            with patch.object(nba_module, "DATA_DIR", str(root)), patch.dict(
+                os.environ, {config.MODEL_FILE_ENV: str(candidate)}
+            ), fast_model():
+                self.assertTrue(system.initialize_system())
+
+            self.assertTrue(system.model_trained)
+            self.assertTrue(candidate.exists())
+            system.scraper.scrape_multiple_seasons.assert_not_called()
+            self.assertEqual(production.read_bytes(), b"production sentinel")
+            self.assertTrue(NBAAISystem().load_model(str(candidate)))
+
+    def test_save_model_creates_missing_parent_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            destination = root / "missing" / "nested" / "model.pkl"
+            system = NBAAISystem()
+            system.data = make_synthetic_league(n_players=20)
+
+            with fast_model():
+                combined_data = system.prepare_combined_data()
+                self.assertIsNotNone(combined_data)
+                self.assertTrue(system.train_model(combined_data))
+            self.assertFalse(destination.parent.exists())
+            self.assertTrue(system.save_model(str(destination)))
+
+            self.assertTrue(destination.exists())
+            self.assertEqual(destination.read_bytes()[:2], b"\x1f\x8b")
+            self.assertTrue(NBAAISystem().load_model(str(destination)))
+
     def test_global_startup_helpers_never_scrape(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
