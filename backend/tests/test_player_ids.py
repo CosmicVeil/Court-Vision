@@ -110,6 +110,14 @@ class GameLogRouteTests(unittest.TestCase):
                     self.client.get(f"/api/players/2544/games{query}")
                     self.assertEqual(log.call_args.args[1:], (2544, expected))
 
+    def test_season_param_passes_through(self):
+        payload = {"player_id": 2544, "games": [], "averages": {}, "season": "2024-2025"}
+        with patch.object(players_routes.db, "get_db"), \
+             patch.object(players_routes.game_archive, "player_game_log", return_value=payload) as log:
+            response = self.client.get("/api/players/2544/games?season=2024-2025")
+            self.assertEqual(response.get_json(), payload)
+            self.assertEqual(log.call_args.kwargs.get("season"), "2024-2025")
+
     def test_database_error_is_503(self):
         with patch.object(players_routes.db, "get_db", side_effect=RuntimeError("down")):
             response = self.client.get("/api/players/2544/games")

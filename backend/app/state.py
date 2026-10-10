@@ -1,5 +1,6 @@
 """Runtime data shared by the API routes, loaded once by create_app()."""
 import json
+import os
 import pickle
 import unicodedata
 
@@ -197,8 +198,7 @@ def initialize():
     assign_player_ids()
     load_ai()  # after the season data: the predictions cache is re-keyed by player ID
     db.init_db()
-    print("Database initialized")
-    game_archive.auto_archive_enabled = True
+    game_archive.auto_archive_enabled = bool(os.environ.get('DATABASE_URL'))
 
     if ai_available and not is_render:
         try:
