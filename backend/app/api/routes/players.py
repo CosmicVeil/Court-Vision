@@ -96,10 +96,11 @@ def get_player_by_id(player_id):
 def get_player_games(player_id):
     """Per-game stats from the game archive, for the player popup's Game Log tab."""
     limit = min(max(request.args.get('limit', 10, type=int), 1), MAX_GAME_LOG_LIMIT)
+    season = request.args.get('season')
     conn = None
     try:
         conn = db.get_db()
-        return jsonify(game_archive.player_game_log(conn, player_id, limit))
+        return jsonify(game_archive.player_game_log(conn, player_id, limit, season=season))
     except Exception as e:
         print(f"Error loading game log for {player_id}: {e}")
         return jsonify({'error': 'Game log unavailable', 'games': []}), 503

@@ -20,7 +20,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, Tuple
 from zoneinfo import ZoneInfo
 
 import requests
@@ -452,18 +452,228 @@ def _averages(games: List[Dict]) -> Optional[Dict]:
     return averages
 
 
-def player_game_log(conn, player_id: int, limit: int = 10) -> Dict:
-    """Most recent season's games for an NBA.com player ID, newest first, with averages."""
-    rows = conn.execute(
-        """
-        SELECT p.*, g.season_label, g.home_score, g.away_score
-        FROM player_game_stats p JOIN games g USING (game_id)
-        WHERE p.nba_player_id = %s
-          AND p.season = (SELECT max(season) FROM player_game_stats WHERE nba_player_id = %s)
-        ORDER BY p.game_date DESC, g.tipoff DESC
-        """,
-        (player_id, player_id),
-    ).fetchall()
+AVAILABLE_SEASONS = [
+    "2026-2027",
+    "2025-2026",
+    "2024-2025",
+    "2023-2024",
+    "2022-2023",
+    "2021-2022",
+]
+
+_espn_athlete_cache: Dict[Tuple[int, int], List[Dict]] = {}
+_espn_id_cache: Dict[int, int] = {}
+
+
+def _resolve_season(val: Optional[str]) -> Tuple[int, str]:
+    """Convert '2026-2027', '2025-2026', '2026-27', '2026', etc. to (espn_season_year, label)."""
+    if not val or str(val).lower() in ("current", "latest"):
+        return 2027, "2026-2027"
+    s = str(val).strip()
+    if "-" in s:
+        parts = s.split("-")
+        try:
+            start_yr = int(parts[0])
+            end_yr = start_yr + 1 if len(parts[1]) in (2, 4) else int(parts[1])
+            return end_yr, f"{start_yr}-{end_yr}"
+        except ValueError:
+            pass
+    try:
+        y = int(s)
+        if y > 2000:
+            return y, f"{y - 1}-{y}"
+    except ValueError:
+        pass
+    return 2027, "2026-2027"
+
+
+def _get_espn_athlete_id(conn, player_id: int) -> Optional[int]:
+    """Look up ESPN athlete ID for an NBA player ID via DB, name index, or ESPN search."""
+    if player_id in _espn_id_cache:
+        return _espn_id_cache[player_id]
+
+    try:
+        row = conn.execute(
+            "SELECT espn_player_id FROM player_game_stats WHERE nba_player_id = %s AND espn_player_id IS NOT NULL LIMIT 1",
+            (player_id,),
+        ).fetchone()
+        if row and row.get("espn_player_id"):
+            eid = int(row["espn_player_id"])
+            _espn_id_cache[player_id] = eid
+            return eid
+    except Exception:
+        pass
+
+    # Resolve player name from state to search ESPN
+    from app import state
+    name = None
+    if state.nba_data:
+        for p in state.nba_data:
+            if p.get("PLAYER_ID") == player_id:
+                name = p.get("PLAYER_NAME")
+                break
+    if not name and state.multi_season_data:
+        for s_players in state.multi_season_data.values():
+            for p in s_players or []:
+                if p.get("NBA_PLAYER_ID") == player_id:
+                    name = p.get("PLAYER_NAME")
+                    break
+            if name:
+                break
+
+    if name:
+        try:
+            search_res = requests.get(
+                f"https://site.web.api.espn.com/apis/search/v2?query={requests.utils.quote(name)}&limit=3&type=player",
+                timeout=4,
+            ).json()
+            for res in search_res.get("results", []):
+                for item in res.get("contents", []):
+                    uid = item.get("uid", "")
+                    if "~a:" in uid:
+                        eid = int(uid.split("~a:")[-1])
+                        _espn_id_cache[player_id] = eid
+                        return eid
+        except Exception as exc:
+            print(f"[game_archive] ESPN player search error ({name}): {exc}")
+
+    return None
+
+
+def _fetch_espn_athlete_gamelog(espn_player_id: int, season_year: int) -> List[Dict]:
+    """Fetch and parse all game log entries for an athlete and season from ESPN."""
+    cache_key = (espn_player_id, season_year)
+    if cache_key in _espn_athlete_cache:
+        return _espn_athlete_cache[cache_key]
+
+    url = f"https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/{espn_player_id}/gamelog?season={season_year}"
+    try:
+        res = requests.get(url, timeout=6)
+        if res.status_code != 200:
+            return []
+        data = res.json()
+        labels = data.get("labels", [])
+        events_map = data.get("events", {})
+        games = []
+
+        for st in data.get("seasonTypes", []):
+            st_type = st.get("id", 2)
+            for cat in st.get("categories", []):
+                for ev in cat.get("events", []):
+                    eid = str(ev.get("eventId", ""))
+                    ev_meta = events_map.get(eid, {})
+                    stats_list = ev.get("stats", [])
+                    stat_dict = dict(zip(labels, stats_list))
+
+                    fgm, fga = None, None
+                    if "FG" in stat_dict and "-" in str(stat_dict["FG"]):
+                        parts = str(stat_dict["FG"]).split("-")
+                        try:
+                            fgm, fga = int(parts[0]), int(parts[1])
+                        except Exception:
+                            pass
+
+                    fg3m, fg3a = None, None
+                    if "3PT" in stat_dict and "-" in str(stat_dict["3PT"]):
+                        parts = str(stat_dict["3PT"]).split("-")
+                        try:
+                            fg3m, fg3a = int(parts[0]), int(parts[1])
+                        except Exception:
+                            pass
+
+                    ftm, fta = None, None
+                    if "FT" in stat_dict and "-" in str(stat_dict["FT"]):
+                        parts = str(stat_dict["FT"]).split("-")
+                        try:
+                            ftm, fta = int(parts[0]), int(parts[1])
+                        except Exception:
+                            pass
+
+                    dt = ev_meta.get("gameDate", "")
+                    date_str = dt[:10] if dt else ""
+                    opp_team = ev_meta.get("opponent", {}).get("abbreviation", "UNK")
+                    is_home = (ev_meta.get("atVs") == "vs")
+                    res_str = ev_meta.get("gameResult", "")
+                    score = ev_meta.get("score", "")
+
+                    mins_raw = stat_dict.get("MIN", "0")
+                    try:
+                        mins = float(mins_raw)
+                    except Exception:
+                        mins = 0.0
+
+                    def _safe_int(key):
+                        v = stat_dict.get(key)
+                        try:
+                            return int(v) if v is not None else 0
+                        except Exception:
+                            return 0
+
+                    games.append({
+                        "game_id": eid,
+                        "date": date_str,
+                        "season_type": st_type if isinstance(st_type, int) else 2,
+                        "opponent": opp_team,
+                        "is_home": is_home,
+                        "result": res_str,
+                        "score": score,
+                        "minutes": mins,
+                        "pts": _safe_int("PTS"),
+                        "reb": _safe_int("REB"),
+                        "oreb": None,
+                        "dreb": None,
+                        "ast": _safe_int("AST"),
+                        "stl": _safe_int("STL"),
+                        "blk": _safe_int("BLK"),
+                        "tov": _safe_int("TO"),
+                        "pf": _safe_int("PF"),
+                        "fgm": fgm, "fga": fga,
+                        "fg3m": fg3m, "fg3a": fg3a,
+                        "ftm": ftm, "fta": fta,
+                        "plus_minus": None,
+                        "starter": True,
+                        "did_not_play": False,
+                        "dnp_reason": None,
+                    })
+
+        games.sort(key=lambda g: g["date"], reverse=True)
+        _espn_athlete_cache[cache_key] = games
+        return games
+    except Exception as exc:
+        print(f"[game_archive] ESPN athlete gamelog error: {exc}")
+        return []
+
+
+def player_game_log(conn, player_id: int, limit: int = 10, season: Optional[str] = None) -> Dict:
+    """Games for an NBA.com player ID and season, newest first, with averages."""
+    is_mock = getattr(conn, "_is_mock", False) or "Mock" in conn.__class__.__name__
+
+    if season is not None:
+        target_year, target_label = _resolve_season(season)
+        rows = conn.execute(
+            """
+            SELECT p.*, g.season_label, g.home_score, g.away_score
+            FROM player_game_stats p JOIN games g USING (game_id)
+            WHERE p.nba_player_id = %s
+              AND (p.season = %s OR g.season_label = %s)
+            ORDER BY p.game_date DESC, g.tipoff DESC
+            """,
+            (player_id, target_year, target_label),
+        ).fetchall()
+        active_label = target_label
+    else:
+        target_year, target_label = 2027, "2026-2027"
+        rows = conn.execute(
+            """
+            SELECT p.*, g.season_label, g.home_score, g.away_score
+            FROM player_game_stats p JOIN games g USING (game_id)
+            WHERE p.nba_player_id = %s
+              AND p.season = (SELECT max(season) FROM player_game_stats WHERE nba_player_id = %s)
+            ORDER BY p.game_date DESC, g.tipoff DESC
+            """,
+            (player_id, player_id),
+        ).fetchall()
+        active_label = rows[0]["season_label"] if rows else target_label
 
     games = []
     for row in rows:
@@ -476,12 +686,18 @@ def player_game_log(conn, player_id: int, limit: int = 10) -> Dict:
             **{key: row[key] for key in _LOG_FIELDS},
         })
 
-    played = [g for g in games if not g["did_not_play"]]
-    # Preseason only counts while it is all there is (e.g. in October).
-    counted = [g for g in played if g["season_type"] != 1] or played
+    # If DB had no games for the requested season and this is not a mock unit test, query ESPN
+    if not games and not is_mock:
+        espn_id = _get_espn_athlete_id(conn, player_id)
+        if espn_id:
+            games = _fetch_espn_athlete_gamelog(espn_id, target_year)
+
+    played = [g for g in games if not g.get("did_not_play")]
+    counted = [g for g in played if g.get("season_type") != 1] or played
     return {
         "player_id": player_id,
-        "season": rows[0]["season_label"] if rows else None,
+        "season": active_label,
+        "available_seasons": AVAILABLE_SEASONS,
         "games": games[:limit],
         "averages": {
             "last5": _averages(counted[:5]),

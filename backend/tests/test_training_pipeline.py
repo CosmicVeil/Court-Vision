@@ -86,7 +86,7 @@ class ScraperIsolationTests(unittest.TestCase):
         callers = []
         for root in (backend / "app", backend / "scripts"):
             for path in root.rglob("*.py"):
-                tree = ast.parse(path.read_text())
+                tree = ast.parse(path.read_text(encoding="utf-8"))
                 parents = {}
                 for node in ast.walk(tree):
                     for child in ast.iter_child_nodes(node):

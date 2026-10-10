@@ -37,8 +37,99 @@
 
 .stats-history-table td.game-log-dnp { font-style: italic; color: var(--color-stone); text-transform: capitalize; }
 
+.game-log-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: rgba(28, 28, 34, 0.7);
+  border: 1px solid rgba(255, 100, 54, 0.2);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+}
+
+.game-log-season-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.game-log-season-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--color-ember-orange, #ff6436);
+  font-family: var(--font-mono, monospace);
+  text-transform: uppercase;
+}
+
+.game-log-label-icon {
+  font-size: 1rem;
+}
+
+.game-log-select-wrapper {
+  position: relative;
+  min-width: 200px;
+}
+
+.game-log-season-select {
+  width: 100%;
+  padding: 8px 32px 8px 14px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 100, 54, 0.25);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: var(--font-body, 'Inter', sans-serif);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ff6436' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  transition: all 0.2s ease;
+}
+
+.game-log-season-select:hover:not(:disabled) {
+  border-color: var(--color-ember-orange, #ff6436);
+  box-shadow: 0 0 10px rgba(255, 100, 54, 0.2);
+}
+
+.game-log-season-select:focus {
+  outline: none;
+  border-color: var(--color-ember-orange, #ff6436);
+  box-shadow: 0 0 14px rgba(255, 100, 54, 0.35);
+}
+
+.game-log-season-select option {
+  background: #18181e;
+  color: #fff;
+}
+
+.game-log-season-badge {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #94a3b8);
+  font-family: var(--font-mono, monospace);
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.game-log-season-badge strong {
+  color: #fff;
+  margin-left: 4px;
+}
+
 .game-log-tag {
   margin-left: 6px; padding: 1px 5px; border-radius: 4px;
   font-size: 9px; letter-spacing: 1px; font-family: var(--font-mono);
   color: var(--color-stone); border: 1px solid rgba(255, 255, 255, 0.12);
 }
+
