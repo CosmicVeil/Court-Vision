@@ -19,6 +19,8 @@ if args[:2]==['auth','status']:
 prompt=sys.stdin.read()
 with open(os.environ['FAKE_PROMPTS'],'a') as log:
     log.write(name+': '+prompt.splitlines()[0]+'\\n'+prompt+'\\n---\\n')
+if name=='codex':
+    pathlib.Path(os.environ['FAKE_PROMPTS']+'.codex-args').write_text(json.dumps(args))
 if name=='codex' and prompt.startswith('Diagnose this bug'):
     if os.environ.get('FAKE_DIAG')=='fix':
         pathlib.Path('value.txt').write_text('fixed during diagnosis')
@@ -136,6 +138,20 @@ class PipelineTests(unittest.TestCase):
         for prompt in prompts:
             self.assertIn('STRICT SCOPE',prompt)
         self.assertIn('Skip any finding that asks',prompts[4])
+    def test_codex_model_and_reasoning_effort(self):
+        config=json.loads(self.config.read_text())
+        config.update(codex_model='gpt-6-astra',codex_reasoning_effort='high')
+        self.config.write_text(json.dumps(config))
+        p=self.invoke(); self.assertEqual(p.returncode,0,p.stderr)
+        args=json.loads(Path(str(self.root/'prompts')+'.codex-args').read_text())
+        self.assertEqual(args[args.index('--model')+1],'gpt-6-astra')
+        self.assertIn('model_reasoning_effort="high"',args)
+        self.assertIn('--ignore-user-config',args)
+    def test_codex_defaults_when_unset(self):
+        p=self.invoke(); self.assertEqual(p.returncode,0,p.stderr)
+        args=json.loads(Path(str(self.root/'prompts')+'.codex-args').read_text())
+        self.assertNotIn('--model',args)
+        self.assertFalse(any(a.startswith('model_reasoning_effort') for a in args))
     def test_bug_diagnosis_may_not_fix_code(self):
         p=self.invoke(extra=['--bug'],FAKE_DIAG='fix'); self.assertEqual(p.returncode,2)
         self.assertIn('outside test_paths: value.txt',p.stderr)

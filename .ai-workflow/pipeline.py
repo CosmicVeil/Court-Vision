@@ -141,6 +141,9 @@ def codex(state, prompt, name):
             '--color', 'never', '-o', str(root / f'{name}.md')]
     if state['config'].get('codex_model'):
         args += ['--model', state['config']['codex_model']]
+    # --ignore-user-config skips ~/.codex/config.toml, so effort must be set here.
+    if state['config'].get('codex_reasoning_effort'):
+        args += ['-c', f"model_reasoning_effort=\"{state['config']['codex_reasoning_effort']}\""]
     args += ['-']
     if execute(args, state['checkout'], root / f'{name}.log',
                state['config']['agent_timeout_seconds'], prompt):

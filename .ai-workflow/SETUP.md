@@ -103,7 +103,7 @@ Review the checkout and its new files before committing or merging. Do not delet
 2. Copy `pipeline.py`, `config.json`, `SETUP.md` and optionally `test_pipeline.py` into the other repository's `.ai-workflow` directory.
 3. Edit `config.json` for that project. `setup` is a list of dependency-install commands; `checks` lists commands, names, whether they are required, and an optional `cwd` relative to the checkout. `test_paths` lists the globs the bug diagnosis may edit. Commands are argument arrays, not shell strings. Wildcards in check arguments are expanded by the runner. Use executable scripts for complex shell logic.
 4. Replace CourtVision's constraints with that project's requirements. Include at least one meaningful required check. Choose offline tests when possible. Keep `max_fix_rounds` between 0 and 2.
-5. Model fields default to `null`, using each CLI's available default. You can set a model supported by your account; larger models and long context usually consume more allowance. Neither paid plan guarantees unlimited automatic runs.
+5. CourtVision's configs use `claude_model` `opus`, and Codex `gpt-6-astra` with `codex_reasoning_effort` `high`. The runner starts Codex with `--ignore-user-config`, so `~/.codex/config.toml` is not read; set the model and effort in the config. Leaving `codex_model` or `codex_reasoning_effort` `null` falls back to the Codex CLI default, which is a different model with no reasoning. Larger models and higher effort use more of your allowance, and neither paid plan guarantees unlimited automatic runs.
 6. Run the offline controller tests and readiness check:
 
 ```bash
@@ -139,7 +139,8 @@ Example configuration for a Python project (adjust interpreter/dependencies):
   ],
   "constraints": "Preserve public API compatibility. Use offline tests.",
   "claude_model": null,
-  "codex_model": null
+  "codex_model": "gpt-6-astra",
+  "codex_reasoning_effort": "high"
 }
 ```
 
