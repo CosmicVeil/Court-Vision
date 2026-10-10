@@ -48,6 +48,9 @@
       "required": true
     }
   ],
+  "test_paths": [
+    "backend/tests/*"
+  ],
   "constraints": "CourtVision layout: frontend/ (React/Vite; pages in src/pages, shared components in src/components, tests in frontend/tests) and backend/ (Flask app package in backend/app with routes in app/api/routes, services, ml, scraping; data files in backend/data; CLI scripts in backend/scripts; tests in backend/tests; entry point backend/main.py). Backend-only ML task (backend/app/ml). Do not touch the frontend. Do not scrape live services, do not retrain or overwrite backend/data/nba_ai_model.pkl, and do not modify any file in backend/data. Hyperparameters in _build_xgboost_model are owned by the user: do not change them. All tests must be offline and fast (use a small XGBoost model in tests). Never weaken or delete existing assertions to get a pass.",
   "claude_model": "opus",
   "codex_model": null

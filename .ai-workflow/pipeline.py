@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""Local Claude plan/review -> Codex implementation. Standard library only."""
+"""Local Claude plan/review -> Codex implementation, with an optional Codex bug
+diagnosis stage before planning (--bug). Standard library only."""
 import argparse
 import datetime
+import fnmatch
 import glob
 import json
 import os
@@ -16,6 +18,14 @@ import fcntl
 HERE = Path(__file__).resolve().parent
 class Stop(RuntimeError):
     pass
+
+
+# Shared by every agent prompt: agents change only what the task asks for.
+SCOPE = ('''STRICT SCOPE: Change only what the task explicitly asks for. Do NOT change anything
+you were not told to change: no refactors, renames, reformatting, cleanups, dependency or config
+changes, "while I'm here" fixes, or hardening of related code that the task did not mention.
+Similar defects or improvements you notice elsewhere go in your report as suggestions, not edits.
+Tests for the requested change are in scope.''')
 
 
 def save(path, value):
@@ -82,17 +92,18 @@ def checks(state, label):
     root, checkout = Path(state['run']), Path(state['checkout'])
     results = []
     for i, item in enumerate(state['config']['checks']):
+        cwd = checkout / item.get('cwd', '.')
         args = []
         for arg in item['command']:
             if glob.has_magic(arg):
-                matches = sorted(glob.glob(arg, root_dir=checkout))
+                matches = sorted(glob.glob(arg, root_dir=cwd))
                 if not matches:
                     raise Stop(f'Check pattern matched no files: {arg}')
                 args.extend(matches)
             else:
                 args.append(arg)
         log = root / f'{label}-{i}.log'
-        code = execute(args, checkout, log, state['config']['check_timeout_seconds'])
+        code = execute(args, cwd, log, state['config']['check_timeout_seconds'])
         results.append({'name': item['name'], 'exit_code': code,
                         'required': item.get('required', True), 'log': str(log)})
     save(root / f'{label}.json', results)
@@ -123,7 +134,7 @@ def claude(state, prompt, schema, name):
         raise Stop(f'Invalid Claude result in {log}: {e}')
 
 
-def code(state, instructions, name):
+def codex(state, prompt, name):
     root = Path(state['run'])
     args = ['codex', '-a', 'never', 'exec', '--ignore-user-config',
             '-c', 'forced_login_method="chatgpt"', '--sandbox', 'workspace-write',
@@ -131,8 +142,31 @@ def code(state, instructions, name):
     if state['config'].get('codex_model'):
         args += ['--model', state['config']['codex_model']]
     args += ['-']
+    if execute(args, state['checkout'], root / f'{name}.log',
+               state['config']['agent_timeout_seconds'], prompt):
+        raise Stop(f'Codex failed. See {root / (name + ".log")}. Inspect before resuming.')
+
+
+def bug_evidence(state):
+    """Diagnosis context shared with the planner, implementer and reviewer in bug mode."""
+    if state.get('mode') != 'bug':
+        return ''
+    root = Path(state['run'])
+    return f'''This is a bug fix. Codex diagnosed it before planning:
+Diagnosis report: {root / 'diagnosis.md'}
+Diagnosis changes (reproduction tests only): {root / 'diff-diagnosis.patch'}
+New files added during diagnosis: {root / 'diff-diagnosis-new-files.txt'}
+Check results after diagnosis (reproduction evidence): {root / 'repro.json'}
+Fix the diagnosed root cause, not only the symptom. Keep the reproduction tests unless they
+are wrong; they should fail in repro.json and pass after the fix.
+'''
+
+
+def code(state, instructions, name):
+    root = Path(state['run'])
     prompt = f'''Work on this task: {state['task']}
 Read applicable AGENTS.md and CLAUDE.md. Implement only the requested scope.
+{SCOPE}
 Add or update automated tests for every behavior you build or change, in the project's
 existing test locations and style: cover the main path, edge cases and error handling, and
 add a regression test for each bug you fix. Tests must run offline and pass. Never weaken,
@@ -141,13 +175,49 @@ If something cannot reasonably be tested automatically, say so and why in your r
 Do not commit, push, merge, deploy, modify git history, or change other checkouts.
 Do not weaken checks or edit workflow control files. Do not read secrets.
 Project constraints: {state['config'].get('constraints', '')}
-Plan:\n{(root / 'plan.md').read_text()}
+{bug_evidence(state)}Plan:\n{(root / 'plan.md').read_text()}
 {instructions}
 Run relevant checks and report changes, tests, and limitations honestly.
 '''
-    if execute(args, state['checkout'], root / f'{name}.log',
-               state['config']['agent_timeout_seconds'], prompt):
-        raise Stop(f'Codex failed. See {root / (name + ".log")}. Inspect before resuming.')
+    codex(state, prompt, name)
+
+
+def diagnose(state):
+    root = Path(state['run'])
+    test_paths = state['config'].get('test_paths', [])
+    codex(state, f'''Diagnose this bug. Do NOT fix it: {state['task']}
+Read applicable AGENTS.md and CLAUDE.md. Work in two parts before anyone plans a fix:
+1. Testing: run the relevant existing tests and commands to reproduce the failure. Then add a
+   minimal automated regression test, in the project's existing test locations and style, that
+   fails now because of this bug and will pass once it is fixed. Tests must run offline.
+2. Code review: trace the code path involved and find what actually causes the error. Check
+   recent changes, related callers, and similar code that may share the defect.
+{SCOPE}
+Only add or edit test files ({', '.join(test_paths) or "the project's test directories"}).
+Do not change application code, configuration or dependencies. Do not weaken existing assertions.
+Do not commit, push, merge, deploy, modify git history, or change other checkouts. Do not read secrets.
+Project constraints: {state['config'].get('constraints', '')}
+Baseline check results (before your changes):\n{(root / 'baseline.json').read_text()}
+Your final message is the diagnosis report. Use these sections:
+- Symptom and how to reproduce it (exact commands and observed output)
+- Root cause (file:line references and why it produces the error)
+- Evidence (what you ran or read that confirms the cause; say if it is unconfirmed)
+- Regression tests added (file, test name, and how they fail now)
+- Other places that share the defect or could be affected
+- Fix options, recommended option, and risks
+- Confidence (high/medium/low) and open questions
+If you cannot reproduce the bug, say so plainly and explain what you tried.
+''', 'diagnosis')
+    report = root / 'diagnosis.md'
+    if not report.exists() or not report.read_text().strip():
+        raise Stop('Codex produced an empty diagnosis report')
+    _, new = snapshot(state, 'diff-diagnosis')
+    changed = capture(['git', 'diff', '--name-only', state['base'], '--'], state['checkout'])
+    files = [f for f in (changed + '\n' + new).splitlines() if f]
+    outside = [f for f in files if not any(fnmatch.fnmatch(f, p) for p in test_paths)]
+    if test_paths and outside:
+        raise Stop('Diagnosis changed files outside test_paths: ' + ', '.join(outside)
+                   + '. Inspect the checkout; diagnosis must not fix the bug.')
 
 
 def snapshot(state, label):
@@ -177,16 +247,25 @@ def run(state):
         advance('baseline')
     if state['stage'] == 'baseline':
         checks(state, 'baseline')
+        advance('diagnose' if state.get('mode') == 'bug' else 'plan')
+    if state['stage'] == 'diagnose':
+        diagnose(state)
+        advance('reproduce')
+    if state['stage'] == 'reproduce':
+        checks(state, 'repro')
         advance('plan')
     if state['stage'] == 'plan':
         result = claude(state, f'''Plan this task in the repository: {state['task']}
 Read relevant source and applicable AGENTS.md/CLAUDE.md. No implementation.
 Constraints: {state['config'].get('constraints', '')}
-Baseline checks: {(root / 'baseline.json').read_text()}
+{bug_evidence(state)}Baseline checks: {(root / 'baseline.json').read_text()}
 Inspect baseline logs where needed. Identify pre-existing failures separately.
 Provide a concise implementation plan, acceptance criteria, files and verification.
 List the specific tests to add or update (file, cases) so every new or changed behavior is covered.
 Do not expand scope to unrelated baseline failures; flag them as blockers.
+{SCOPE} Plan only the changes the task asks for. List related issues you notice under
+"Out of scope (not planned)" instead of planning them.
+{"Verify the diagnosis against the source before relying on it. If it is wrong or unconfirmed, say so and plan from the real cause." if state.get('mode') == 'bug' else ''}
 ''', {'type': 'object', 'properties': {'plan': {'type': 'string'}},
       'required': ['plan'], 'additionalProperties': False}, 'plan')
         if not isinstance(result.get('plan'), str) or not result['plan'].strip():
@@ -200,7 +279,8 @@ Do not expand scope to unrelated baseline failures; flag them as blockers.
         n = state['round']
         if state['stage'] == 'fix':
             feedback = (root / f'review-{n}.result.json').read_text()
-            code(state, f'Address actionable review findings within task scope:\n{feedback}\n'
+            code(state, f'Address actionable review findings within task scope. Skip any finding that asks\n'
+                 f'for changes outside the task, and say which you skipped and why:\n{feedback}\n'
                  + (root / f'checks-{n}.json').read_text(), f'fix-{n + 1}')
             state['round'] += 1
             advance('check')
@@ -218,12 +298,17 @@ Read diff: {patch}
 Read these new files as well (they are not in the diff):\n{new}
 Read baseline check results: {root / 'baseline.json'}
 Read current check results and relevant logs: {root / f'checks-{n}.json'}
-Assess correctness, regressions, security, tests and all acceptance criteria.
+{bug_evidence(state)}Assess correctness, regressions, security, tests and all acceptance criteria.
+{SCOPE}
+Changes the task did not ask for are an actionable finding: ask for them to be reverted.
+Never ask for out-of-scope work. Mention related issues outside the task in the summary only,
+not in findings.
 New or changed behavior without meaningful automated tests is an actionable finding, as are
 tests that would pass without the change or weakened/deleted existing assertions.
 Report actionable findings with file/line references where possible, distinguish baseline issues.
 Approved must be false if any required check fails, implementation is incomplete,
 there are unresolved findings, or evidence is insufficient. Findings=[] only if none.
+{"For this bug: a fix that does not address the diagnosed root cause, or regression tests that did not fail in repro.json and pass now (without a stated reason), is an actionable finding." if state.get('mode') == 'bug' else ''}
 ''', {'type': 'object', 'properties': {'approved': {'type': 'boolean'},
       'summary': {'type': 'string'}, 'findings': {'type': 'array', 'items': {'type': 'string'}}},
       'required': ['approved', 'summary', 'findings'], 'additionalProperties': False}, f'review-{n}')
@@ -251,6 +336,8 @@ def main():
     parser.add_argument('--repo', default=str(HERE.parent))
     parser.add_argument('--config', default=str(HERE / 'config.json'))
     parser.add_argument('--doctor', action='store_true')
+    parser.add_argument('--bug', action='store_true',
+                        help='Bug mode: Codex reproduces and diagnoses the cause before Claude plans')
     parser.add_argument('--from-head', action='store_true', help='Explicitly exclude uncommitted source changes')
     parser.add_argument('--resume', type=Path, help='Run folder printed by an earlier run')
     args = parser.parse_args()
@@ -281,7 +368,7 @@ def main():
         capture(['git', 'worktree', 'add', '-b', branch, str(checkout), base], repo)
         state = {'run': str(root), 'repo': str(repo), 'checkout': str(checkout),
                  'base': base, 'branch': branch, 'task': args.task, 'config': config,
-                 'round': 0, 'stage': 'setup'}
+                 'mode': 'bug' if args.bug else 'feature', 'round': 0, 'stage': 'setup'}
         save(root / 'state.json', state)
         print(f'Run folder: {root}', flush=True)
         if dirty:

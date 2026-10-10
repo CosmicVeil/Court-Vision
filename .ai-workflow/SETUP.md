@@ -2,6 +2,11 @@
 
 This is a local, on-demand pipeline. Give it one task; it creates a separate Git worktree, prepares dependencies, records baseline checks, asks Claude to plan, asks Codex to implement, runs checks, and asks a fresh Claude session to review the actual changes. Codex can address findings up to twice. It leaves the branch and evidence for you to inspect and merge.
 
+There are two workflows:
+
+- **Feature workflow** (default): setup → baseline → Claude plan → Codex code → checks → Claude review → fixes.
+- **Bug workflow** (`--bug`): setup → baseline → **Codex diagnosis** → **reproduction checks** → Claude plan → Codex code → checks → Claude review → fixes. Codex tests and reviews the code to find what causes the error before anyone plans a fix.
+
 ## Start on this Mac
 
 The files are installed in `/Users/mohandixit/Documents/GitHub/CourtVision/.ai-workflow/`.
@@ -21,6 +26,12 @@ python3 .ai-workflow/pipeline.py --doctor
 python3 .ai-workflow/pipeline.py "Fix upcoming-games pagination so page 2 displays games 11–20; add regression coverage."
 ```
 
+For a bug, add `--bug` and describe what you did, what happened, what you expected, and any error text:
+
+```bash
+python3 .ai-workflow/pipeline.py --bug "Player popup game log shows the previous player's games after switching players. Expected: the selected player's games."
+```
+
 CourtVision currently has uncommitted backend/model changes. The runner refuses a dirty source checkout by default. To deliberately start at the latest commit and EXCLUDE all uncommitted changes:
 
 ```bash
@@ -28,6 +39,20 @@ python3 .ai-workflow/pipeline.py --from-head "Describe the task and acceptance c
 ```
 
 This flag also excludes new/uncommitted tests. It does not stash, commit, or copy your work. The pipeline files themselves can run before being committed because the controller runs outside the new checkout.
+
+## The bug workflow
+
+After the baseline checks, Codex runs a diagnosis stage before Claude plans anything:
+
+1. **Testing.** Codex runs the relevant tests and commands to reproduce the failure, then adds a minimal regression test that fails now and will pass once the bug is fixed.
+2. **Code review.** Codex traces the code path to find the root cause, and checks callers and similar code that may share the defect.
+3. **Report.** Codex writes `diagnosis.md`: symptom and reproduction, root cause with file and line references, evidence, regression tests added, other affected places, fix options, and confidence.
+
+Codex must not fix the bug during diagnosis. If it changes any file outside `test_paths` in the config (`backend/tests/*`, `frontend/tests/*`; only `backend/tests/*` in `config.backend-ml.json`), the run stops. The runner then runs all checks again as `repro.json`; the new regression test is expected to fail there. Claude plans from the diagnosis after checking it against the source, and the reviewer flags a fix that misses the root cause or regression tests that did not fail before and pass after. If Codex cannot reproduce the bug, it says so and the planner sees that.
+
+## Strict scope
+
+Every agent prompt tells the agent to change only what the task asks for: no refactors, cleanups, config changes, or fixes to related code the task did not mention. The planner lists related issues under "Out of scope (not planned)". The reviewer flags unrequested changes as findings to revert and never asks for out-of-scope work, and Codex skips any review finding that would go beyond the task. Name everything you want changed in the task itself.
 
 ## What a run does
 
@@ -54,7 +79,8 @@ All checks pass on the current code, so a failing check after a run means the ru
 
 The terminal prints the run folder. It contains:
 
-- `state.json`: task, configuration snapshot, base commit, branch and checkpoint.
+- `state.json`: task, mode (`feature` or `bug`), configuration snapshot, base commit, branch and checkpoint.
+- `diagnosis.md`, `diff-diagnosis.patch`, `diff-diagnosis-new-files.txt`, `repro.json`: bug mode only.
 - `plan.md`: Claude's plan.
 - `baseline*.log` / `checks-*.log`: check evidence.
 - `code.log`, `code.md`, `fix-*.log`: implementation output.
@@ -75,7 +101,7 @@ Review the checkout and its new files before committing or merging. Do not delet
 
 1. Install Git, Python 3.10+ (macOS/Linux), Node/npm if the project needs them, Codex CLI and Claude Code. Sign in using the subscriptions.
 2. Copy `pipeline.py`, `config.json`, `SETUP.md` and optionally `test_pipeline.py` into the other repository's `.ai-workflow` directory.
-3. Edit `config.json` for that project. `setup` is a list of dependency-install commands; `checks` lists commands, names and whether they are required. Commands are argument arrays, not shell strings. Wildcards in check arguments are expanded by the runner. Use executable scripts for complex shell logic.
+3. Edit `config.json` for that project. `setup` is a list of dependency-install commands; `checks` lists commands, names, whether they are required, and an optional `cwd` relative to the checkout. `test_paths` lists the globs the bug diagnosis may edit. Commands are argument arrays, not shell strings. Wildcards in check arguments are expanded by the runner. Use executable scripts for complex shell logic.
 4. Replace CourtVision's constraints with that project's requirements. Include at least one meaningful required check. Choose offline tests when possible. Keep `max_fix_rounds` between 0 and 2.
 5. Model fields default to `null`, using each CLI's available default. You can set a model supported by your account; larger models and long context usually consume more allowance. Neither paid plan guarantees unlimited automatic runs.
 6. Run the offline controller tests and readiness check:
@@ -128,4 +154,4 @@ This setup uses `claude -p` without `--bare`: the currently documented bare mode
 
 ## Validation performed during setup
 
-Offline integration tests use fake AI executables and real temporary Git worktrees to verify isolation, repair-loop limits, failed-check gating, invalid-review rejection, dirty-source handling and checkpoint resumption. No live model task has been run: Claude Code still requires subscription sign-in, and no implementation task was supplied. The offline tests validate controller behavior, not model quality or live-provider availability.
+Offline integration tests use fake AI executables and real temporary Git worktrees to verify isolation, repair-loop limits, failed-check gating, invalid-review rejection, dirty-source handling, checkpoint resumption, per-check `cwd`, strict-scope prompts, and the bug workflow (diagnosis before planning, the test-paths guard, empty reports). No live model task has been run: Claude Code still requires subscription sign-in, and no implementation task was supplied. The offline tests validate controller behavior, not model quality or live-provider availability.
