@@ -53,10 +53,10 @@ def capture(args, cwd=None, include_stderr=False):
     return (p.stdout + (p.stderr if include_stderr else "")).strip()
 
 
-def execute(args, cwd, log, timeout, prompt=None):
+def execute(args, cwd, log, timeout, prompt=None, env=None):
     print(f'Running {log.stem} …', flush=True)
     with log.open('w') as out:
-        p = subprocess.Popen(args, cwd=cwd, env=environment(), text=True,
+        p = subprocess.Popen(args, cwd=cwd, env={**environment(), **(env or {})}, text=True,
                              stdin=subprocess.PIPE if prompt is not None else subprocess.DEVNULL,
                              stdout=out, stderr=subprocess.STDOUT, start_new_session=True)
         try:
@@ -93,8 +93,12 @@ def checks(state, label):
     results = []
     for i, item in enumerate(state['config']['checks']):
         cwd = checkout / item.get('cwd', '.')
+        # Controller-owned scripts live in the workflow folder, outside the agents' reach.
+        places = {'{workflow_dir}': str(HERE), '{run_dir}': str(root), '{checkout}': str(checkout)}
         args = []
         for arg in item['command']:
+            for key, value in places.items():
+                arg = arg.replace(key, value)
             if glob.has_magic(arg):
                 matches = sorted(glob.glob(arg, root_dir=cwd))
                 if not matches:
@@ -103,7 +107,8 @@ def checks(state, label):
             else:
                 args.append(arg)
         log = root / f'{label}-{i}.log'
-        code = execute(args, cwd, log, state['config']['check_timeout_seconds'])
+        code = execute(args, cwd, log, state['config']['check_timeout_seconds'],
+                       env={'AI_RUN_DIR': str(root), 'AI_CHECK_LABEL': label})
         results.append({'name': item['name'], 'exit_code': code,
                         'required': item.get('required', True), 'log': str(log)})
     save(root / f'{label}.json', results)
@@ -142,12 +147,84 @@ def codex(state, prompt, name):
     if state['config'].get('codex_model'):
         args += ['--model', state['config']['codex_model']]
     # --ignore-user-config skips ~/.codex/config.toml, so effort must be set here.
-    if state['config'].get('codex_reasoning_effort'):
-        args += ['-c', f"model_reasoning_effort=\"{state['config']['codex_reasoning_effort']}\""]
+    # A string applies to every stage; a map sets it per stage (diagnose, code, fix).
+    effort = state['config'].get('codex_reasoning_effort')
+    if isinstance(effort, dict):
+        stage = 'diagnose' if name == 'diagnosis' else 'fix' if name.startswith('fix-') else 'code'
+        effort = effort.get(stage)
+    if effort:
+        args += ['-c', f'model_reasoning_effort="{effort}"']
     args += ['-']
     if execute(args, state['checkout'], root / f'{name}.log',
                state['config']['agent_timeout_seconds'], prompt):
         raise Stop(f'Codex failed. See {root / (name + ".log")}. Inspect before resuming.')
+
+
+def skill_dirs(config):
+    """Every skill folder the config names, as {stage: [Path]} plus 'review'."""
+    stages = dict(config.get('codex_skills') or {})
+    stages['review'] = config.get('review_skills') or []
+    return {stage: [Path(os.path.expanduser(entry)) for entry in entries]
+            for stage, entries in stages.items()}
+
+
+def validate_skills(config):
+    for stage, folders in skill_dirs(config).items():
+        for folder in folders:
+            if not (folder / 'SKILL.md').is_file():
+                raise Stop(f'Skill for {stage} not found: {folder / "SKILL.md"}. '
+                           'Fix the path in the config (plugin version folders change on update).')
+
+
+def copy_skills(config, root):
+    """Copy each skill folder into the run so every agent can read it and the run records what it used."""
+    for folders in skill_dirs(config).values():
+        for folder in folders:
+            target = root / 'skills' / folder.name
+            if not target.exists():
+                shutil.copytree(folder, target)
+
+
+def skills_note(state, stage):
+    folders = skill_dirs(state['config']).get(stage, [])
+    if not folders:
+        return ''
+    root = Path(state['run'])
+    paths = '\n'.join(f'- {root / "skills" / f.name / "SKILL.md"}' for f in folders)
+    return (f'''Skills for this stage. Read each SKILL.md in full (and any file it points to in the same
+folder) and follow it:
+{paths}
+These skills sometimes say to ask your human partner. No one is available: state the question in
+your report and continue with the safest choice within scope. The workflow's own rules (strict
+scope, no commits, no new dependencies, the required output format) override any skill.
+''')
+
+
+def spec_note(state):
+    """Points every agent at the design spec when the run has one."""
+    if not state.get('spec'):
+        return ''
+    return (f"Design spec (authoritative for look, behaviour and acceptance criteria): "
+            f"{Path(state['run']) / 'spec.md'}\nRead it in full before doing anything else.\n")
+
+
+def screenshot_note(state, label):
+    folder = Path(state['run']) / 'screenshots' / label
+    shots = sorted(folder.glob('*.png')) if folder.exists() else []
+    if not shots:
+        return ''
+    return ('Browser check screenshots (Read every image and judge the visual result against the '
+            'task and spec; a frozen, blank, overlapping or unreadable frame is a finding):\n'
+            + '\n'.join(str(x) for x in shots) + '\n')
+
+
+# Verification and test-first discipline for the implementer.
+DISCIPLINE = ('''Work test-first: for each behaviour, write or update the test, run it and see it
+fail for the expected reason, then implement until it passes. Before reporting that anything is
+done, run the commands that prove it and quote their actual output; never claim a pass you did
+not see. If a check cannot run in your sandbox (for example a browser check that needs to start
+a server), say so plainly instead of guessing; the controller runs every configured check after
+you finish and returns the results to you.''')
 
 
 def bug_evidence(state):
@@ -178,7 +255,8 @@ If something cannot reasonably be tested automatically, say so and why in your r
 Do not commit, push, merge, deploy, modify git history, or change other checkouts.
 Do not weaken checks or edit workflow control files. Do not read secrets.
 Project constraints: {state['config'].get('constraints', '')}
-{bug_evidence(state)}Plan:\n{(root / 'plan.md').read_text()}
+{DISCIPLINE}
+{skills_note(state, 'fix' if name.startswith('fix-') else 'code')}{spec_note(state)}{bug_evidence(state)}Plan:\n{(root / 'plan.md').read_text()}
 {instructions}
 Run relevant checks and report changes, tests, and limitations honestly.
 '''
@@ -200,7 +278,7 @@ Only add or edit test files ({', '.join(test_paths) or "the project's test direc
 Do not change application code, configuration or dependencies. Do not weaken existing assertions.
 Do not commit, push, merge, deploy, modify git history, or change other checkouts. Do not read secrets.
 Project constraints: {state['config'].get('constraints', '')}
-Baseline check results (before your changes):\n{(root / 'baseline.json').read_text()}
+{skills_note(state, 'diagnose')}Baseline check results (before your changes):\n{(root / 'baseline.json').read_text()}
 Your final message is the diagnosis report. Use these sections:
 - Symptom and how to reproduce it (exact commands and observed output)
 - Root cause (file:line references and why it produces the error)
@@ -261,7 +339,7 @@ def run(state):
         result = claude(state, f'''Plan this task in the repository: {state['task']}
 Read relevant source and applicable AGENTS.md/CLAUDE.md. No implementation.
 Constraints: {state['config'].get('constraints', '')}
-{bug_evidence(state)}Baseline checks: {(root / 'baseline.json').read_text()}
+{spec_note(state)}{bug_evidence(state)}Baseline checks: {(root / 'baseline.json').read_text()}
 Inspect baseline logs where needed. Identify pre-existing failures separately.
 Provide a concise implementation plan, acceptance criteria, files and verification.
 List the specific tests to add or update (file, cases) so every new or changed behavior is covered.
@@ -296,12 +374,13 @@ Do not expand scope to unrelated baseline failures; flag them as blockers.
             patch, new = snapshot(state, f'diff-{n}')
             verdict = claude(state, f'''Independently review the actual current changes for: {state['task']}
 Read applicable AGENTS.md/CLAUDE.md and relevant source. Do not edit anything.
+{skills_note(state, 'review')}
 Read plan: {root / 'plan.md'}
 Read diff: {patch}
 Read these new files as well (they are not in the diff):\n{new}
 Read baseline check results: {root / 'baseline.json'}
 Read current check results and relevant logs: {root / f'checks-{n}.json'}
-{bug_evidence(state)}Assess correctness, regressions, security, tests and all acceptance criteria.
+{spec_note(state)}{screenshot_note(state, f'checks-{n}')}{bug_evidence(state)}Assess correctness, regressions, security, tests and all acceptance criteria.
 {SCOPE}
 Changes the task did not ask for are an actionable finding: ask for them to be reverted.
 Never ask for out-of-scope work. Mention related issues outside the task in the summary only,
@@ -343,6 +422,9 @@ def main():
                         help='Bug mode: Codex reproduces and diagnoses the cause before Claude plans')
     parser.add_argument('--from-head', action='store_true', help='Explicitly exclude uncommitted source changes')
     parser.add_argument('--resume', type=Path, help='Run folder printed by an earlier run')
+    parser.add_argument('--branch', help='Name for the new branch (default: ai/<timestamp>)')
+    parser.add_argument('--base', help='Branch or commit to start from (default: current HEAD)')
+    parser.add_argument('--spec', type=Path, help='Design spec file every agent must follow')
     args = parser.parse_args()
     if args.doctor:
         doctor()
@@ -355,7 +437,7 @@ def main():
     else:
         repo = Path(capture(['git', 'rev-parse', '--show-toplevel'], args.repo)).resolve()
         dirty = capture(['git', 'status', '--porcelain'], repo)
-        if dirty and not args.from_head:
+        if dirty and not args.from_head and not args.base:
             raise Stop('Source has uncommitted changes. Commit them first, or use --from-head to EXCLUDE them.')
         config = json.loads(Path(args.config).read_text())
         if not 0 <= config['max_fix_rounds'] <= 2:
@@ -364,18 +446,37 @@ def main():
             raise Stop('Configure at least one required check')
         tag = datetime.datetime.now().strftime('%Y%m%d-%H%M%S') + '-' + uuid.uuid4().hex[:6]
         root = repo.parent / (repo.name + '-ai-runs') / tag
+        branch = args.branch or 'ai/' + tag
+        try:
+            capture(['git', 'check-ref-format', '--branch', branch], repo)
+        except Stop:
+            raise Stop(f'Invalid branch name: {branch}')
+        if subprocess.run(['git', 'rev-parse', '--verify', '--quiet', 'refs/heads/' + branch],
+                          cwd=repo, stdout=subprocess.DEVNULL).returncode == 0:
+            raise Stop(f'Branch {branch} already exists. Choose another name.')
+        try:
+            base = capture(['git', 'rev-parse', '--verify', (args.base or 'HEAD') + '^{commit}'], repo)
+        except Stop:
+            raise Stop(f'Unknown base: {args.base}')
+        if args.spec and not args.spec.is_file():
+            raise Stop(f'Spec file not found: {args.spec}')
+        validate_skills(config)
         root.mkdir(parents=True)
-        branch = 'ai/' + tag
         checkout = root / 'checkout'
-        base = capture(['git', 'rev-parse', 'HEAD'], repo)
         capture(['git', 'worktree', 'add', '-b', branch, str(checkout), base], repo)
         state = {'run': str(root), 'repo': str(repo), 'checkout': str(checkout),
                  'base': base, 'branch': branch, 'task': args.task, 'config': config,
-                 'mode': 'bug' if args.bug else 'feature', 'round': 0, 'stage': 'setup'}
+                 'mode': 'bug' if args.bug else 'feature', 'round': 0, 'stage': 'setup',
+                 'spec': bool(args.spec)}
+        if args.spec:
+            shutil.copyfile(args.spec, root / 'spec.md')
+        copy_skills(config, root)
         save(root / 'state.json', state)
         print(f'Run folder: {root}', flush=True)
-        if dirty:
+        if dirty and not args.base:
             print('Uncommitted source changes were EXCLUDED; checkout starts at HEAD.', flush=True)
+        if args.base:
+            print(f'Checkout starts at {args.base} ({base[:7]}).', flush=True)
     with (root / 'run.lock').open('w') as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)

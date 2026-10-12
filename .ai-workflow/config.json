@@ -83,5 +83,24 @@
   "constraints": "CourtVision layout: frontend/ (React/Vite; pages in src/pages, shared components in src/components, tests in frontend/tests) and backend/ (Flask app package in backend/app with routes in app/api/routes, services, ml, scraping; data files in backend/data; CLI scripts in backend/scripts; tests in backend/tests; entry point backend/main.py). Keep changes scoped to the task. Do not retrain models, scrape live services, start Postgres, or modify files in backend/data unless the task explicitly asks. Backend tests must be offline: build the app with create_app(load_data=False) and mock live NBA data fetchers. Match the existing visual language (dark glassmorphic cards, ember-orange accents, existing CSS variables/class conventions). Never weaken, skip, or delete existing test assertions to get a pass; if a test is genuinely obsolete, explain why before changing it.",
   "claude_model": "opus",
   "codex_model": "gpt-6-astra",
-  "codex_reasoning_effort": "high"
+  "codex_reasoning_effort": {
+    "diagnose": "high",
+    "code": "high",
+    "fix": "medium"
+  },
+  "codex_skills": {
+    "diagnose": [
+      "~/.codex/plugins/cache/openai-curated-remote/superpowers/6.4.2/skills/systematic-debugging",
+      "~/.codex/plugins/cache/openai-curated-remote/superpowers/6.4.2/skills/test-driven-development"
+    ],
+    "code": [
+      "~/.codex/plugins/cache/openai-curated-remote/superpowers/6.4.2/skills/test-driven-development",
+      "~/.codex/plugins/cache/openai-curated-remote/superpowers/6.4.2/skills/verification-before-completion"
+    ],
+    "fix": [
+      "~/.codex/plugins/cache/openai-curated-remote/superpowers/6.4.2/skills/receiving-code-review",
+      "~/.codex/plugins/cache/openai-curated-remote/superpowers/6.4.2/skills/verification-before-completion"
+    ]
+  },
+  "review_skills": []
 }

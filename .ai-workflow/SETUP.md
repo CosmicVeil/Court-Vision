@@ -32,6 +32,8 @@ For a bug, add `--bug` and describe what you did, what happened, what you expect
 python3 .ai-workflow/pipeline.py --bug "Player popup game log shows the previous player's games after switching players. Expected: the selected player's games."
 ```
 
+To name the branch instead of using `ai/<timestamp>`, add `--branch`, for example `--branch fix/players-missing-player-id`. The runner refuses an invalid name or one that already exists.
+
 CourtVision currently has uncommitted backend/model changes. The runner refuses a dirty source checkout by default. To deliberately start at the latest commit and EXCLUDE all uncommitted changes:
 
 ```bash
@@ -53,6 +55,39 @@ Codex must not fix the bug during diagnosis. If it changes any file outside `tes
 ## Strict scope
 
 Every agent prompt tells the agent to change only what the task asks for: no refactors, cleanups, config changes, or fixes to related code the task did not mention. The planner lists related issues under "Out of scope (not planned)". The reviewer flags unrequested changes as findings to revert and never asks for out-of-scope work, and Codex skips any review finding that would go beyond the task. Name everything you want changed in the task itself.
+
+## Design specs, starting branches and check scripts
+
+- `--spec path/to/spec.md` copies a design spec into the run folder; the planner, Codex and the reviewer must all follow it.
+- `--base <branch>` starts the run from that branch or commit instead of the current `HEAD`.
+- Check commands can use `{workflow_dir}`, `{run_dir}` and `{checkout}`, and get `AI_RUN_DIR` and `AI_CHECK_LABEL` in their environment. Put controller-owned check scripts in `.ai-workflow/checks/` and reference them with `{workflow_dir}` so the agents can't edit them. A check that saves PNGs to `$AI_RUN_DIR/screenshots/$AI_CHECK_LABEL/` has them passed to the reviewer.
+- Codex's prompt includes two working rules adapted from the Superpowers skills: work test-first, and never report something as done without running the command that proves it.
+
+## Skills per stage
+
+Codex can't usefully load skills on its own: it has about 1,700 skill descriptions available, overflows its skills budget and drops them all. The runner names exact skills per stage instead. In the config:
+
+- `codex_skills` maps a stage (`diagnose`, `code`, `fix`) to a list of skill folders.
+- `review_skills` lists skill folders for Claude's review.
+
+Each folder must contain a `SKILL.md`. Before creating a run, the runner checks that every listed folder exists, and stops with the missing path if one doesn't. (Plugin version folders such as Superpowers' `6.4.2` change when the plugin updates.) It then copies each folder into `skills/` in the run folder. Every agent reads the skills from there, and the run keeps a record of exactly what it used. Prompts tell the agents that nobody is available to answer a skill's questions, and that the workflow's own rules (strict scope, no commits, no new dependencies, output format) override any skill.
+
+Left out on purpose:
+
+- `using-superpowers`, which would make Codex search every skill.
+- `brainstorming`, `writing-plans` and `requesting-code-review`, because Claude plans and reviews.
+- `using-git-worktrees`, `finishing-a-development-branch`, `subagent-driven-development` and `dispatching-parallel-agents`, which conflict with the runner.
+- `scroll-experience`, which is built around GSAP, a library these projects don't use.
+
+The `~/.agents/skills` folders are community-written; read a skill before adding it.
+
+| Stage | Skills |
+| --- | --- |
+| Bug diagnosis | Superpowers `systematic-debugging`, `test-driven-development` |
+| Coding | Superpowers `test-driven-development`, `verification-before-completion` |
+| Fix rounds | Superpowers `receiving-code-review`, `verification-before-completion` |
+
+The animation skills used in Atlas (`fixing-motion-performance`, `review-animations` in `~/.agents/skills`) are optional here; add them to `codex_skills` and `review_skills` for animation-heavy tasks.
 
 ## What a run does
 
@@ -103,7 +138,7 @@ Review the checkout and its new files before committing or merging. Do not delet
 2. Copy `pipeline.py`, `config.json`, `SETUP.md` and optionally `test_pipeline.py` into the other repository's `.ai-workflow` directory.
 3. Edit `config.json` for that project. `setup` is a list of dependency-install commands; `checks` lists commands, names, whether they are required, and an optional `cwd` relative to the checkout. `test_paths` lists the globs the bug diagnosis may edit. Commands are argument arrays, not shell strings. Wildcards in check arguments are expanded by the runner. Use executable scripts for complex shell logic.
 4. Replace CourtVision's constraints with that project's requirements. Include at least one meaningful required check. Choose offline tests when possible. Keep `max_fix_rounds` between 0 and 2.
-5. CourtVision's configs use `claude_model` `opus`, and Codex `gpt-6-astra` with `codex_reasoning_effort` `high`. The runner starts Codex with `--ignore-user-config`, so `~/.codex/config.toml` is not read; set the model and effort in the config. Leaving `codex_model` or `codex_reasoning_effort` `null` falls back to the Codex CLI default, which is a different model with no reasoning. Larger models and higher effort use more of your allowance, and neither paid plan guarantees unlimited automatic runs.
+5. CourtVision's configs use `claude_model` `opus`, and Codex `gpt-6-astra` with high reasoning effort for diagnosis and coding and medium for fix rounds. `codex_reasoning_effort` can be one value for every stage or a map per stage; both repos use `{"diagnose": "high", "code": "high", "fix": "medium"}`, because fix rounds address specific review findings and medium effort saves plan allowance. The runner starts Codex with `--ignore-user-config`, so `~/.codex/config.toml` is not read; set the model and effort in the config. Leaving `codex_model` or `codex_reasoning_effort` `null` falls back to the Codex CLI default, which is a different model with no reasoning. Larger models and higher effort use more of your allowance, and neither paid plan guarantees unlimited automatic runs.
 6. Run the offline controller tests and readiness check:
 
 ```bash
@@ -140,7 +175,7 @@ Example configuration for a Python project (adjust interpreter/dependencies):
   "constraints": "Preserve public API compatibility. Use offline tests.",
   "claude_model": null,
   "codex_model": "gpt-6-astra",
-  "codex_reasoning_effort": "high"
+  "codex_reasoning_effort": {"diagnose": "high", "code": "high", "fix": "medium"}
 }
 ```
 

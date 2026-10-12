@@ -21,6 +21,7 @@ with open(os.environ['FAKE_PROMPTS'],'a') as log:
     log.write(name+': '+prompt.splitlines()[0]+'\\n'+prompt+'\\n---\\n')
 if name=='codex':
     pathlib.Path(os.environ['FAKE_PROMPTS']+'.codex-args').write_text(json.dumps(args))
+    with open(os.environ['FAKE_PROMPTS']+'.codex-args-all','a') as f: f.write(json.dumps(args)+'\\n')
 if name=='codex' and prompt.startswith('Diagnose this bug'):
     if os.environ.get('FAKE_DIAG')=='fix':
         pathlib.Path('value.txt').write_text('fixed during diagnosis')
@@ -147,11 +148,94 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(args[args.index('--model')+1],'gpt-6-astra')
         self.assertIn('model_reasoning_effort="high"',args)
         self.assertIn('--ignore-user-config',args)
+    def test_codex_reasoning_effort_per_stage(self):
+        config=json.loads(self.config.read_text())
+        config['codex_reasoning_effort']={'code':'high','fix':'medium'}
+        self.config.write_text(json.dumps(config))
+        p=self.invoke('fix'); self.assertEqual(p.returncode,0,p.stderr)
+        calls=[json.loads(x) for x in Path(str(self.root/'prompts')+'.codex-args-all').read_text().splitlines()]
+        self.assertEqual(len(calls),2)  # code, then one fix round
+        self.assertIn('model_reasoning_effort="high"',calls[0])
+        self.assertIn('model_reasoning_effort="medium"',calls[1])
     def test_codex_defaults_when_unset(self):
         p=self.invoke(); self.assertEqual(p.returncode,0,p.stderr)
         args=json.loads(Path(str(self.root/'prompts')+'.codex-args').read_text())
         self.assertNotIn('--model',args)
         self.assertFalse(any(a.startswith('model_reasoning_effort') for a in args))
+    def test_custom_branch_name(self):
+        p=self.invoke(extra=['--branch','feat/value-change']); self.assertEqual(p.returncode,0,p.stderr)
+        self.assertEqual(self.state()[1]['branch'],'feat/value-change')
+        self.git('rev-parse','--verify','refs/heads/feat/value-change')
+    def test_existing_or_invalid_branch_is_refused(self):
+        self.git('branch','taken')
+        p=self.invoke(extra=['--branch','taken']); self.assertEqual(p.returncode,2)
+        self.assertIn('already exists',p.stderr)
+        p=self.invoke(extra=['--branch','bad..name']); self.assertEqual(p.returncode,2)
+        self.assertIn('Invalid branch name',p.stderr)
+        self.assertFalse((self.root/'repo-ai-runs').exists())
+    def test_base_branch_and_spec(self):
+        self.git('checkout','-qb','feature-base')
+        (self.repo/'value.txt').write_text('from base'); self.git('commit','-qam','base work')
+        self.git('checkout','-q','-')
+        spec=self.root/'spec.md'; spec.write_text('# Spec\nMake it blue.')
+        p=self.invoke(extra=['--base','feature-base','--spec',str(spec)]); self.assertEqual(p.returncode,0,p.stderr)
+        path,s=self.state(); run=path.parent
+        self.assertEqual((run/'spec.md').read_text(),'# Spec\nMake it blue.')
+        self.assertEqual(s['base'],self.git('rev-parse','feature-base').stdout.decode().strip())
+        prompts=[x for x in self.prompts().split('---\n') if x.strip()]
+        for prompt in prompts:
+            self.assertIn(str(run/'spec.md'),prompt)
+        self.assertIn('Work test-first',prompts[1])
+    def test_unknown_base_or_spec_is_refused(self):
+        p=self.invoke(extra=['--base','no-such-branch']); self.assertEqual(p.returncode,2)
+        self.assertIn('Unknown base',p.stderr)
+        p=self.invoke(extra=['--spec',str(self.root/'missing.md')]); self.assertEqual(p.returncode,2)
+        self.assertIn('Spec file not found',p.stderr)
+        self.assertFalse((self.root/'repo-ai-runs').exists())
+    def test_check_placeholders_env_and_screenshots(self):
+        script=('import os,pathlib,sys;'
+                'd=pathlib.Path(os.environ["AI_RUN_DIR"])/"screenshots"/os.environ["AI_CHECK_LABEL"];'
+                'd.mkdir(parents=True,exist_ok=True);(d/"frame.png").write_bytes(b"png");'
+                'sys.exit(0 if sys.argv[1]==os.environ["AI_RUN_DIR"] else 1)')
+        check=self.root/'check.py'; check.write_text(script)
+        config=json.loads(self.config.read_text())
+        config['checks'][0]['command']=[sys.executable,str(check),'{run_dir}']
+        self.config.write_text(json.dumps(config))
+        p=self.invoke(); self.assertEqual(p.returncode,0,p.stderr)
+        path,_=self.state(); run=path.parent
+        review=[x for x in self.prompts().split('---\n') if x.strip()][2]
+        self.assertIn(str(run/'screenshots'/'checks-0'/'frame.png'),review)
+    def make_skill(self,name,extra=None):
+        d=self.root/'skills-src'/name; d.mkdir(parents=True)
+        (d/'SKILL.md').write_text(f'# {name}')
+        if extra: (d/extra).write_text('extra')
+        return str(d)
+    def test_stage_skills_are_copied_and_named_in_prompts(self):
+        config=json.loads(self.config.read_text())
+        config['codex_skills']={'diagnose':[self.make_skill('debugging')],
+                                'code':[self.make_skill('tdd')],'fix':[self.make_skill('receiving')]}
+        config['review_skills']=[self.make_skill('review-anim','STANDARDS.md')]
+        self.config.write_text(json.dumps(config))
+        p=self.invoke('fix',extra=['--bug']); self.assertEqual(p.returncode,0,p.stderr)
+        path,_=self.state(); run=path.parent
+        for name in ('debugging','tdd','receiving','review-anim'):
+            self.assertTrue((run/'skills'/name/'SKILL.md').exists())
+        self.assertTrue((run/'skills'/'review-anim'/'STANDARDS.md').exists())
+        prompts=[x for x in self.prompts().split('---\n') if x.strip()]
+        diagnose,plan,code,review,fix,review2=prompts
+        skill=lambda n: str(run/'skills'/n/'SKILL.md')
+        self.assertIn(skill('debugging'),diagnose); self.assertNotIn(skill('tdd'),diagnose)
+        self.assertIn(skill('tdd'),code); self.assertNotIn(skill('receiving'),code)
+        self.assertIn(skill('receiving'),fix); self.assertNotIn(skill('tdd'),fix)
+        self.assertIn(skill('review-anim'),review); self.assertNotIn(skill('review-anim'),plan)
+        self.assertIn('No one is available',code)
+    def test_missing_skill_is_refused_before_run_folder(self):
+        config=json.loads(self.config.read_text())
+        config['codex_skills']={'code':[str(self.root/'nope')]}
+        self.config.write_text(json.dumps(config))
+        p=self.invoke(); self.assertEqual(p.returncode,2)
+        self.assertIn('Skill for code not found',p.stderr)
+        self.assertFalse((self.root/'repo-ai-runs').exists())
     def test_bug_diagnosis_may_not_fix_code(self):
         p=self.invoke(extra=['--bug'],FAKE_DIAG='fix'); self.assertEqual(p.returncode,2)
         self.assertIn('outside test_paths: value.txt',p.stderr)
