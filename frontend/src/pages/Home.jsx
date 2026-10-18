@@ -491,6 +491,7 @@ const Home = () => {
           <Link to="/recommendations">RECOMMENDATIONS</Link>
           <Link to="/favourites">FAVOURITES</Link>
           <Link to="/contact">CONTACT</Link>
+          <Link to="/privacy">PRIVACY</Link>
         </nav>
         <div className="header-profile" ref={dropdownRef}>
           <button className="profile-btn" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>

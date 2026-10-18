@@ -104,6 +104,7 @@ function Contact() {
       <footer className="contact-footer">
         <span>COURT VISION</span>
         <span>NBA analytics, made clear.</span>
+        <Link to="/privacy">Privacy &amp; Cookies</Link>
       </footer>
       </div>
     </main>

@@ -10,6 +10,7 @@ import LiveGameDetail from "./pages/LiveGameDetail.jsx";
 import RecommendationChart from "./pages/RecommendationChart.jsx";
 import Predictions from "./pages/Predictions.jsx";
 import Contact from "./pages/Contact.jsx";
+import Privacy from "./pages/Privacy.jsx";
 import NotFound from "./pages/NotFound.jsx";
 
 
@@ -27,6 +28,7 @@ function App() {
         <Route path="/games/:gameId" element={<LiveGameDetail />} />
         <Route path="/predictions" element={<Predictions />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/privacy" element={<Privacy />} />
         <Route
           path="/recommendations/:stat"
           element={<RecommendationChart />}

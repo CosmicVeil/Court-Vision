@@ -1,0 +1,211 @@
+/* ============================================================
+   COURT VISION — PRIVACY & COOKIES
+   Obsidian Glass Arena Theme + Ember Orange Design Tokens
+   ============================================================ */
+
+.privacy-page {
+  min-height: 100vh;
+  background: var(--bg-main, #08080a);
+  color: var(--text-primary, #ffffff);
+  padding: 110px 24px 70px;
+  position: relative;
+  z-index: 2;
+  font-family: var(--font-body, 'Inter', sans-serif);
+  overflow: hidden;
+}
+
+.privacy-shell {
+  width: min(calc(100% - 2rem), 1160px);
+  margin: 0 auto;
+  position: relative;
+}
+
+.privacy-ambient {
+  position: absolute;
+  width: 480px;
+  height: 480px;
+  background: radial-gradient(circle, rgba(255, 100, 54, 0.12), transparent 70%);
+  filter: blur(60px);
+  pointer-events: none;
+}
+
+.privacy-ambient-one {
+  top: -100px;
+  left: -180px;
+}
+
+.privacy-ambient-two {
+  top: 45%;
+  right: -220px;
+  opacity: 0.6;
+}
+
+.privacy-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.privacy-header .stats-nav-top {
+  flex-wrap: wrap;
+}
+
+.privacy-hero {
+  text-align: center;
+  margin-bottom: 48px;
+  overflow-wrap: anywhere;
+}
+
+.privacy-hero h1 {
+  font-size: clamp(2.5rem, 5vw, 4.2rem);
+  margin-bottom: 12px;
+  font-family: var(--font-heading, 'Inter', sans-serif);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.5px;
+  color: #ffffff;
+  line-height: 1.08;
+}
+
+.privacy-intro {
+  font-size: clamp(15px, 1.8vw, 17px);
+  color: var(--color-stone, #8e8c94);
+  max-width: 650px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+.privacy-updated {
+  margin-top: 18px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--color-stone, #8e8c94);
+}
+
+.privacy-sections,
+.privacy-disclaimer {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.privacy-disclaimer {
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  background: rgba(255, 100, 54, 0.08);
+  border: 1px solid rgba(255, 100, 54, 0.45);
+  border-left: 4px solid var(--color-ember-orange, #ff6436);
+  border-radius: var(--radius-xl, 20px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.privacy-sections {
+  display: grid;
+  gap: 24px;
+}
+
+.privacy-card {
+  min-width: 0;
+  padding: 32px;
+  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
+  border: 1px solid rgba(255, 100, 54, 0.18);
+  border-radius: var(--radius-xl, 20px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+  overflow-wrap: anywhere;
+}
+
+.privacy-card h2 {
+  font-family: var(--font-heading, 'Inter', sans-serif);
+  font-size: clamp(1.25rem, 2.5vw, 1.6rem);
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+
+.privacy-card p,
+.privacy-list li,
+.privacy-disclaimer p {
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.privacy-card p,
+.privacy-list {
+  color: var(--color-silver-mist, #dcd9e0);
+}
+
+.privacy-card p + p {
+  margin-top: 16px;
+}
+
+.privacy-disclaimer .privacy-label,
+.privacy-card .privacy-eyebrow {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-ember-orange, #ff6436);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.privacy-list {
+  padding-left: 22px;
+  margin: 16px 0;
+}
+
+.privacy-list li + li {
+  margin-top: 10px;
+}
+
+.privacy-card code {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.9em;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  padding: 2px 4px;
+  overflow-wrap: anywhere;
+}
+
+.privacy-page a {
+  color: var(--color-ember-orange, #ff6436);
+}
+
+.privacy-card a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.privacy-page a:hover {
+  color: var(--color-pure-white, #ffffff);
+}
+
+.privacy-page a:focus-visible {
+  outline: 2px solid var(--color-ember-orange, #ff6436);
+  outline-offset: 4px;
+}
+
+.privacy-footer {
+  max-width: 760px;
+  margin: 40px auto 0;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: var(--color-stone, #8e8c94);
+}
+
+@media (max-width: 480px) {
+  .privacy-page {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .privacy-card,
+  .privacy-disclaimer {
+    padding: 22px 18px;
+  }
+}

@@ -1,41 +1,65 @@
-"""In-memory bearer tokens and the @require_auth route decorator."""
+"""Bearer tokens stored hashed in Postgres and the @require_auth route decorator."""
+import hashlib
 import secrets
-from datetime import datetime, timedelta
 from functools import wraps
 from typing import Optional
 
 from flask import jsonify, request
 
 from app.config import TOKEN_EXPIRY_HOURS
+from app.db import get_db
 
-active_tokens = {}
+
+def _hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
 
 
 def create_token(user_id: int) -> str:
     token = secrets.token_urlsafe(32)
-    expiry = datetime.now() + timedelta(hours=TOKEN_EXPIRY_HOURS)
-    active_tokens[token] = {
-        'user_id': user_id,
-        'expiry': expiry
-    }
-    return token
+    conn = None
+    try:
+        conn = get_db()
+        conn.execute('DELETE FROM auth_tokens WHERE expires_at <= NOW()')
+        conn.execute(
+            'INSERT INTO auth_tokens (token_hash, user_id, expires_at) '
+            'VALUES (%s, %s, NOW() + make_interval(hours => %s))',
+            (_hash_token(token), user_id, TOKEN_EXPIRY_HOURS)
+        )
+        conn.commit()
+        return token
+    finally:
+        if conn:
+            conn.close()
 
 
 def validate_token(token: str) -> Optional[int]:
-    if token not in active_tokens:
+    conn = None
+    try:
+        conn = get_db()
+        row = conn.execute(
+            'SELECT user_id FROM auth_tokens WHERE token_hash = %s AND expires_at > NOW()',
+            (_hash_token(token),)
+        ).fetchone()
+        return row['user_id'] if row else None
+    except Exception as e:
+        print(f"Error in validate_token: {e}")
         return None
-
-    token_data = active_tokens[token]
-    if datetime.now() > token_data['expiry']:
-        del active_tokens[token]
-        return None
-
-    return token_data['user_id']
+    finally:
+        if conn:
+            conn.close()
 
 
 def invalidate_token(token: str):
-    if token in active_tokens:
-        del active_tokens[token]
+    conn = None
+    try:
+        conn = get_db()
+        conn.execute('DELETE FROM auth_tokens WHERE token_hash = %s', (_hash_token(token),))
+        conn.commit()
+    except Exception as e:
+        print(f"Error in invalidate_token: {e}")
+    finally:
+        if conn:
+            conn.close()
 
 
 def require_auth(f):
