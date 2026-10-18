@@ -61,7 +61,9 @@ test("Privacy page describes account storage and third-party data handling", () 
   assert.match(page, /first name, last name, email/);
   assert.match(page, /salted hash \(never in plain text\)/);
   assert.match(page, /account creation time, and the players you save/);
-  assert.match(page, /only in the server's memory and expire after 24 hours or on logout/);
+  assert.match(page, /stored in our database only as a one-way hash/);
+  assert.match(page, /deleted on logout or expire after 24 hours/);
+  assert.doesNotMatch(page, /only in the server's memory/);
   for (const provider of ["Google Fonts", "fonts.googleapis.com", "fonts.gstatic.com", "Vercel", "Render", "LinkedIn"]) {
     assert.ok(page.includes(provider), `${provider} must be disclosed`);
   }

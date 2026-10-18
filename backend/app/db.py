@@ -46,6 +46,13 @@ def init_db(app=None):
                 UNIQUE(user_id, player_id)
             )
         ''')
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS auth_tokens (
+                token_hash TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                expires_at TIMESTAMP NOT NULL
+            )
+        ''')
         from app.services.game_archive import init_archive_tables
         init_archive_tables(conn)
         conn.commit()

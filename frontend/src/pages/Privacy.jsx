@@ -63,7 +63,7 @@ function Privacy() {
               salted hash (never in plain text), account creation time, and the players you save.
             </p>
             <p>
-              Sign-in tokens live only in the server's memory and expire after 24 hours or on logout.
+              Sign-in tokens are stored in our database only as a one-way hash, and are deleted on logout or expire after 24 hours.
             </p>
           </section>
 
