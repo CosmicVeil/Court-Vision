@@ -190,6 +190,32 @@ def assign_player_ids():
                 player['PLAYER_ID'] = player_ids.player_id_for(player['PLAYER_NAME'])
 
 
+def apply_archive_teams():
+    """Override season teams with the latest archived teams, when the DB is available."""
+    if not nba_data or not os.environ.get('DATABASE_URL'):
+        return 0
+
+    conn = None
+    try:
+        conn = db.get_db()
+        teams = game_archive.latest_player_teams(conn)
+    except Exception as e:
+        print(f"Could not load teams from game archive ({e}); keeping season teams.")
+        return 0
+    finally:
+        if conn:
+            conn.close()
+
+    changed = 0
+    for player in nba_data:
+        team = teams.get(player.get('PLAYER_ID'))
+        if team and player.get('TEAM') != team:
+            player['TEAM'] = team
+            changed += 1
+    print(f"Applied {changed} team changes from game archive")
+    return changed
+
+
 def initialize():
     """Load everything the routes need. Runs once per process (including under Gunicorn)."""
     print("Loading NBA data...")
@@ -198,6 +224,7 @@ def initialize():
     assign_player_ids()
     load_ai()  # after the season data: the predictions cache is re-keyed by player ID
     db.init_db()
+    apply_archive_teams()
     game_archive.auto_archive_enabled = bool(os.environ.get('DATABASE_URL'))
 
     if ai_available and not is_render:
