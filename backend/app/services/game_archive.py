@@ -625,6 +625,7 @@ def _fetch_espn_athlete_gamelog(espn_player_id: int, season_year: int) -> List[D
 
                     dt = ev_meta.get("gameDate", "")
                     date_str = dt[:10] if dt else ""
+                    team = _tricode((ev_meta.get("team") or {}).get("abbreviation", "")) or "UNK"
                     opp_team = ev_meta.get("opponent", {}).get("abbreviation", "UNK")
                     is_home = (ev_meta.get("atVs") == "vs")
                     res_str = ev_meta.get("gameResult", "")
@@ -647,6 +648,7 @@ def _fetch_espn_athlete_gamelog(espn_player_id: int, season_year: int) -> List[D
                         "game_id": eid,
                         "date": date_str,
                         "season_type": st_type,
+                        "team": team,
                         "opponent": opp_team,
                         "is_home": is_home,
                         "result": res_str,
@@ -676,6 +678,16 @@ def _fetch_espn_athlete_gamelog(espn_player_id: int, season_year: int) -> List[D
     except Exception as exc:
         print(f"[game_archive] ESPN athlete gamelog error: {exc}")
         return []
+
+
+def _season_teams(games: List[Dict]) -> List[str]:
+    """Distinct known teams by first appearance in a newest-first game log."""
+    teams = []
+    for game in reversed(games):
+        team = game.get("team")
+        if team and team != "UNK" and team not in teams:
+            teams.append(team)
+    return teams
 
 
 def player_game_log(conn, player_id: int, limit: int = 10, season: Optional[str] = None) -> Dict:
@@ -715,6 +727,7 @@ def player_game_log(conn, player_id: int, limit: int = 10, season: Optional[str]
             (row["away_score"], row["home_score"])
         games.append({
             "game_id": row["game_id"], "date": row["game_date"].isoformat(),
+            "team": row.get("team") or "UNK",
             "season_type": row["season_type"], "opponent": row["opponent"], "is_home": row["is_home"],
             "result": "W" if team_score > opp_score else "L", "score": f"{team_score}-{opp_score}",
             **{key: row[key] for key in _LOG_FIELDS},
@@ -731,6 +744,7 @@ def player_game_log(conn, player_id: int, limit: int = 10, season: Optional[str]
     return {
         "player_id": player_id,
         "season": active_label,
+        "teams": _season_teams(games),
         "available_seasons": AVAILABLE_SEASONS,
         "games": games[:limit],
         "averages": {
