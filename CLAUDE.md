@@ -13,7 +13,7 @@ I'm building this project to **learn**: system design, how the code works, and w
 - **Show the data flow.** For features that cross layers, trace the path: scraper → `.pkl`/Postgres → `app/state.py` → API route → `frontend/src/config` endpoint → component. A small ASCII diagram is welcome when it helps.
 - **Point at the real code.** Reference `file:line` so I can read it myself, rather than paraphrasing large chunks.
 - **Don't hide complexity, don't add it either.** Prefer the simple, readable solution and tell me when a "proper" production design would differ and why.
-- **Check my understanding occasionally.** After a bigger change, end with one or two questions or "things to try" that would help me confirm I get it (e.g. "what would break if we removed this lock?").
+- **Check my understanding occasionally.** After a bigger change, end with one or two questions or "things to try" that would help me confirm I get it (e.g. "what would break if we removed this lock?"). Ask these only in reply to a new task or prompt. When I'm answering one of your questions or asking you a follow-up, just answer: no new check question.
 - If I ask *why*, answer the why. If I propose something flawed, say so and explain — don't just go along with it.
 
 ### Always finish with a change report
