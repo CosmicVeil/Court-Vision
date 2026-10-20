@@ -685,7 +685,7 @@ def _season_teams(games: List[Dict]) -> List[str]:
     teams = []
     for game in reversed(games):
         team = game.get("team")
-        if team and team != "UNK" and team not in teams:
+        if team in TEAM_IDS and team not in teams:
             teams.append(team)
     return teams
 

@@ -82,6 +82,14 @@ class GameLogTests(unittest.TestCase):
         result = self.log([log_row("g3", 3), log_row("g2", 2, team="DAL"), log_row("g1", 1)])
         self.assertEqual(result.get("teams"), ["LAL", "DAL"])
 
+    def test_teams_ignore_non_nba_all_star_teams(self):
+        rows = [log_row("g4", 4), log_row("g3", 3, team="WORLD"),
+                log_row("g2", 2, team="EAST"), log_row("g1", 1)]
+        result = self.log(rows)
+        self.assertEqual(result.get("teams"), ["LAL"])
+        self.assertEqual([g.get("team") for g in result["games"]], ["LAL", "WORLD", "EAST", "LAL"])
+        self.assertEqual([g["game_id"] for g in result["games"]], ["g4", "g3", "g2", "g1"])
+
     def test_missing_team_falls_back_to_unk(self):
         missing = log_row("g1", 1)
         del missing["team"]
