@@ -133,3 +133,6 @@
   color: var(--color-stone); border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
+.game-log-tag--post,
+.game-log-tag--playin { color: var(--color-ember-orange); border-color: rgba(255, 100, 54, 0.45); }
+

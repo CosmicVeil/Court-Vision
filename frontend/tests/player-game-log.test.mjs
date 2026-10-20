@@ -6,6 +6,29 @@ import { readFrontend, readRepo, readSource } from "./helpers.mjs";
 const gameLog = readSource("PlayerGameLog.jsx");
 const gameLogCss = readFrontend("src/components/PlayerGameLog.css");
 
+test("season type lookup maps preseason, playoff and play-in labels and modifiers", () => {
+  assert.match(gameLog, /1:\s*\{\s*label:\s*'PRE',\s*modifier:\s*'pre'/);
+  assert.match(gameLog, /3:\s*\{\s*label:\s*'POST',\s*modifier:\s*'post'/);
+  assert.match(gameLog, /5:\s*\{\s*label:\s*'PLAY-IN',\s*modifier:\s*'playin'/);
+  assert.doesNotMatch(gameLog, /2:\s*\{\s*label:/);
+});
+
+test("season tags use the lookup, base class and modifier in the Date cell", () => {
+  assert.match(gameLog, /const tag = SEASON_TYPE_TAGS\[type\]/);
+  assert.match(gameLog, /return tag && <span/);
+  assert.match(gameLog, /className=\{`game-log-tag game-log-tag--\$\{tag\.modifier\}`\}>\{tag\.label\}/);
+  assert.match(gameLog, /<td>\{formatDate\(game\.date\)\}\{seasonTag\(game\.season_type\)\}<\/td>/);
+  assert.doesNotMatch(gameLog, /season_type === 1 &&/);
+});
+
+test("playoff tags use the ember accent while PRE stays muted", () => {
+  assert.match(gameLogCss, /\.game-log-tag--post[^{]*\{[^}]*color:\s*var\(--color-ember-orange\)/);
+  assert.match(gameLogCss, /\.game-log-tag--playin[^{]*\{[^}]*color:\s*var\(--color-ember-orange\)/);
+  assert.match(gameLogCss, /\.game-log-tag--post[^{]*\{[^}]*border-color:\s*rgba\(255,\s*100,\s*54,\s*0\.45\)/);
+  assert.match(gameLogCss, /\.game-log-tag--playin[^{]*\{[^}]*border-color:\s*rgba\(255,\s*100,\s*54,\s*0\.45\)/);
+  assert.match(gameLogCss, /\.game-log-tag\s*\{[^}]*color:\s*var\(--color-stone\)[^}]*border:\s*1px solid rgba\(255,\s*255,\s*255,\s*0\.12\)/);
+});
+
 test("game log requests the full season", () => {
   assert.match(gameLog, /SEASON_GAME_LIMIT = 200/);
   assert.match(gameLog, /games\?limit=\$\{SEASON_GAME_LIMIT\}/);

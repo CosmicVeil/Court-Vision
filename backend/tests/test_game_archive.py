@@ -1,6 +1,6 @@
 import unittest
 from datetime import date
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import app.services.game_archive as game_archive
 from app import create_app
@@ -91,6 +91,59 @@ class ParseSummaryTests(unittest.TestCase):
         self.assertTrue(bench["did_not_play"])
         self.assertEqual(bench["dnp_reason"], "COACH'S DECISION")
         self.assertIsNone(bench["pts"])
+
+
+class EspnSeasonTypeTest(unittest.TestCase):
+    def test_display_names_map_to_season_types(self):
+        cases = [
+            ("2024-25 Preseason", 1),
+            ("2024-25 Regular Season", 2),
+            ("2024-25 Postseason", 3),
+            ("2024-25 Playoffs", 3),
+            ("2024-25 Play-In Tournament", 5),
+            ("2024-25 Postseason Play-In", 5),
+            ("2024-25 Playoff Play-In", 5),
+            (None, 2),
+            ("", 2),
+            ("2024-25 All-Star", 2),
+        ]
+        for display_name, expected in cases:
+            with self.subTest(display_name=display_name):
+                self.assertEqual(game_archive._espn_season_type(display_name), expected)
+
+
+class EspnAthleteGamelogTest(unittest.TestCase):
+    def setUp(self):
+        game_archive._espn_athlete_cache.clear()
+        self.addCleanup(game_archive._espn_athlete_cache.clear)
+
+    def test_season_types_use_display_names_without_ids(self):
+        entries = [
+            ("401", "2024-25 Postseason"),
+            ("402", "2024-25 Regular Season"),
+            ("403", "2024-25 Preseason"),
+            ("404", "2024-25 Play-In Tournament"),
+            ("405", None),
+        ]
+        payload = {
+            "labels": ["MIN", "FG", "3PT", "FT", "REB", "AST", "BLK", "STL", "PF", "TO", "PTS"],
+            "events": {
+                eid: {"gameDate": "2025-04-20T19:00Z", "opponent": {"abbreviation": "BOS"},
+                      "atVs": "vs", "gameResult": "W", "score": "110-100"}
+                for eid, _ in entries
+            },
+            "seasonTypes": [
+                {**({"displayName": name} if name is not None else {}),
+                 "categories": [{"events": [{"eventId": eid,
+                                             "stats": ["30", "8-16", "2-5", "4-4", "6", "7", "1", "2", "3", "2", "22"]}]}]}
+                for eid, name in entries
+            ],
+        }
+        with patch.object(game_archive.requests, "get", return_value=Mock(status_code=200, json=lambda: payload)) as get:
+            result = game_archive._fetch_espn_athlete_gamelog(123, 2025)
+        self.assertEqual({g["game_id"]: g["season_type"] for g in result},
+                         {"401": 3, "402": 2, "403": 1, "404": 5, "405": 2})
+        get.assert_called_once()
 
 
 class AutoArchiveTests(unittest.TestCase):
