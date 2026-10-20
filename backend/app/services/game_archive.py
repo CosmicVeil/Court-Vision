@@ -465,6 +465,18 @@ _espn_athlete_cache: Dict[Tuple[int, int], List[Dict]] = {}
 _espn_id_cache: Dict[int, int] = {}
 
 
+def _espn_season_type(display_name: Optional[str]) -> int:
+    """Map an ESPN gamelog displayName to its numeric season type."""
+    name = display_name or ""
+    if "Play-In" in name:
+        return 5
+    if "Preseason" in name:
+        return 1
+    if "Postseason" in name or "Playoff" in name:
+        return 3
+    return 2
+
+
 def _resolve_season(val: Optional[str]) -> Tuple[int, str]:
     """Convert '2026-2027', '2025-2026', '2026-27', '2026', etc. to (espn_season_year, label)."""
     if not val or str(val).lower() in ("current", "latest"):
@@ -557,7 +569,7 @@ def _fetch_espn_athlete_gamelog(espn_player_id: int, season_year: int) -> List[D
         games = []
 
         for st in data.get("seasonTypes", []):
-            st_type = st.get("id", 2)
+            st_type = _espn_season_type(st.get("displayName"))
             for cat in st.get("categories", []):
                 for ev in cat.get("events", []):
                     eid = str(ev.get("eventId", ""))
@@ -612,7 +624,7 @@ def _fetch_espn_athlete_gamelog(espn_player_id: int, season_year: int) -> List[D
                     games.append({
                         "game_id": eid,
                         "date": date_str,
-                        "season_type": st_type if isinstance(st_type, int) else 2,
+                        "season_type": st_type,
                         "opponent": opp_team,
                         "is_home": is_home,
                         "result": res_str,

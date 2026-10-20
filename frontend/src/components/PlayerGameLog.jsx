@@ -5,10 +5,19 @@ import './PlayerGameLog.css';
 // Matches the backend clamp and fits a full season including preseason, play-in, and playoffs.
 const SEASON_GAME_LIMIT = 200;
 const AVERAGE_ROWS = [['last5', 'Last 5'], ['last10', 'Last 10'], ['season', 'Season']];
+const SEASON_TYPE_TAGS = {
+  1: { label: 'PRE', modifier: 'pre' },
+  3: { label: 'POST', modifier: 'post' },
+  5: { label: 'PLAY-IN', modifier: 'playin' },
+};
 
 const formatDate = iso => new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 const pct = value => (value === null || value === undefined ? '—' : `${value}%`);
 const plusMinus = value => (value > 0 ? `+${value}` : `${value ?? '—'}`);
+const seasonTag = type => {
+  const tag = SEASON_TYPE_TAGS[type];
+  return tag && <span className={`game-log-tag game-log-tag--${tag.modifier}`}>{tag.label}</span>;
+};
 
 const SEASONS = [
   { value: '2026-2027', label: '2026-2027 (Current)' },
@@ -119,7 +128,7 @@ export default function PlayerGameLog({ playerId }) {
               <tbody>
                 {games.map(game => (
                   <tr key={game.game_id}>
-                    <td>{formatDate(game.date)}{game.season_type === 1 && <span className="game-log-tag">PRE</span>}</td>
+                    <td>{formatDate(game.date)}{seasonTag(game.season_type)}</td>
                     <td>{game.is_home ? 'vs' : '@'} {game.opponent}</td>
                     <td><span className={game.result === 'W' ? 'game-log-win' : 'game-log-loss'}>{game.result}</span> {game.score}</td>
                     {game.did_not_play ? (
