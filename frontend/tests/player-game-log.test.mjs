@@ -49,7 +49,7 @@ test("games show the player's team before the opponent with an unknown placehold
 });
 
 test("season badge shows formatted teams only after the selected season loads", () => {
-  assert.match(gameLog, /import \{ formatSeasonTeams \} from ['"]\.\.\/utils\/gameLog['"]/);
+  assert.match(gameLog, /import \{[^}]*\bformatSeasonTeams\b[^}]*\} from ['"]\.\.\/utils\/gameLog['"]/);
   assert.match(gameLog, /const seasonTeams = isLoading \? '' : formatSeasonTeams\(result\.data\?\.teams\)/);
   assert.match(gameLog, /Season: <strong>\{seasonDisplay\}<\/strong>\s*\{seasonTeams && <span className="game-log-season-teams"> · \{seasonTeams\}<\/span>\}/);
 });
@@ -87,4 +87,13 @@ test("heading reflects the full list while Recent Form stays separate", () => {
   assert.match(gameLog, /Recent Form/);
   assert.match(gameLog, /game-log-averages/);
   assert.ok(gameLog.indexOf("game-log-averages") < gameLog.indexOf("game-log-scroll"));
+});
+
+test("current season label rolls over on October 1 and the list is not hardcoded", async () => {
+  const { currentSeasonLabel } = await import(new URL("../src/utils/gameLog.js", import.meta.url));
+  assert.equal(currentSeasonLabel(new Date(2026, 8, 30)), "2025-2026");
+  assert.equal(currentSeasonLabel(new Date(2026, 9, 1)), "2026-2027");
+  assert.equal(currentSeasonLabel(new Date(2027, 0, 15)), "2026-2027");
+  assert.doesNotMatch(gameLog, /'20\d\d-20\d\d'/);
+  assert.match(gameLog, /useState\(currentSeasonLabel\)/);
 });
