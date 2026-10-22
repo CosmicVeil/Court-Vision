@@ -474,14 +474,25 @@ def _averages(games: List[Dict]) -> Optional[Dict]:
     return averages
 
 
-AVAILABLE_SEASONS = [
-    "2026-2027",
-    "2025-2026",
-    "2024-2025",
-    "2023-2024",
-    "2022-2023",
-    "2021-2022",
-]
+# Oldest season ESPN's athlete gamelog endpoint has data for (1993-94).
+FIRST_GAME_LOG_SEASON = 1994
+
+
+def current_season_year(today: Optional[date] = None) -> int:
+    """ESPN season year (the year the season ends) in effect on `today`.
+
+    Rolls over on October 1, when preseason starts, so the empty summer months
+    still show the season that just finished.
+    """
+    today = today or datetime.now(_ET).date()
+    return today.year + 1 if today.month >= 10 else today.year
+
+
+def available_seasons(today: Optional[date] = None) -> List[str]:
+    """Game log season labels, newest first, e.g. ['2026-2027', ..., '1993-1994']."""
+    newest = current_season_year(today)
+    return [f"{year - 1}-{year}" for year in range(newest, FIRST_GAME_LOG_SEASON - 1, -1)]
+
 
 _espn_athlete_cache: Dict[Tuple[int, int], List[Dict]] = {}
 _espn_id_cache: Dict[int, int] = {}
@@ -501,8 +512,9 @@ def _espn_season_type(display_name: Optional[str]) -> int:
 
 def _resolve_season(val: Optional[str]) -> Tuple[int, str]:
     """Convert '2026-2027', '2025-2026', '2026-27', '2026', etc. to (espn_season_year, label)."""
+    current = current_season_year()
     if not val or str(val).lower() in ("current", "latest"):
-        return 2027, "2026-2027"
+        return current, f"{current - 1}-{current}"
     s = str(val).strip()
     if "-" in s:
         parts = s.split("-")
@@ -518,7 +530,7 @@ def _resolve_season(val: Optional[str]) -> Tuple[int, str]:
             return y, f"{y - 1}-{y}"
     except ValueError:
         pass
-    return 2027, "2026-2027"
+    return current, f"{current - 1}-{current}"
 
 
 def _get_espn_athlete_id(conn, player_id: int) -> Optional[int]:
@@ -708,7 +720,7 @@ def player_game_log(conn, player_id: int, limit: int = 10, season: Optional[str]
         ).fetchall()
         active_label = target_label
     else:
-        target_year, target_label = 2027, "2026-2027"
+        target_year, target_label = _resolve_season(None)
         rows = conn.execute(
             """
             SELECT p.*, g.season_label, g.home_score, g.away_score
@@ -745,7 +757,7 @@ def player_game_log(conn, player_id: int, limit: int = 10, season: Optional[str]
         "player_id": player_id,
         "season": active_label,
         "teams": _season_teams(games),
-        "available_seasons": AVAILABLE_SEASONS,
+        "available_seasons": available_seasons(),
         "games": games[:limit],
         "averages": {
             "last5": _averages(counted[:5]),
