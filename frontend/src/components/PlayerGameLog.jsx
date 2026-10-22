@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { buildApiUrl } from '../config/api';
+import { formatSeasonTeams } from '../utils/gameLog';
 import './PlayerGameLog.css';
 
 // Matches the backend clamp and fits a full season including preseason, play-in, and playoffs.
@@ -64,6 +65,7 @@ export default function PlayerGameLog({ playerId }) {
   const games = result.data?.games || [];
   const averages = result.data?.averages || {};
   const seasonDisplay = result.data?.season || selectedSeason;
+  const seasonTeams = isLoading ? '' : formatSeasonTeams(result.data?.teams);
 
   return (
     <div className="game-log">
@@ -88,6 +90,7 @@ export default function PlayerGameLog({ playerId }) {
         </div>
         <div className="game-log-season-badge">
           Season: <strong>{seasonDisplay}</strong>
+          {seasonTeams && <span className="game-log-season-teams"> · {seasonTeams}</span>}
         </div>
       </div>
 
@@ -124,11 +127,12 @@ export default function PlayerGameLog({ playerId }) {
           <h3 className="secondary-stats-title game-log-title">All Games ({games.length})</h3>
           <div className="stats-history-scroll-box game-log-scroll" tabIndex={0} role="region" aria-label="Season game log">
             <table className="stats-history-table">
-              <thead><tr><th>Date</th><th>Opp</th><th>Result</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>TOV</th><th>FG</th><th>3PT</th><th>FT</th><th>+/-</th></tr></thead>
+              <thead><tr><th>Date</th><th>Team</th><th>Opp</th><th>Result</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>TOV</th><th>FG</th><th>3PT</th><th>FT</th><th>+/-</th></tr></thead>
               <tbody>
                 {games.map(game => (
                   <tr key={game.game_id}>
                     <td>{formatDate(game.date)}{seasonTag(game.season_type)}</td>
+                    <td className="game-log-team">{game.team && game.team !== 'UNK' ? game.team : '—'}</td>
                     <td>{game.is_home ? 'vs' : '@'} {game.opponent}</td>
                     <td><span className={game.result === 'W' ? 'game-log-win' : 'game-log-loss'}>{game.result}</span> {game.score}</td>
                     {game.did_not_play ? (

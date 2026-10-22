@@ -32,6 +32,8 @@
 
 .stats-history-table td.game-log-highlight { color: var(--accent-primary); font-weight: 700; }
 
+.stats-history-table td.game-log-team { font-family: var(--font-mono); font-weight: 600; }
+
 .game-log-win { color: #4ade80; font-weight: 700; }
 .game-log-loss { color: #f87171; font-weight: 700; }
 
@@ -126,6 +128,8 @@
   color: #fff;
   margin-left: 4px;
 }
+
+.game-log-season-teams { color: var(--color-ember-orange, #ff6436); font-weight: 700; }
 
 .game-log-tag {
   margin-left: 6px; padding: 1px 5px; border-radius: 4px;

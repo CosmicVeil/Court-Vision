@@ -17,6 +17,7 @@ Public interface is identical to the original:
 import csv
 import os
 import requests
+import threading
 import time
 from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Any
@@ -82,6 +83,7 @@ LIVE_BOX_TTL = 60
 _ET = ZoneInfo("America/New_York")
 _WEEK_BOX_CACHE: Dict[str, Dict] = {}
 _WEEK_DAY_CACHE: Dict[str, Dict] = {}
+_team_lock = threading.Lock()
 
 
 def _get(url: str, params: Optional[Dict] = None) -> Optional[Any]:
@@ -280,6 +282,24 @@ def _fetch_boxscore(game_id: str, home_tri: str, away_tri: str) -> Dict[str, Lis
         print(f"[live_games] Boxscore parse error: {e}")
 
     return {"home": home_players, "away": away_players}
+
+
+def _apply_boxscore_teams(players: Dict[str, List], home_tri: str, away_tri: str,
+                         nba_data: Optional[List[Dict]]) -> None:
+    """Apply observed teams to shared season players without rewriting unchanged teams."""
+    if not nba_data:
+        return
+    by_id = {p.get("PLAYER_ID"): p for p in nba_data}
+    for side, tricode in (("home", home_tri), ("away", away_tri)):
+        if tricode not in TEAM_IDS:
+            continue
+        for box_player in players[side]:
+            person_id = box_player.get("personId")
+            player = by_id.get(person_id) if person_id else None
+            if player is not None and player.get("TEAM") != tricode:
+                with _team_lock:
+                    if player.get("TEAM") != tricode:
+                        player["TEAM"] = tricode
 
 
 def _roster_from_pkl(tricode: str, nba_data: Optional[List[Dict]]) -> List[Dict]:
@@ -496,6 +516,7 @@ def get_todays_games(nba_data: Optional[List[Dict]] = None) -> List[Dict]:
             # Live or final — fetch real boxscore
             players = _fetch_boxscore(game["gameId"], home_tri, away_tri)
             if players["home"] or players["away"]:
+                _apply_boxscore_teams(players, home_tri, away_tri, nba_data)
                 game["players"] = players
             else:
                 # Fall back to season rosters if boxscore is empty

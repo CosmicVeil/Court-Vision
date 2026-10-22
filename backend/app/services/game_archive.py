@@ -19,7 +19,7 @@ Games are archived two ways:
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Dict, Iterable, List, Optional, Tuple
 from zoneinfo import ZoneInfo
 
@@ -27,6 +27,7 @@ import requests
 from psycopg.types.json import Jsonb
 
 from app import db
+from app.services.live_games import TEAM_IDS
 from app.utils.player_ids import nba_player_id
 from app.utils.player_names import normalize_player_name
 
@@ -431,6 +432,27 @@ def archived_game_ids(conn, game_ids: Iterable[str]) -> set:
 # Reads for the player popup
 # ---------------------------------------------------------------------------
 
+def latest_player_teams(conn) -> Dict[int, str]:
+    """Return each player's team from their latest archived game with an NBA team."""
+    rows = conn.execute("""
+        SELECT DISTINCT ON (p.nba_player_id)
+            p.nba_player_id, p.team, p.game_date, g.tipoff
+        FROM player_game_stats p JOIN games g USING (game_id)
+        WHERE p.nba_player_id IS NOT NULL
+            AND p.team = ANY(%s)
+        ORDER BY p.nba_player_id, p.game_date DESC, g.tipoff DESC NULLS LAST
+    """, (list(TEAM_IDS),)).fetchall()
+    latest = {}
+    for row in rows:
+        if row["nba_player_id"] is None or row["team"] not in TEAM_IDS:
+            continue
+        player_id = int(row["nba_player_id"])
+        recency = (row["game_date"], row["tipoff"] or datetime.min.replace(tzinfo=timezone.utc))
+        if player_id not in latest or recency > latest[player_id][0]:
+            latest[player_id] = (recency, row["team"])
+    return {player_id: team for player_id, (_, team) in latest.items()}
+
+
 _LOG_FIELDS = ("starter", "did_not_play", "dnp_reason", "minutes", "pts", "reb", "oreb", "dreb", "ast",
                "stl", "blk", "tov", "pf", "fgm", "fga", "fg3m", "fg3a", "ftm", "fta", "plus_minus")
 
@@ -603,6 +625,7 @@ def _fetch_espn_athlete_gamelog(espn_player_id: int, season_year: int) -> List[D
 
                     dt = ev_meta.get("gameDate", "")
                     date_str = dt[:10] if dt else ""
+                    team = _tricode((ev_meta.get("team") or {}).get("abbreviation", "")) or "UNK"
                     opp_team = ev_meta.get("opponent", {}).get("abbreviation", "UNK")
                     is_home = (ev_meta.get("atVs") == "vs")
                     res_str = ev_meta.get("gameResult", "")
@@ -625,6 +648,7 @@ def _fetch_espn_athlete_gamelog(espn_player_id: int, season_year: int) -> List[D
                         "game_id": eid,
                         "date": date_str,
                         "season_type": st_type,
+                        "team": team,
                         "opponent": opp_team,
                         "is_home": is_home,
                         "result": res_str,
@@ -654,6 +678,16 @@ def _fetch_espn_athlete_gamelog(espn_player_id: int, season_year: int) -> List[D
     except Exception as exc:
         print(f"[game_archive] ESPN athlete gamelog error: {exc}")
         return []
+
+
+def _season_teams(games: List[Dict]) -> List[str]:
+    """Distinct known teams by first appearance in a newest-first game log."""
+    teams = []
+    for game in reversed(games):
+        team = game.get("team")
+        if team in TEAM_IDS and team not in teams:
+            teams.append(team)
+    return teams
 
 
 def player_game_log(conn, player_id: int, limit: int = 10, season: Optional[str] = None) -> Dict:
@@ -693,6 +727,7 @@ def player_game_log(conn, player_id: int, limit: int = 10, season: Optional[str]
             (row["away_score"], row["home_score"])
         games.append({
             "game_id": row["game_id"], "date": row["game_date"].isoformat(),
+            "team": row.get("team") or "UNK",
             "season_type": row["season_type"], "opponent": row["opponent"], "is_home": row["is_home"],
             "result": "W" if team_score > opp_score else "L", "score": f"{team_score}-{opp_score}",
             **{key: row[key] for key in _LOG_FIELDS},
@@ -709,6 +744,7 @@ def player_game_log(conn, player_id: int, limit: int = 10, season: Optional[str]
     return {
         "player_id": player_id,
         "season": active_label,
+        "teams": _season_teams(games),
         "available_seasons": AVAILABLE_SEASONS,
         "games": games[:limit],
         "averages": {
