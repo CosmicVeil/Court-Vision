@@ -6,7 +6,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--spacing-48);
-  height: 72px;
+  height: var(--header-height);
   background: transparent;
   position: fixed;
   top: 0;

@@ -25,11 +25,22 @@
     --container-page: 90rem;
     --container-content: 64rem;
     --gutter: 16px;
+    --header-height: 72px;
   }
 
   @media (min-width: 768px) {
     :root { --gutter: 24px; }
   }
+}
+
+/* Scrolling: native controls and scrollbars render dark, scrolling glides (it jumps under
+   reduced motion), in-page jumps stop below the fixed header, and the scrollbar gutter is
+   reserved so pages don't shift sideways when a scrollbar appears. */
+html {
+  color-scheme: dark;
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--header-height) + var(--space) * 4);
+  scrollbar-gutter: stable;
 }
 
 [data-numeric], table { font-variant-numeric: tabular-nums; }
@@ -72,6 +83,27 @@ p { text-wrap: pretty; }
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Results that are re-loading stay in place, dimmed, instead of being covered. The dim waits
+   150ms so a fast response never flickers; un-dimming is immediate. */
+[data-results] { transition: opacity var(--duration-base) var(--ease-brand); }
+
+[data-results][aria-busy="true"] {
+  opacity: .45;
+  pointer-events: none;
+  transition-delay: 150ms;
+}
+
+/* One line with a reserved width, so "Updating…" and "583 players" don't shift the sort bar. */
+[data-slot="results-status"] {
+  min-width: 14ch;
+  color: var(--color-stone);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 html[data-motion] [data-reveal]:not([data-revealed]) {
@@ -144,6 +176,8 @@ html[data-motion-ready] [data-reveal] {
 @keyframes spin-once { to { rotate: 360deg; } }
 
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
   html[data-motion] [data-reveal] {
     translate: none !important;
     transition-property: opacity;

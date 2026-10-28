@@ -330,7 +330,7 @@
   text-shadow: 0 0 12px rgba(255, 100, 54, 0.5);
 }
 
-.favorite-btn, .favorite-btn-card {
+.favorite-btn {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 100, 54, 0.2);
   border-radius: 6px;
@@ -345,13 +345,13 @@
   transition: all 0.2s ease;
 }
 
-.favorite-btn:hover, .favorite-btn-card:hover {
+.favorite-btn:hover {
   background: rgba(255, 100, 54, 0.15);
   border-color: var(--color-ember-orange, #ff6436);
   color: #ffffff;
 }
 
-.favorite-btn.favorited, .favorite-btn-card.favorited {
+.favorite-btn.favorited {
   background: rgba(255, 206, 109, 0.15);
   color: #ffce6d;
   border-color: rgba(255, 206, 109, 0.4);
@@ -394,28 +394,6 @@
   transition: opacity 0.2s ease;
 }
 
-.stats-card-clickable {
-  cursor: pointer;
-}
-
-.stats-card-clickable:hover {
-  transform: translateY(-6px);
-  border-color: rgba(255, 100, 54, 0.5);
-  box-shadow: 0 20px 52px rgba(0, 0, 0, 0.8), 0 0 24px rgba(255, 100, 54, 0.2);
-}
-
-.stats-card-clickable:hover .player-name {
-  color: var(--color-ember-orange, #ff6436);
-  text-shadow: 0 0 14px rgba(255, 100, 54, 0.4);
-}
-
-.player-header-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
 .player-name {
   font-family: var(--font-heading, 'Inter', sans-serif);
   font-size: 1.35rem;
@@ -429,46 +407,7 @@
   transition: color 0.2s ease;
 }
 
-.player-team-position {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-.team-badge, .position-badge {
-  padding: 4px 12px;
-  border-radius: 6px;
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-
-.team-badge {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #fff;
-}
-
-.position-badge {
-  background: rgba(255, 100, 54, 0.12);
-  border: 1px solid rgba(255, 100, 54, 0.3);
-  color: var(--color-ember-orange, #ff6436);
-}
-
-.player-age {
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
-  color: var(--color-stone, #8e8c94);
-  background: rgba(255, 255, 255, 0.04);
-  padding: 3px 10px;
-  border-radius: 9999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.player-stats h4, .player-trends h4 {
+.player-trends h4 {
   font-family: var(--font-mono, monospace);
   font-size: 10px;
   font-weight: 700;
@@ -478,20 +417,13 @@
   margin-bottom: 10px;
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
 .trends-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
 
-.stat-item, .trend-item {
+.trend-item {
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 8px;

@@ -58,7 +58,7 @@ test('orbit chips take live games first and never exceed the slots', () => {
 
 test('Live Games wires the interaction layer and keeps it accessible', () => {
   const page = read('src/pages/LiveGames.jsx');
-  for (const pattern of [/<HeroOrbit/, /<LiveTicker/, /<SyncDock/, /getScoreChanges/, /getTilt/,
+  for (const pattern of [/<HeroOrbit/, /<LiveTicker/, /<SyncDock/, /getScoreChanges/, /usePointerTilt\(\)/,
     /onPointerMove/, /className="lg-title-word"/, /className="stat-tick" key=/]) assert.match(page, pattern);
   const dock = read('src/components/SyncDock.jsx');
   assert.match(dock, /new IntersectionObserver/);

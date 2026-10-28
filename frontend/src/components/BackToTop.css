@@ -1,0 +1,55 @@
+.back-to-top-sentinel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+/* Bottom right, clear of the Live Games sync dock (bottom centre). */
+.back-to-top {
+  position: fixed;
+  right: calc(var(--gutter) + env(safe-area-inset-right));
+  bottom: calc(var(--space) * 5 + env(safe-area-inset-bottom));
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border: 1px solid rgba(255, 100, 54, 0.35);
+  border-radius: var(--radius-full);
+  background: rgba(14, 14, 18, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  color: var(--color-ember-orange);
+  font-size: var(--text-lg);
+  cursor: pointer;
+  opacity: 0;
+  translate: 0 1rem;
+  pointer-events: none;
+  transition: opacity var(--duration-base) var(--ease-brand), translate var(--duration-base) var(--ease-brand),
+    scale var(--duration-fast) var(--ease-brand);
+}
+
+.back-to-top[data-visible] {
+  opacity: 1;
+  translate: 0 0;
+  pointer-events: auto;
+}
+
+.back-to-top:active { scale: .92; }
+
+.back-to-top:focus-visible {
+  outline: 2px solid var(--color-ember-orange);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .back-to-top:hover { border-color: var(--color-ember-orange); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back-to-top { translate: none; transition: opacity var(--duration-fast) linear; }
+}

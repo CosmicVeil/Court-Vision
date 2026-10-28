@@ -10,39 +10,16 @@ import PillNav from '../components/PillNav';
 import ScrollReveal from '../components/ScrollReveal';
 import SyncDock from '../components/SyncDock';
 import { getLiveGamesStats } from '../utils/liveGamesStats';
-import { getScoreChanges, getTilt } from '../utils/liveInteractions';
+import { getScoreChanges } from '../utils/liveInteractions';
+import usePointerTilt from '../hooks/usePointerTilt';
 import { getRevealDelay } from '../utils/scrollReveal';
 import './LiveGames.css';
 
 const GAME_STATUS_ORDER = { 2: 0, 1: 1, 3: 2 };
-const TILT_PROPERTIES = ['--rx', '--ry', '--mx', '--my'];
 
 function GameCard({ game, index, scoreChanges }) {
   const isLive = Number(game.status) === STATUS_LIVE;
-  const cardRef = useRef(null);
-  const frameRef = useRef(0);
-
-  useEffect(() => () => cancelAnimationFrame(frameRef.current), []);
-
-  // Pointer tilt writes CSS variables straight to the element: no React state, so no re-render per move.
-  const onPointerMove = event => {
-    if (event.pointerType !== 'mouse') return;
-    const { clientX, clientY } = event;
-    cancelAnimationFrame(frameRef.current);
-    frameRef.current = requestAnimationFrame(() => {
-      const card = cardRef.current;
-      if (!card) return;
-      const { rx, ry, mx, my } = getTilt({ clientX, clientY }, card.getBoundingClientRect());
-      card.style.setProperty('--rx', `${rx}deg`);
-      card.style.setProperty('--ry', `${ry}deg`);
-      card.style.setProperty('--mx', `${mx}%`);
-      card.style.setProperty('--my', `${my}%`);
-    });
-  };
-  const onPointerLeave = () => {
-    cancelAnimationFrame(frameRef.current);
-    TILT_PROPERTIES.forEach(property => cardRef.current?.style.removeProperty(property));
-  };
+  const { ref: cardRef, onPointerMove, onPointerLeave } = usePointerTilt();
 
   return (
     <Link to={getGameDetailPath(game.gameId)} className="game-card-link" data-reveal data-defer style={{ '--reveal-delay': getRevealDelay(index) }}

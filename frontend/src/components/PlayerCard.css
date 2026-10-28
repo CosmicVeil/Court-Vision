@@ -1,0 +1,284 @@
+/* PlayerCard: shared by Stats and Predictions. Classes are pc- prefixed because page CSS is
+   global in this app, and names like .card-header or .team-badge are already taken. */
+.pc-grid {
+  /* Positioned, so cards' offsetLeft/Top (read by useFlip) are relative to the grid. */
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: calc(var(--space) * 6);
+  max-width: 1200px;
+  margin: 0 auto 48px;
+}
+
+.pc-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space) * 4);
+  min-width: 0;
+  padding: calc(var(--space) * 6);
+  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
+  border: 1px solid rgba(255, 100, 54, 0.18);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(var(--lift, 0px));
+  transition: transform var(--duration-base) var(--ease-brand);
+}
+
+/* Spotlight that follows the pointer (--mx/--my come from usePointerTilt). */
+.pc-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 100, 54, 0.16), transparent 60%);
+  opacity: 0;
+  transition: opacity var(--duration-base) var(--ease-brand);
+}
+
+.pc-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: calc(var(--space) * 3);
+}
+
+.pc-identity { min-width: 0; }
+
+.pc-name {
+  margin: 0 0 calc(var(--space) * 2);
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: 900;
+  line-height: var(--leading-snug);
+  text-transform: uppercase;
+}
+
+.pc-open {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-pure-white);
+  font: inherit;
+  text-align: left;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+/* The stretched hit area: the whole card opens the player. */
+.pc-open::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: var(--radius-xl);
+}
+
+.pc-open:focus-visible { outline: none; }
+
+.pc-open:focus-visible::after {
+  outline: 2px solid var(--color-ember-orange);
+  outline-offset: 3px;
+}
+
+.pc-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space) * 1.5);
+}
+
+.pc-badge {
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-pure-white);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.pc-badge.is-accent {
+  border-color: rgba(255, 100, 54, 0.3);
+  background: rgba(255, 100, 54, 0.12);
+  color: var(--color-ember-orange);
+}
+
+.pc-badge.is-muted {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--color-stone);
+}
+
+/* Above the stretched button, so it stays its own target. */
+.pc-fav {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 100, 54, 0.25);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-ember-orange);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-brand), border-color var(--duration-fast) var(--ease-brand);
+}
+
+.pc-fav:active { scale: .96; }
+
+.pc-fav:focus-visible {
+  outline: 2px solid var(--color-ember-orange);
+  outline-offset: 3px;
+}
+
+.pc-fav.is-on {
+  border-color: rgba(255, 206, 109, 0.4);
+  background: rgba(255, 206, 109, 0.15);
+  color: #ffce6d;
+}
+
+.pc-section-label {
+  margin: 0 0 calc(var(--space) * 2);
+  color: var(--color-stone);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.pc-stat-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: calc(var(--space) * 2);
+  margin: 0;
+}
+
+.pc-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  padding: calc(var(--space) * 2.5) calc(var(--space) * 1.5);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.4);
+  text-align: center;
+}
+
+/* Value first, label under it (same order as the stat strip). */
+.pc-stat dt {
+  order: 2;
+  margin-top: 4px;
+  color: var(--color-stone);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+
+.pc-stat dd { margin: 0; }
+
+.pc-stat-value {
+  font-family: var(--font-mono);
+  font-weight: 900;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.pc-main .pc-stat-value {
+  color: var(--color-ember-orange);
+  font-size: var(--text-xl);
+}
+
+.pc-extra .pc-stat { padding: calc(var(--space) * 1.5); background: rgba(255, 255, 255, 0.02); }
+.pc-extra .pc-stat-value { color: var(--color-pure-white); font-size: var(--text-xs); }
+
+.pc-stat-value[data-tick] {
+  display: inline-block;
+  animation: tick-in var(--duration-slow) var(--ease-brand);
+}
+
+.pc-delta {
+  order: 3;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pc-delta[data-direction="up"] { color: #4caf50; }
+.pc-delta[data-direction="down"] { color: #f87171; }
+.pc-delta[data-direction="flat"] { color: var(--color-stone); }
+
+/* Corner call to action. Decorative: the name button is the accessible way in. */
+.pc-cta {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-end;
+  gap: calc(var(--space) * 2);
+  margin-top: auto;
+  color: var(--color-pure-white);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.pc-cta-label {
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 100, 54, 0.4);
+  border-radius: var(--radius-full);
+  background: rgba(255, 100, 54, 0.12);
+  transition: opacity var(--duration-base) var(--ease-brand), translate var(--duration-base) var(--ease-brand);
+}
+
+.pc-cta-arrow {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, #ff6436, #e04a1c);
+  font-size: .9rem;
+  rotate: -45deg;
+  transition: rotate var(--duration-base) var(--ease-brand), scale var(--duration-fast) var(--ease-brand);
+}
+
+.pc-card:hover .pc-cta-arrow,
+.pc-card:has(.pc-open:focus-visible) .pc-cta-arrow { rotate: 0deg; }
+
+.pc-card:active .pc-cta-arrow { scale: .9; }
+
+/* Pointer-only play: lift, spotlight and the CTA label sliding out. Touch keeps the label visible. */
+@media (hover: hover) and (pointer: fine) {
+  .pc-card:hover { --lift: -6px; border-color: rgba(255, 100, 54, 0.5); }
+  .pc-card:hover::before { opacity: 1; }
+  .pc-fav:hover { border-color: var(--color-ember-orange); background: rgba(255, 100, 54, 0.15); }
+
+  .pc-cta-label { opacity: 0; translate: 8px 0; }
+
+  .pc-card:hover .pc-cta-label,
+  .pc-card:has(.pc-open:focus-visible) .pc-cta-label { opacity: 1; translate: 0 0; }
+}
+
+@media (max-width: 480px) {
+  .pc-card { padding: calc(var(--space) * 5); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pc-card { transform: none; transition: none; }
+  .pc-stat-value[data-tick] { animation: none; }
+  .pc-cta-arrow,
+  .pc-cta-label { transition: none; }
+}

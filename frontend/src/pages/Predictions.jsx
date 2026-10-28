@@ -1,24 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import PlayerCard from '../components/PlayerCard';
 import PlayerStatsModal from '../components/PlayerStatsModal';
+import useFlip from '../hooks/useFlip';
+import useListQuery from '../hooks/useListQuery';
+import ScrollReveal from '../components/ScrollReveal';
 import { PREDICTION_STATS } from '../config/predictionStats';
 import { getFavorites, toggleFavorite } from '../utils/favorites';
 import { isAuthenticated } from '../utils/auth';
 import { buildApiUrl } from '../config/api';
+import { scrollToIfAbove } from '../utils/scroll';
 import { samePlayerName } from '../utils/playerNames';
+import { getPredictionCardStats } from '../utils/playerCard';
 import './Predictions.css';
-
-const MAIN_PREDICTION_STATS = [
-  { key: 'predicted_ppg', label: 'PPG' },
-  { key: 'predicted_apg', label: 'APG' },
-  { key: 'predicted_rpg', label: 'RPG' },
-];
-
-const CURRENT_SHOOTING_STATS = [
-  { key: 'fg_pct_last', label: 'FG%' },
-  { key: 'fg3_pct_last', label: '3P%' },
-  { key: 'ft_pct_last', label: 'FT%' },
-];
 
 const toNumber = (value) => Number(value) || 0;
 
@@ -42,24 +36,38 @@ const toFavoritePlayer = (player) => ({
   },
 });
 
+// Everything the URL may carry for this list, with its default (only non-defaults show up).
+const LIST_DEFAULTS = { q: '', team: '', position: '', sort: 'predicted_ppg', order: 'desc', page: 1 };
+const LIST_ALLOWED = {
+  sort: ['name', ...PREDICTION_STATS.map((stat) => stat.predictedField)],
+  order: ['asc', 'desc'],
+};
+
 const Predictions = () => {
+  const [query, updateQuery] = useListQuery(LIST_DEFAULTS, LIST_ALLOWED);
+  const { q: searchTerm, team: selectedTeam, position: selectedPosition,
+    sort: sortBy, order: sortOrder, page: currentPage } = query;
+  // The search box keeps its own draft so typing never waits on a router update.
+  const [searchDraft, setSearchDraft] = useState(searchTerm);
   const [predictions, setPredictions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTeam, setSelectedTeam] = useState('');
-  const [selectedPosition, setSelectedPosition] = useState('');
   const [teams, setTeams] = useState([]);
   const [positions, setPositions] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalPlayers, setTotalPlayers] = useState(0);
-  const [sortBy, setSortBy] = useState('predicted_ppg');
-  const [sortOrder, setSortOrder] = useState('desc');
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [loadingPlayer, setLoadingPlayer] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState(new Set());
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const gridRef = useRef(null);
+  const resultsRef = useRef(null);
+  useFlip(gridRef);
+
+  const goToPage = (page) => {
+    updateQuery({ page });
+    scrollToIfAbove(resultsRef.current);
+  };
 
   useEffect(() => {
     setFavoriteIds(new Set(getFavorites().map((favorite) => favorite.id)));
@@ -134,11 +142,15 @@ const Predictions = () => {
     fetchPositions();
   }, []);
 
+  // Each change aborts the previous request, so a slow older response can never overwrite a
+  // newer one (last request wins).
   useEffect(() => {
-    fetchPredictions();
+    const controller = new AbortController();
+    fetchPredictions(controller.signal);
+    return () => controller.abort();
   }, [currentPage, searchTerm, selectedTeam, selectedPosition, sortBy, sortOrder]);
 
-  const fetchPredictions = async () => {
+  const fetchPredictions = async (signal) => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -152,17 +164,19 @@ const Predictions = () => {
       if (selectedTeam) params.append('team', selectedTeam);
       if (selectedPosition) params.append('position', selectedPosition);
 
-      const response = await fetch(buildApiUrl(`predictions?${params}`));
+      const response = await fetch(buildApiUrl(`predictions?${params}`), { signal });
       if (!response.ok) throw new Error('Failed to fetch predictions');
 
       const data = await response.json();
+      if (signal.aborted) return;
       setPredictions(data.predictions || []);
       setTotalPages(data.pagination?.total_pages || 1);
       setTotalPlayers(data.pagination?.total || 0);
     } catch (err) {
+      if (signal.aborted) return;
       setError(err.message);
     } finally {
-      setLoading(false);
+      if (!signal.aborted) setLoading(false);
     }
   };
 
@@ -191,30 +205,27 @@ const Predictions = () => {
   };
 
   const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
-    setCurrentPage(1);
+    setSearchDraft(e.target.value);
+    updateQuery({ q: e.target.value, page: 1 });
   };
 
   const handleTeamFilter = (e) => {
-    setSelectedTeam(e.target.value);
-    setCurrentPage(1);
+    updateQuery({ team: e.target.value, page: 1 });
   };
 
   const handlePositionFilter = (e) => {
-    setSelectedPosition(e.target.value);
-    setCurrentPage(1);
+    updateQuery({ position: e.target.value, page: 1 });
   };
 
   const handleSortFieldChange = (event) => {
     const nextSortBy = event.target.value;
-    setSortBy(nextSortBy);
-    setSortOrder(nextSortBy === 'name' ? 'asc' : 'desc');
-    setCurrentPage(1);
+    updateQuery({ sort: nextSortBy, order: nextSortBy === 'name' ? 'asc' : 'desc', page: 1 });
+    scrollToIfAbove(resultsRef.current);
   };
 
   const handleSortDirectionChange = () => {
-    setSortOrder((currentOrder) => currentOrder === 'asc' ? 'desc' : 'asc');
-    setCurrentPage(1);
+    updateQuery({ order: sortOrder === 'asc' ? 'desc' : 'asc', page: 1 });
+    scrollToIfAbove(resultsRef.current);
   };
 
   const isNameSort = sortBy === 'name';
@@ -223,14 +234,14 @@ const Predictions = () => {
     : (isNameSort ? 'Z to A' : 'Highest to Lowest');
 
   const clearFilters = () => {
-    setSearchTerm('');
-    setSelectedTeam('');
-    setSelectedPosition('');
-    setCurrentPage(1);
+    setSearchDraft('');
+    updateQuery({ q: '', team: '', position: '', page: 1 });
   };
 
   return (
     <div className="predictions-container">
+      {/* New cards arrive with each fetch, so the reveal rescans when the list changes. */}
+      <ScrollReveal scanKey={predictions} />
       <div className="predictions-header">
         <div className="stats-nav-top">
           <span className="cv-section-badge">AI FORECASTING</span>
@@ -244,7 +255,7 @@ const Predictions = () => {
           <input
             type="text"
             placeholder="Search players..."
-            value={searchTerm}
+            value={searchDraft}
             onChange={handleSearch}
             className="search-input"
           />
@@ -273,7 +284,7 @@ const Predictions = () => {
         </button>
       </div>
 
-      <div className="sorting-section">
+      <div className="sorting-section" ref={resultsRef}>
         <div className="sort-control-group">
           <label className="sort-label" htmlFor="prediction-sort-field">Sort by</label>
           <select
@@ -297,6 +308,10 @@ const Predictions = () => {
             <span>{sortDirectionLabel}</span>
           </button>
         </div>
+        {/* Announces reloads to screen readers too; the dimmed results alone are visual only. */}
+        <span data-slot="results-status" role="status" data-numeric>
+          {loading ? 'Updating…' : `${totalPlayers} players`}
+        </span>
       </div>
 
       {loading && predictions.length === 0 ? (
@@ -316,69 +331,31 @@ const Predictions = () => {
         <div className="no-results">No player predictions matched your search criteria.</div>
       ) : (
         <>
-          <div className="predictions-grid">
-            {predictions.map((player, idx) => (
-              <div 
-                key={player.id || idx} 
-                className="prediction-card prediction-card-clickable"
-                onClick={() => handlePlayerClick(player)}
-                style={{ cursor: 'pointer' }}
-              >
-                <div className="card-header">
-                  <div className="player-meta">
-                    <h3>{player.name}</h3>
-                    <div className="player-badges">
-                      <span className="team-badge">{player.team}</span>
-                      <span className="position-badge">{player.position}</span>
-                      <span className="age-badge">Age {player.age}</span>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className={`prediction-favorite-btn ${favoriteIds.has(player.id) ? 'favorited' : ''}`}
-                    onClick={(event) => handleFavoriteToggle(event, player)}
-                    aria-pressed={favoriteIds.has(player.id)}
-                    aria-label={favoriteIds.has(player.id)
-                      ? `Remove ${player.name} from favorites`
-                      : `Add ${player.name} to favorites`}
-                  >
-                    {favoriteIds.has(player.id) ? 'FAVORITED' : 'ADD FAV'}
-                  </button>
-                </div>
-
-                <div className="card-body">
-                  <div className="prediction-card-main-stats">
-                    {MAIN_PREDICTION_STATS.map((stat) => (
-                      <div className="prediction-main-stat" key={stat.key}>
-                        <span className="prediction-main-stat-value">
-                          {(Number(player[stat.key]) || 0).toFixed(1)}
-                        </span>
-                        <span className="prediction-main-stat-label">Predicted {stat.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="prediction-card-shooting">
-                    <span className="prediction-shooting-heading">This Season Shooting</span>
-                    <div className="prediction-shooting-grid">
-                      {CURRENT_SHOOTING_STATS.map((stat) => (
-                        <div className="prediction-shooting-stat" key={stat.key}>
-                          <span className="prediction-shooting-value">
-                            {(Number(player[stat.key]) || 0).toFixed(1)}%
-                          </span>
-                          <span className="prediction-shooting-label">{stat.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="pc-grid" ref={gridRef} data-results aria-busy={loading}>
+            {predictions.map((player, idx) => {
+              const { main, extra } = getPredictionCardStats(player);
+              return (
+                <PlayerCard
+                  key={player.id || idx}
+                  index={idx}
+                  player={player}
+                  stats={main}
+                  statsLabel="Predicted · change vs this season"
+                  extraStats={extra}
+                  extraLabel="This Season Shooting"
+                  isFavorite={favoriteIds.has(player.id)}
+                  onToggleFavorite={(event) => handleFavoriteToggle(event, player)}
+                  onOpen={() => handlePlayerClick(player)}
+                  ctaLabel="Full projection"
+                />
+              );
+            })}
           </div>
 
           <div className="pagination">
             <div className="pagination-controls">
               <button 
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                onClick={() => goToPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
                 className="pagination-btn"
               >
@@ -398,7 +375,7 @@ const Predictions = () => {
               </div>
               
               <button 
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
                 className="pagination-btn"
               >
@@ -407,12 +384,6 @@ const Predictions = () => {
             </div>
           </div>
         </>
-      )}
-
-      {loading && predictions.length > 0 && (
-        <div className="loading-overlay">
-          <div className="loading">Updating Predictions...</div>
-        </div>
       )}
 
       <PlayerStatsModal player={selectedPlayer} loading={loadingPlayer} onClose={() => setSelectedPlayer(null)} />
