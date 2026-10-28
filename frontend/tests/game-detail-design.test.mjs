@@ -77,7 +77,61 @@ test('the detail page adopts the scoreboard, leaders, momentum and live dock', (
   // Changes are computed where the data is fetched; the scoreboard only displays them.
   for (const pattern of [/data-slot="display-heading"/, /scoreChanges/, /formatPeriod/, /data-score-pop/]) assert.match(board, pattern);
   const box = read('src/components/GameBoxScore.jsx');
-  for (const pattern of [/<PillNav/, /getColumnLeaders/, /<tbody key=\{tab\}/, /is-leader/]) assert.match(box, pattern);
+  for (const pattern of [/<PillNav/, /getColumnLeaders/, /<tbody key=\{`\$\{tab\}/, /is-leader/]) assert.match(box, pattern);
+});
+
+test('minutes parse from plain and clock formats, with no-play values as missing', () => {
+  assert.equal(typeof detail.parseMinutes, 'function');
+  for (const [value, expected] of [['35', 35], [35, 35], ['35:30', 35.5], ['0', 0], ['-', null], ['–', null], ['', null], [null, null], [undefined, null], ['DNP', null]]) {
+    assert.equal(detail.parseMinutes(value), expected, `parseMinutes(${JSON.stringify(value)})`);
+  }
+});
+
+test('players sort by any stat, stable, with missing values always last', () => {
+  assert.equal(typeof detail.sortPlayers, 'function');
+  const roster = [
+    player(1, 10, 5, 1, { min: '30', fgm: 4, plusMinus: -3 }),
+    player(2, 22, 2, 7, { min: '-', fgm: 9, plusMinus: 8 }),
+    player(3, 10, 9, 0, { min: '35:30', fgm: 4, plusMinus: 0 }),
+    player(4, 0, 0, 0, { min: '12', fgm: 0, plusMinus: null }),
+  ];
+  const ids = list => list.map(p => p.personId);
+  assert.deepEqual(ids(detail.sortPlayers(roster, { key: 'pts', dir: 'desc' })), [2, 1, 3, 4], 'ties keep roster order');
+  assert.deepEqual(ids(detail.sortPlayers(roster, { key: 'pts', dir: 'asc' })), [4, 1, 3, 2]);
+  assert.deepEqual(ids(detail.sortPlayers(roster, { key: 'min', dir: 'desc' })), [3, 1, 4, 2], 'a no-play minute sorts last');
+  assert.deepEqual(ids(detail.sortPlayers(roster, { key: 'min', dir: 'asc' })), [4, 1, 3, 2], 'missing stays last when ascending too');
+  assert.deepEqual(ids(detail.sortPlayers(roster, { key: 'fg', dir: 'desc' })), [2, 1, 3, 4], 'FG sorts by makes');
+  assert.deepEqual(ids(detail.sortPlayers(roster, { key: 'plusMinus', dir: 'desc' })), [2, 3, 1, 4]);
+  assert.equal(detail.sortPlayers(roster, null), roster, 'no sort keeps the original list');
+  assert.notEqual(detail.sortPlayers(roster, { key: 'pts', dir: 'desc' }), roster, 'never mutates the input');
+  assert.deepEqual(ids(roster), [1, 2, 3, 4]);
+});
+
+test('header clicks cycle high-to-low, low-to-high, then back to the default view', () => {
+  assert.equal(typeof detail.nextSort, 'function');
+  assert.deepEqual(detail.nextSort(null, 'pts'), { key: 'pts', dir: 'desc' });
+  assert.deepEqual(detail.nextSort({ key: 'pts', dir: 'desc' }, 'pts'), { key: 'pts', dir: 'asc' });
+  assert.equal(detail.nextSort({ key: 'pts', dir: 'asc' }, 'pts'), null);
+  assert.deepEqual(detail.nextSort({ key: 'pts', dir: 'asc' }, 'reb'), { key: 'reb', dir: 'desc' });
+});
+
+test('the box score header sorts accessibly and flattens the groups while sorted', () => {
+  const box = read('src/components/GameBoxScore.jsx');
+  for (const pattern of [/sortPlayers/, /nextSort/, /aria-sort=/, /className="sort-btn"/, /type="button"/]) assert.match(box, pattern);
+  assert.match(box, /\{!sort && starters\.length > 0/, 'group headers only show in the default view');
+});
+
+test('period bars show their points on hover or focus instead of printing them below', () => {
+  const page = read('src/pages/LiveGameDetail.jsx');
+  assert.doesNotMatch(page, /period-scores/);
+  assert.match(page, /className="bar-value"/);
+  assert.match(page, /tabIndex=\{0\}/, 'each period can be focused, so keyboard and touch users can read it');
+  assert.match(page, /aria-label=\{`\$\{row\.label\}/);
+  const css = read('src/pages/LiveGames.css');
+  const section = css.slice(css.indexOf('/* Game detail page'));
+  assert.match(section, /\.bar-value\s*\{[^}]*opacity: 0/);
+  assert.match(section, /\.period-col:hover \.bar-value/);
+  assert.match(section, /\.period-col:focus-visible \.bar-value/);
 });
 
 test('detail-page styles fix the oversized logos and stay scoped', () => {

@@ -24,15 +24,20 @@ function PeriodMomentum({ game }) {
           <span className="legend-home">{game.home.tricode}</span>
         </div>
       </div>
-      <div className="period-bars" aria-hidden="true">
+      <div className="period-bars">
         {rows.map((row, index) => (
-          <div key={row.label} className="period-col" data-winner={row.winner || undefined}>
-            <div className="period-bar-pair">
-              <span className="period-bar bar-away" style={{ '--share': row.awayShare, '--i': index }} />
-              <span className="period-bar bar-home" style={{ '--share': row.homeShare, '--i': index }} />
+          // Focusable so keyboard users (and a tap on touch screens) can reveal the points too.
+          <div key={row.label} className="period-col" data-winner={row.winner || undefined} tabIndex={0} role="img"
+            aria-label={`${row.label}: ${game.away.tricode} ${row.away ?? 'not played'}, ${game.home.tricode} ${row.home ?? 'not played'}`}>
+            <div className="period-bar-pair" aria-hidden="true">
+              {[['away', row.away, row.awayShare], ['home', row.home, row.homeShare]].map(([side, points, share]) => (
+                <span key={side} className="period-bar-slot">
+                  <span className={`period-bar bar-${side}`} style={{ '--share': share, '--i': index }} />
+                  <span className="bar-value" data-numeric style={{ '--share': share }}>{points ?? '–'}</span>
+                </span>
+              ))}
             </div>
-            <span className="period-label">{row.label}</span>
-            <span className="period-scores" data-numeric>{row.away ?? '–'}–{row.home ?? '–'}</span>
+            <span className="period-label" aria-hidden="true">{row.label}</span>
           </div>
         ))}
       </div>

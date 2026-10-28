@@ -1276,6 +1276,8 @@
   grid-auto-columns: minmax(0, 1fr);
   gap: calc(var(--space) * 3);
   margin-bottom: calc(var(--space) * 6);
+  /* Room for the point labels that appear above the tallest bars. */
+  padding-top: calc(var(--space) * 6);
 }
 
 .period-col {
@@ -1283,7 +1285,16 @@
   flex-direction: column;
   align-items: center;
   gap: calc(var(--space) * 2);
+  padding-bottom: calc(var(--space));
+  border-radius: var(--radius-md);
   font-family: var(--font-mono);
+  cursor: default;
+  transition: opacity var(--duration-base) var(--ease-brand);
+}
+
+.period-col:focus-visible {
+  outline: 2px solid var(--color-ember-orange);
+  outline-offset: 4px;
 }
 
 .period-bar-pair {
@@ -1292,6 +1303,45 @@
   gap: 6px;
   height: 120px;
 }
+
+.period-bar-slot {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+}
+
+/* Points float just above the top of each bar; hidden until the period is hovered or focused. */
+.bar-value {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--share, 0) * 100% + 6px);
+  padding: 2px 6px;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  background: rgba(14, 14, 18, 0.95);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  translate: -50% 4px;
+  transition: opacity var(--duration-base) var(--ease-brand), translate var(--duration-base) var(--ease-brand);
+}
+
+.period-col:hover .bar-value,
+.period-col:focus-visible .bar-value,
+.period-col:focus .bar-value {
+  opacity: 1;
+  translate: -50% 0;
+}
+
+.period-col:hover .period-label,
+.period-col:focus-visible .period-label { color: var(--color-ember-orange); }
+
+/* While one period is hovered, the others step back. */
+.period-bars:hover .period-col:not(:hover) { opacity: .45; }
 
 .period-bar {
   width: 18px;
@@ -1315,11 +1365,7 @@ html[data-motion] .detail-momentum:not([data-revealed]) .period-bar { transform:
   color: #fff;
   font-size: var(--text-xs);
   font-weight: 700;
-}
-
-.period-scores {
-  color: var(--color-stone);
-  font-size: 11px;
+  transition: color var(--duration-fast) var(--ease-brand);
 }
 
 /* Linescore and box score tables. */
@@ -1385,6 +1431,43 @@ html[data-motion] .detail-momentum:not([data-revealed]) .period-bar { transform:
   z-index: 1;
   background: #121216;
   white-space: nowrap;
+}
+
+/* Sortable headers: the whole label is a button; the arrow shows the current direction. */
+.sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-brand);
+}
+
+.sort-arrow {
+  font-size: 9px;
+  opacity: .35;
+  transition: opacity var(--duration-fast) var(--ease-brand);
+}
+
+.sort-btn[data-active] { color: #fff; }
+.sort-btn[data-active] .sort-arrow { opacity: 1; color: var(--color-ember-orange); }
+
+.sort-btn:focus-visible {
+  outline: 2px solid var(--color-ember-orange);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sort-btn:hover { color: #fff; }
+  .sort-btn:hover .sort-arrow { opacity: .8; }
 }
 
 .lg-detail-page .group-header td {
@@ -1455,6 +1538,11 @@ html[data-motion] .detail-momentum:not([data-revealed]) .period-bar { transform:
   .detail-section { padding: calc(var(--space) * 4); }
   .period-bar { width: 10px; }
   .period-bar-pair { height: 90px; gap: 3px; }
+
+  /* Bars are too narrow to centre a label on each, so the labels open outward instead. */
+  .period-col .period-bar-slot:first-child .bar-value { left: auto; right: 0; translate: 0 4px; }
+  .period-col .period-bar-slot:last-child .bar-value { left: 0; translate: 0 4px; }
+  .period-col:is(:hover, :focus, :focus-visible) .period-bar-slot .bar-value { translate: 0 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1473,5 +1561,6 @@ html[data-motion] .detail-momentum:not([data-revealed]) .period-bar { transform:
     transition: none;
   }
 
+  .bar-value { transition-property: opacity; translate: -50% 0; }
   .leader-card { transition-property: border-color; }
 }

@@ -50,6 +50,43 @@ export function getPeriodBreakdown(away, home) {
   }));
 }
 
+// Minutes arrive as "35" or "35:30"; "-" (did not play) and anything unparseable count as missing.
+export function parseMinutes(value) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  const match = /^(\d+)(?::(\d{1,2}))?$/.exec(String(value ?? '').trim());
+  if (!match) return null;
+  return Number(match[1]) + (match[2] ? Number(match[2]) / 60 : 0);
+}
+
+// Shooting columns show "made/attempted"; they sort by makes.
+const SORT_FIELDS = { fg: 'fgm', fg3: 'fg3m', ft: 'ftm' };
+
+function sortValue(player, key) {
+  if (key === 'min') return parseMinutes(player.min);
+  const value = numeric(player[SORT_FIELDS[key] || key]);
+  return Number.isFinite(value) ? value : null;
+}
+
+export function sortPlayers(players, sort) {
+  if (!sort) return players;
+  const direction = sort.dir === 'asc' ? 1 : -1;
+  return (players || [])
+    .map((player, index) => ({ player, index, value: sortValue(player, sort.key) }))
+    .sort((a, b) => {
+      // Missing values sink to the bottom in both directions.
+      if (a.value === null || b.value === null) return (a.value === null) - (b.value === null) || a.index - b.index;
+      // Equal values keep roster order (a stable sort).
+      return (a.value - b.value) * direction || a.index - b.index;
+    })
+    .map(entry => entry.player);
+}
+
+// Header clicks cycle: high to low, low to high, then back to the default grouped view.
+export function nextSort(current, key) {
+  if (!current || current.key !== key) return { key, dir: 'desc' };
+  return current.dir === 'desc' ? { key, dir: 'asc' } : null;
+}
+
 export function getColumnLeaders(players, keys = BOX_SCORE_LEADER_KEYS) {
   return Object.fromEntries(keys.map(key => {
     const values = (players || []).map(player => numeric(player[key])).filter(Number.isFinite);
