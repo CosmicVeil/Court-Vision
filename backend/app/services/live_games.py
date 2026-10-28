@@ -442,7 +442,8 @@ def _load_upcoming_csv(cache_date: str) -> Optional[List[Dict]]:
         print(f"[live_games] Error reading upcoming CSV: {exc}")
         return None
 
-    return games
+    # The cache date lives on each row, so a header-only file can't prove it is fresh.
+    return games or None
 
 
 def _write_upcoming_csv(cache_date: str, games: List[Dict]) -> None:
@@ -456,19 +457,35 @@ def _write_upcoming_csv(cache_date: str, games: List[Dict]) -> None:
         print(f"[live_games] Error writing upcoming CSV: {exc}")
 
 
-def _fetch_upcoming_games(days: int, nba_data: Optional[List[Dict]]) -> List[Dict]:
+def _upcoming_month_events(start_date, end_date) -> Optional[List[Dict]]:
+    """Fetch scoreboard events month by month (ESPN rejects YYYYMMDD-YYYYMMDD ranges).
+
+    Returns None if any month fails, so a partial schedule is never cached.
+    """
+    events: List[Dict] = []
+    year, month = start_date.year, start_date.month
+    while (year, month) <= (end_date.year, end_date.month):
+        data = _get(_SCOREBOARD, params={"dates": f"{year}{month:02d}", "limit": 1000})
+        if data is None:
+            return None
+        events.extend(data.get("events", []))
+        year, month = (year + 1, 1) if month == 12 else (year, month + 1)
+    return events
+
+
+def _fetch_upcoming_games(days: int, nba_data: Optional[List[Dict]]) -> Optional[List[Dict]]:
+    """Return games from tomorrow through *days* ahead, or None if ESPN failed."""
     today = datetime.now(timezone(timedelta(hours=-4))).date()
     upcoming: List[Dict] = []
 
     start_date = today + timedelta(days=1)
     end_date = today + timedelta(days=days)
-    dates_str = f"{start_date.strftime('%Y%m%d')}-{end_date.strftime('%Y%m%d')}"
 
-    data = _get(_SCOREBOARD, params={"dates": dates_str, "limit": 1000})
-    if not data:
-        return []
+    events = _upcoming_month_events(start_date, end_date)
+    if events is None:
+        return None
 
-    for event in data.get("events", []):
+    for event in events:
         game = _parse_espn_game(event)
         if not game:
             continue
@@ -481,6 +498,10 @@ def _fetch_upcoming_games(days: int, nba_data: Optional[List[Dict]]) -> List[Dic
         except Exception:
             date_str = start_date.strftime("%Y%m%d")
             status_text = start_date.strftime("%b %d")
+
+        # Month requests include days outside the window (e.g. earlier this month).
+        if not start_date.strftime("%Y%m%d") <= date_str <= end_date.strftime("%Y%m%d"):
+            continue
 
         home_tri = game["home"]["tricode"]
         away_tri = game["away"]["tricode"]
@@ -541,6 +562,9 @@ def get_upcoming_games(days: int = 365, nba_data: Optional[List[Dict]] = None) -
         return _attach_rosters(_filter_games_by_days(cached_games, days), nba_data)
 
     upcoming = _fetch_upcoming_games(365, nba_data)
+    if upcoming is None:
+        # Don't cache a failure; the next request will retry ESPN.
+        return []
     _write_upcoming_csv(cache_date, upcoming)
     return _attach_rosters(_filter_games_by_days(upcoming, days), nba_data)
 
