@@ -121,7 +121,7 @@ export default function LiveGames() {
         </div>
       ) : (
         <>
-          <div className="games-grid" data-reveal="fade">{games.map((game, index) => <GameCard key={game.gameId} game={game} index={index} />)}</div>
+          <div className="games-grid">{games.map((game, index) => <GameCard key={game.gameId} game={game} index={index} />)}</div>
           {tab === 'upcoming' && (
             <nav className="lg-pagination" aria-label="Upcoming games pages">
               <div className="lg-pagination-controls">

@@ -51,12 +51,14 @@ test('Live Games adopts anatomy, numeric chrome, stable card identity and rescan
     /data-slot="eyebrow"/, /data-slot="display-heading"/, /data-slot="lead"/, /data-slot="stat-strip"/,
     /<dd data-numeric>/, /getLiveGamesStats/, /<PillNav/, /data-numeric className="live-badge"/,
     /data-numeric className="count-badge"/, /role="tabpanel"/, /aria-labelledby=/,
-    /className="games-grid" data-reveal="fade"/, /data-reveal data-defer/,
+    /className="games-grid">/, /data-reveal data-defer/,
     /getRevealDelay\(index\)/, /key=\{game.gameId\}/, /index=\{index\}/,
     /<ScrollReveal scanKey=\{revealKey\}/, /\$\{tab\}:\$\{upcomingPage\}:\$\{loading\}/,
     /games.map\(g => g.gameId\).join\(','\)/, /data-numeric className="lg-page-label"/,
     /data-numeric className="lg-page-count"/, /games\/today/, /LIVE_GAMES_REFRESH_MS/, /GAME_STATUS_ORDER/,
   ]) assert.match(page, pattern);
+  // Cards reveal individually; a reveal on the whole grid can be too tall to ever reach the threshold.
+  assert.doesNotMatch(page, /className="games-grid"[^>]*data-reveal/);
   assert.match(page, /<div className="last-updated lg-meta-row">\s*\{lastUpdated &&/);
   assert.match(page, /className="trend-empty-radar" data-defer/);
   assert.match(read('src/components/GameBoxScore.jsx'), /<span data-numeric className=\{`team-score/);

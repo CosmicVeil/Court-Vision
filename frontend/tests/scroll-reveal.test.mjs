@@ -23,8 +23,23 @@ test('stagger delays start at zero and cap long lists', () => {
 });
 
 test('reveal and defer observation use the specified visibility margins', () => {
-  assert.deepEqual(helpers.REVEAL_OBSERVER_OPTIONS, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+  // The 0 threshold also reports targets too tall to ever reach 12% visible.
+  assert.deepEqual(helpers.REVEAL_OBSERVER_OPTIONS, { threshold: [0, 0.12], rootMargin: '0px 0px -8% 0px' });
   assert.deepEqual(helpers.DEFER_OBSERVER_OPTIONS, { rootMargin: '25% 0px' });
+});
+
+test('targets reveal at the threshold, or as soon as they intersect when taller than the viewport', () => {
+  assert.equal(typeof helpers.shouldReveal, 'function');
+  const entry = (isIntersecting, intersectionRatio, height, rootBounds = { height: 345 }) => ({
+    isIntersecting, intersectionRatio, boundingClientRect: { height }, rootBounds,
+  });
+  // A 4000px target on a 345px root peaks at 0.086 visible and must still reveal.
+  assert.equal(helpers.shouldReveal(entry(true, 0.05, 4000)), true);
+  assert.equal(helpers.shouldReveal(entry(true, 0.05, 300)), false, 'short target below the threshold waits');
+  assert.equal(helpers.shouldReveal(entry(true, 0.12, 300)), true);
+  assert.equal(helpers.shouldReveal(entry(false, 0, 4000)), false, 'non-intersecting tall target stays hidden');
+  assert.equal(helpers.shouldReveal(entry(false, 0, 300)), false);
+  assert.equal(helpers.shouldReveal(entry(true, 0.05, 4000, null)), false, 'without root bounds only the threshold applies');
 });
 
 test('ScrollReveal progressively enables motion, rescans new nodes and cleans up without scroll polling', () => {
@@ -102,9 +117,15 @@ test('reveal lifecycle premarks visible content, rescans once, pauses offscreen 
   const [reveal, defer] = h.observers;
   assert.equal(reveal.targets.size, 1);
   assert.ok(reveal.targets.has(below));
-  reveal.callback([{ target: below, isIntersecting: false }]);
+  const seen = (isIntersecting, intersectionRatio, height = 300) => ({
+    target: below, isIntersecting, intersectionRatio, boundingClientRect: { height }, rootBounds: { height: 920 },
+  });
+  reveal.callback([seen(false, 0)]);
   assert.equal(below.attributes.has('data-revealed'), false);
-  reveal.callback([{ target: below, isIntersecting: true }]);
+  reveal.callback([seen(true, 0.05)]);
+  assert.equal(below.attributes.has('data-revealed'), false, 'short target waits for the threshold');
+  assert.ok(reveal.targets.has(below));
+  reveal.callback([seen(true, 0.12)]);
   assert.ok(below.attributes.has('data-revealed'));
   assert.equal(reveal.targets.size, 0);
   defer.callback([{ target: below, isIntersecting: false }]);

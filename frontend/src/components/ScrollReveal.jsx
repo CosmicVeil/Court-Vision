@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react';
-import { DEFER_OBSERVER_OPTIONS, REVEAL_OBSERVER_OPTIONS, isAlreadyInView } from '../utils/scrollReveal';
+import { DEFER_OBSERVER_OPTIONS, REVEAL_OBSERVER_OPTIONS, isAlreadyInView, shouldReveal } from '../utils/scrollReveal';
 
 export default function ScrollReveal({ scanKey }) {
   const scanRef = useRef(null);
@@ -11,7 +11,7 @@ export default function ScrollReveal({ scanKey }) {
     const deferTargets = new WeakSet();
     const revealObserver = new IntersectionObserver(entries => {
       entries.forEach(entry => {
-        if (!entry.isIntersecting) return;
+        if (!shouldReveal(entry)) return;
         entry.target.setAttribute('data-revealed', '');
         revealObserver.unobserve(entry.target);
       });
