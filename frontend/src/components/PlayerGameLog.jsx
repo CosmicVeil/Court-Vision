@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { buildApiUrl } from '../config/api';
-import { formatSeasonTeams } from '../utils/gameLog';
+import { currentSeasonLabel, formatAbsence, formatSeasonTeams } from '../utils/gameLog';
 import './PlayerGameLog.css';
 
 // Matches the backend clamp and fits a full season including preseason, play-in, and playoffs.
@@ -20,19 +20,10 @@ const seasonTag = type => {
   return tag && <span className={`game-log-tag game-log-tag--${tag.modifier}`}>{tag.label}</span>;
 };
 
-const SEASONS = [
-  { value: '2026-2027', label: '2026-2027 (Current)' },
-  { value: '2025-2026', label: '2025-2026' },
-  { value: '2024-2025', label: '2024-2025' },
-  { value: '2023-2024', label: '2023-2024' },
-  { value: '2022-2023', label: '2022-2023' },
-  { value: '2021-2022', label: '2021-2022' },
-];
-
 export default function PlayerGameLog({ playerId }) {
-  const [selectedSeason, setSelectedSeason] = useState('2026-2027');
+  const [selectedSeason, setSelectedSeason] = useState(currentSeasonLabel);
   // Keyed by player and season so switching shows the loading state.
-  const [result, setResult] = useState({ playerId: null, season: '2026-2027', status: 'loading', data: null });
+  const [result, setResult] = useState({ playerId: null, season: selectedSeason, status: 'loading', data: null });
 
   useEffect(() => {
     if (!playerId) return undefined;
@@ -52,13 +43,10 @@ export default function PlayerGameLog({ playerId }) {
 
   if (!playerId) return <div className="game-log-empty">Game log is unavailable for this player.</div>;
 
-  const availableSeasons = result.data?.available_seasons || [];
-  const seasonOptions = availableSeasons.length
-    ? availableSeasons.map(s => ({
-        value: s,
-        label: s === '2026-2027' ? '2026-2027 (Current)' : s,
-      }))
-    : SEASONS;
+  // The backend lists seasons newest first; without a response, offer the current and selected seasons.
+  const currentSeason = currentSeasonLabel();
+  const availableSeasons = result.data?.available_seasons || [...new Set([currentSeason, selectedSeason])];
+  const seasonOptions = availableSeasons.map(s => ({ value: s, label: s === availableSeasons[0] ? `${s} (Current)` : s }));
 
   const isLoading = result.playerId !== playerId || result.season !== selectedSeason || result.status === 'loading';
   const isError = result.status === 'error';
@@ -66,6 +54,7 @@ export default function PlayerGameLog({ playerId }) {
   const averages = result.data?.averages || {};
   const seasonDisplay = result.data?.season || selectedSeason;
   const seasonTeams = isLoading ? '' : formatSeasonTeams(result.data?.teams);
+  const absenceMessage = isLoading ? '' : formatAbsence(result.data?.absence, selectedSeason, result.data?.teams);
 
   return (
     <div className="game-log">
@@ -102,7 +91,11 @@ export default function PlayerGameLog({ playerId }) {
       ) : isError ? (
         <div className="game-log-empty">Game log is unavailable for the {selectedSeason} season.</div>
       ) : !games.length ? (
-        <div className="game-log-empty">No games recorded for this player in the {selectedSeason} season.</div>
+        absenceMessage ? (
+          <div className="game-log-empty">{absenceMessage}</div>
+        ) : (
+          <div className="game-log-empty">No games recorded for this player in the {selectedSeason} season.</div>
+        )
       ) : (
         <>
           <h3 className="secondary-stats-title">Recent Form · {seasonDisplay}</h3>

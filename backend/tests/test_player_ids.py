@@ -170,6 +170,30 @@ class EspnGamelogTeamTests(unittest.TestCase):
         self.assertEqual(limited.get("teams"), ["LAL", "DAL"])
 
 
+class GameLogSeasonTests(unittest.TestCase):
+    def test_season_rolls_over_on_october_first(self):
+        self.assertEqual(game_archive.current_season_year(date(2026, 9, 30)), 2026)
+        self.assertEqual(game_archive.current_season_year(date(2026, 10, 1)), 2027)
+        self.assertEqual(game_archive.current_season_year(date(2027, 6, 15)), 2027)
+
+    def test_available_seasons_run_newest_to_first_espn_season(self):
+        seasons = game_archive.available_seasons(date(2026, 10, 22))
+        self.assertEqual(seasons[:2], ["2026-2027", "2025-2026"])
+        self.assertEqual(seasons[-1], "1993-1994")
+        self.assertEqual(len(seasons), 2027 - game_archive.FIRST_GAME_LOG_SEASON + 1)
+
+    def test_available_seasons_add_next_season_after_rollover(self):
+        self.assertEqual(game_archive.available_seasons(date(2027, 10, 1))[0], "2027-2028")
+        self.assertEqual(game_archive.available_seasons(date(2027, 9, 30))[0], "2026-2027")
+
+    def test_missing_or_invalid_season_resolves_to_current(self):
+        with patch.object(game_archive, "current_season_year", return_value=2031):
+            for value in (None, "current", "latest", "nonsense"):
+                with self.subTest(value=value):
+                    self.assertEqual(game_archive._resolve_season(value), (2031, "2030-2031"))
+            self.assertEqual(game_archive._resolve_season("1998-99"), (1999, "1998-1999"))
+
+
 class GameLogRouteTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
