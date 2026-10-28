@@ -84,8 +84,11 @@ The `~/.agents/skills` folders are community-written; read a skill before adding
 | Stage | Skills |
 | --- | --- |
 | Bug diagnosis | Superpowers `systematic-debugging`, `test-driven-development` |
-| Coding | Superpowers `test-driven-development`, `verification-before-completion` |
-| Fix rounds | Superpowers `receiving-code-review`, `verification-before-completion` |
+| Coding | Superpowers `test-driven-development`, `verification-before-completion`; `frontend-design`, `design-system`, `design-spatial`, `fixing-motion-performance` from `~/.agents/skills` |
+| Fix rounds | Superpowers `receiving-code-review`, `verification-before-completion`; `fixing-motion-performance` |
+| Review | `review-animations`, `fixing-accessibility` from `~/.agents/skills` |
+
+The design skills only cover mechanics (tokens, spacing, motion performance, accessibility), not a visual style. They were chosen because they assume no CSS framework or animation library. Skills built around Tailwind, Framer Motion, shadcn or GSAP (`design-taste-frontend`, `high-end-visual-design`, `minimalist-ui`, `baseline-ui`) were left out, and so was `web-design-guidelines`, which fetches its rules from the web at runtime. The design system they apply is in `frontend/docs/design-system.md`; pass it with `--spec`.
 
 The animation skills used in Atlas (`fixing-motion-performance`, `review-animations` in `~/.agents/skills`) are optional here; add them to `codex_skills` and `review_skills` for animation-heavy tasks.
 
