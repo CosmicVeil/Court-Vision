@@ -242,7 +242,6 @@ const Stats = () => {
     <div className="stats-container">
       <div className="stats-header">
         <div className="stats-nav-top">
-          <Link to="/" className="back-to-home">← HOME</Link>
           <span className="cv-section-badge">PLAYER DATABASE</span>
         </div>
         <h1>NBA PLAYER <span className="text-ember">STATISTICS</span></h1>

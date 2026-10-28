@@ -233,7 +233,6 @@ const Predictions = () => {
     <div className="predictions-container">
       <div className="predictions-header">
         <div className="stats-nav-top">
-          <Link to="/" className="back-to-home">← HOME</Link>
           <span className="cv-section-badge">AI FORECASTING</span>
         </div>
         <h1>NEURAL MATCHUP <span className="text-ember">PREDICTIONS</span></h1>

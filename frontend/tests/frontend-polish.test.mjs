@@ -5,8 +5,9 @@ import { readSource as readComponent } from "./helpers.mjs";
 test("authenticated visitors do not render the final homepage account CTA", () => {
   const source = readComponent("Home.jsx");
   assert.match(source, /\{!isLoggedIn && \(\s*<section className="cta-section">/);
-  assert.match(source, /to="\/login"/);
   assert.match(source, /to="\/create-account"/);
+  // Logging in moved to the shared header, which every page (Home included) renders.
+  assert.match(readComponent("SiteHeader.jsx"), /to="\/login"/);
 });
 
 test("recommendation percentage badges use sign-aware classes", () => {

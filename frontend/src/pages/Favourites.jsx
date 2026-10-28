@@ -86,7 +86,6 @@ const Favourites = () => {
       <div className="favourites-wrapper">
         <header className="favourites-header">
           <div className="stats-nav-top">
-            <Link to="/" className="back-to-home">← HOME</Link>
             <span className="cv-section-badge">PLAYER ROSTER</span>
           </div>
           <h1 className="favourites-title">SAVED <span className="text-ember">FAVOURITES</span></h1>
@@ -124,7 +123,6 @@ const Favourites = () => {
     <div className="favourites-wrapper">
       <header className="favourites-header">
         <div className="stats-nav-top">
-          <Link to="/" className="back-to-home">← HOME</Link>
           <span className="cv-section-badge">PLAYER ROSTER</span>
         </div>
         <h1 className="favourites-title">

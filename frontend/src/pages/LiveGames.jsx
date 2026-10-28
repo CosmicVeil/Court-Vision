@@ -123,7 +123,6 @@ export default function LiveGames() {
   return <div className="lg-page lg-live-page">
     <section className="lg-hero" ref={heroRef}>
       <div className="stats-nav-top">
-        <Link to="/" className="back-to-home">← HOME</Link>
         <span className="cv-section-badge" data-slot="eyebrow">REAL-TIME ARENA</span>
       </div>
       <div className="lg-title-stage">
