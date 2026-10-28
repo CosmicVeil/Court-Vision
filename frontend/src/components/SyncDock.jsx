@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 // A floating pill that takes over the hero's sync controls once the hero scrolls away.
-export default function SyncDock({ watchRef, liveCount, lastUpdated, intervalMs, onRefresh }) {
+export default function SyncDock({ watchRef, label, live = false, lastUpdated, intervalMs, onRefresh }) {
   const [visible, setVisible] = useState(false);
   const [spinning, setSpinning] = useState(false);
 
@@ -16,7 +16,7 @@ export default function SyncDock({ watchRef, liveCount, lastUpdated, intervalMs,
   return (
     <div className="sync-dock" data-visible={visible ? '' : undefined} aria-hidden={!visible} inert={!visible}>
       <span className="sync-dock-live" data-numeric>
-        {liveCount > 0 && <span className="pulse-dot" />}{liveCount} LIVE
+        {live && <span className="pulse-dot" />}{label}
       </span>
       <span className="sync-dock-timer">
         <span className="sync-dock-label">NEXT SYNC</span>

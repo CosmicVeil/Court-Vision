@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { getIndicatorGeometry, getNextTabIndex } from '../utils/pillNav';
 
-export default function PillNav({ items, value, onChange, label, idPrefix, panelId, className }) {
+export default function PillNav({ items, value, onChange, label, idPrefix, panelId, className, tabClassName = 'lg-tab' }) {
   const navRef = useRef(null);
   const indicatorRef = useRef(null);
   const tabRefs = useRef([]);
@@ -44,7 +44,7 @@ export default function PillNav({ items, value, onChange, label, idPrefix, panel
         <button key={item.id} ref={element => { tabRefs.current[index] = element; }} type="button"
           role="tab" id={`${idPrefix}-tab-${item.id}`} aria-controls={panelId} aria-selected={index === activeIndex}
           tabIndex={index === activeIndex ? 0 : -1} data-indicator-target={index === targetIndex ? '' : undefined}
-          className={`lg-tab ${index === activeIndex ? 'active' : ''}`}
+          className={`${tabClassName} ${index === activeIndex ? 'active' : ''}`}
           onClick={() => onChange(item.id)}
           onPointerEnter={event => { if (event.pointerType === 'mouse') setHoverIndex(index); }}
           onFocus={() => setHoverIndex(index)}

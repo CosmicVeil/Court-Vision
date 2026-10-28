@@ -80,7 +80,8 @@ test('Live Games chrome reserves single-line space and card motion stays scoped 
   assert.match(css, /@media \(hover: hover\) and \(pointer: fine\)\s*\{\s*\.lg-tab:hover/);
   assert.match(css, /grid-template-columns: repeat\(auto-fill, minmax\(360px, 1fr\)\)/);
   assert.match(css, /\.game-card:hover\s*\{\s*transform: translateY\(-6px\)/);
-  assert.doesNotMatch(read('src/pages/LiveGameDetail.jsx'), /lg-live-page|data-reveal|ScrollReveal/);
+  // The detail page adopts the system in its own .lg-detail-page scope, never the list page's.
+  assert.doesNotMatch(read('src/pages/LiveGameDetail.jsx'), /lg-live-page/);
 });
 
 test('chrome constrains shrinking pagination and reserves badge space', () => {
