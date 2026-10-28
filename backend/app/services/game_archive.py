@@ -496,6 +496,107 @@ def available_seasons(today: Optional[date] = None) -> List[str]:
 
 _espn_athlete_cache: Dict[Tuple[int, int], List[Dict]] = {}
 _espn_id_cache: Dict[int, int] = {}
+_ESPN_CORE = "https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba"
+_espn_absence_cache: Dict[Tuple[int, int], Tuple[List[str], Optional[Dict]]] = {}
+_espn_team_tricode_cache: Dict[str, str] = {}
+_REASON_ACRONYMS = {"ACL", "MCL", "PCL", "LCL"}
+
+
+def _format_dnp_reason(reason: Optional[str]) -> Optional[str]:
+    if not reason:
+        return None
+    return " ".join(word.upper() if word.upper() in _REASON_ACRONYMS else word
+                    for word in reason.lower().capitalize().split())
+
+
+def _espn_team_tricode(espn_team_id: str) -> Optional[str]:
+    if espn_team_id in _espn_team_tricode_cache:
+        return _espn_team_tricode_cache[espn_team_id]
+    try:
+        response = requests.get(f"{_ESPN_BASE}/teams/{espn_team_id}", timeout=6)
+        if response.status_code != 200:
+            return None
+        team = _tricode(response.json().get("team", {}).get("abbreviation", ""))
+        if team:
+            _espn_team_tricode_cache[espn_team_id] = team
+            return team
+    except Exception as exc:
+        print(f"[game_archive] ESPN team lookup error: {exc}")
+    return None
+
+
+def _espn_dnp_reason(event_id: str, espn_id: int) -> Tuple[Optional[str], bool]:
+    """Return the reason and whether the summary lookup succeeded."""
+    try:
+        response = requests.get(_SUMMARY, params={"event": event_id}, timeout=6)
+        if response.status_code != 200:
+            return None, False
+        for team in response.json().get("boxscore", {}).get("players", []):
+            for statistics in team.get("statistics", []):
+                for entry in statistics.get("athletes", []):
+                    if str(entry.get("athlete", {}).get("id")) == str(espn_id) and entry.get("didNotPlay"):
+                        return _format_dnp_reason(entry.get("reason")), True
+    except Exception as exc:
+        print(f"[game_archive] ESPN DNP reason error: {exc}")
+        return None, False
+    return None, True
+
+
+def _fetch_espn_season_absence(espn_id: int, season_year: int) -> Tuple[List[str], Optional[Dict]]:
+    """Historical roster and sampled DNP reasons for a season with no games played."""
+    cache_key = (espn_id, season_year)
+    if cache_key in _espn_absence_cache:
+        return _espn_absence_cache[cache_key]
+    try:
+        response = requests.get(
+            f"{_ESPN_CORE}/seasons/{season_year}/athletes/{espn_id}/eventlog",
+            params={"limit": 100}, timeout=6,
+        )
+        if response.status_code != 200:
+            return [], None
+        data = response.json()
+        events = data.get("events", {})
+        items = events.get("items", [])
+        if not items or any(item.get("played") for item in items):
+            _espn_absence_cache[cache_key] = ([], None)
+            return [], None
+
+        team_ids = []
+        for team_id in [item.get("teamId") for item in items] + list(data.get("teams", {})):
+            if team_id is not None and str(team_id) not in team_ids:
+                team_ids.append(str(team_id))
+        teams = []
+        team_lookup_failed = False
+        for team_id in team_ids:
+            team = _espn_team_tricode(team_id)
+            if team is None:
+                team_lookup_failed = True
+            if team in TEAM_IDS and team not in teams:
+                teams.append(team)
+        if not teams:
+            if not team_lookup_failed:
+                _espn_absence_cache[cache_key] = ([], None)
+            return [], None
+
+        reasons = []
+        summary_lookup_failed = False
+        for index in sorted({0, len(items) // 2, len(items) - 1}):
+            ref = items[index].get("competition", {}).get("$ref", "")
+            event_id = ref.split("?", 1)[0].rstrip("/").rsplit("/", 1)[-1]
+            if event_id:
+                reason, succeeded = _espn_dnp_reason(event_id, espn_id)
+                if not succeeded:
+                    summary_lookup_failed = True
+                if reason and reason not in reasons:
+                    reasons.append(reason)
+        absence = {"reason": reasons[0] if reasons else None, "reasons": reasons,
+                   "games_missed": events.get("count", len(items))}
+        if not team_lookup_failed and not summary_lookup_failed:
+            _espn_absence_cache[cache_key] = (teams, absence)
+        return teams, absence
+    except Exception as exc:
+        print(f"[game_archive] ESPN season absence error: {exc}")
+        return [], None
 
 
 def _espn_season_type(display_name: Optional[str]) -> int:
@@ -746,17 +847,22 @@ def player_game_log(conn, player_id: int, limit: int = 10, season: Optional[str]
         })
 
     # If DB had no games for the requested season and this is not a mock unit test, query ESPN
+    teams, absence = _season_teams(games), None
     if not games and not is_mock:
         espn_id = _get_espn_athlete_id(conn, player_id)
         if espn_id:
             games = _fetch_espn_athlete_gamelog(espn_id, target_year)
+            teams = _season_teams(games)
+            if not games:
+                teams, absence = _fetch_espn_season_absence(espn_id, target_year)
 
     played = [g for g in games if not g.get("did_not_play")]
     counted = [g for g in played if g.get("season_type") != 1] or played
     return {
         "player_id": player_id,
         "season": active_label,
-        "teams": _season_teams(games),
+        "teams": teams,
+        "absence": absence,
         "available_seasons": available_seasons(),
         "games": games[:limit],
         "averages": {

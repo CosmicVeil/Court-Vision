@@ -97,3 +97,38 @@ test("current season label rolls over on October 1 and the list is not hardcoded
   assert.doesNotMatch(gameLog, /'20\d\d-20\d\d'/);
   assert.match(gameLog, /useState\(currentSeasonLabel\)/);
 });
+
+test("absence formatter explains injured seasons", async () => {
+  const { formatAbsence } = await import(new URL("../src/utils/gameLog.js", import.meta.url));
+  assert.equal(typeof formatAbsence, "function", "absence formatter exists");
+  const absence = { reason: "Left ACL surgery", reasons: ["Left ACL surgery"], games_missed: 63 };
+  assert.equal(formatAbsence(absence, "2019-2020", ["GSW"]),
+    "Did not play in 2019-2020 (GSW) — Left ACL surgery · missed 63 games");
+  assert.equal(formatAbsence({ ...absence, reasons: ["Left ACL surgery", "Right achilles tendon surgery"] }, "2019-2020", ["GSW", "BKN"]),
+    "Did not play in 2019-2020 (GSW → BKN) — Left ACL surgery, Right achilles tendon surgery · missed 63 games");
+  for (const reasons of [undefined, [], "invalid"]) {
+    assert.equal(formatAbsence({ ...absence, reasons }, "2019-2020", ["GSW"]),
+      "Did not play in 2019-2020 (GSW) — Left ACL surgery · missed 63 games");
+  }
+  assert.equal(formatAbsence(absence, "2019-2020", []),
+    "Did not play in 2019-2020 — Left ACL surgery · missed 63 games");
+  assert.equal(formatAbsence({ games_missed: 63 }, "2019-2020", ["GSW"]),
+    "Did not play in 2019-2020 (GSW) · missed 63 games");
+  assert.equal(formatAbsence({ ...absence, games_missed: 1 }, "2019-2020", ["GSW"]),
+    "Did not play in 2019-2020 (GSW) — Left ACL surgery · missed 1 game");
+  assert.equal(formatAbsence({ reasons: [null, "", 42, "Left ACL surgery"] }, "2019-2020", ["UNK"]),
+    "Did not play in 2019-2020 — Left ACL surgery");
+  for (const games_missed of [undefined, null, 0, -1, "63", NaN]) {
+    assert.equal(formatAbsence({ games_missed }, "2019-2020", ["GSW"]), "Did not play in 2019-2020 (GSW)");
+  }
+  for (const invalid of [null, undefined, "injured"]) {
+    assert.equal(formatAbsence(invalid, "2019-2020", ["GSW"]), "");
+  }
+});
+
+test("game log shows the absence message and keeps the generic empty message otherwise", () => {
+  assert.match(gameLog, /import \{[^}]*\bformatAbsence\b[^}]*\} from ['"]\.\.\/utils\/gameLog['"]/);
+  assert.match(gameLog, /const absenceMessage = isLoading \? '' : formatAbsence\(result\.data\?\.absence, selectedSeason, result\.data\?\.teams\)/);
+  assert.match(gameLog, /!games\.length \? \(\s*absenceMessage \? \(\s*<div className="game-log-empty">\{absenceMessage\}<\/div>/);
+  assert.match(gameLog, /No games recorded for this player in the \{selectedSeason\} season\./);
+});

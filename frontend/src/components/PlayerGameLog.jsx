@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { buildApiUrl } from '../config/api';
-import { currentSeasonLabel, formatSeasonTeams } from '../utils/gameLog';
+import { currentSeasonLabel, formatAbsence, formatSeasonTeams } from '../utils/gameLog';
 import './PlayerGameLog.css';
 
 // Matches the backend clamp and fits a full season including preseason, play-in, and playoffs.
@@ -54,6 +54,7 @@ export default function PlayerGameLog({ playerId }) {
   const averages = result.data?.averages || {};
   const seasonDisplay = result.data?.season || selectedSeason;
   const seasonTeams = isLoading ? '' : formatSeasonTeams(result.data?.teams);
+  const absenceMessage = isLoading ? '' : formatAbsence(result.data?.absence, selectedSeason, result.data?.teams);
 
   return (
     <div className="game-log">
@@ -90,7 +91,11 @@ export default function PlayerGameLog({ playerId }) {
       ) : isError ? (
         <div className="game-log-empty">Game log is unavailable for the {selectedSeason} season.</div>
       ) : !games.length ? (
-        <div className="game-log-empty">No games recorded for this player in the {selectedSeason} season.</div>
+        absenceMessage ? (
+          <div className="game-log-empty">{absenceMessage}</div>
+        ) : (
+          <div className="game-log-empty">No games recorded for this player in the {selectedSeason} season.</div>
+        )
       ) : (
         <>
           <h3 className="secondary-stats-title">Recent Form · {seasonDisplay}</h3>
