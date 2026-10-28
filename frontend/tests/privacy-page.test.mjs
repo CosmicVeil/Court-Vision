@@ -78,7 +78,6 @@ test("Privacy page uses the Contact theme with readable prose and narrow-screen 
   const page = readPrivacy();
   const css = readPrivacy("Privacy.css");
   assert.match(page, /import "\.\/Privacy\.css"/);
-  assert.match(page, /<Link to="\/" className="back-to-home">← HOME<\/Link>/);
   assert.match(page, /className="cv-section-badge"/);
   assert.match(page, /<h1 id="privacy-title">PRIVACY &amp; <span className="text-ember">COOKIES<\/span><\/h1>/);
   assert.match(page, /plain-English summary/);
@@ -99,10 +98,9 @@ test("Privacy page uses the Contact theme with readable prose and narrow-screen 
   assert.doesNotMatch(css, /\.contact-/);
 });
 
-test("Privacy is linked next to Contact in the Home nav and from the Contact footer", () => {
-  const homeNav = readSource("Home.jsx").match(/<nav className="header-nav">([\s\S]*?)<\/nav>/)?.[1];
-  assert.ok(homeNav);
-  assert.match(homeNav, /<Link to="\/contact">CONTACT<\/Link>\s*<Link to="\/privacy">PRIVACY<\/Link>/);
+test("Privacy is linked next to Contact in the site nav and from the Contact footer", () => {
+  const siteNav = readFrontend("src/utils/siteNav.js");
+  assert.match(siteNav, /\{ to: '\/contact', label: 'CONTACT' \},\s*\{ to: '\/privacy', label: 'PRIVACY' \}/);
   const footer = readSource("Contact.jsx").match(/<footer className="contact-footer">([\s\S]*?)<\/footer>/)?.[1];
   assert.ok(footer);
   assert.match(footer, /<Link to="\/privacy">Privacy &amp; Cookies<\/Link>/);

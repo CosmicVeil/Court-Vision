@@ -92,6 +92,17 @@ Scroll reveals alone are not enough: pages should also respond to the pointer an
 - **Decorative duplicates of real controls** (chips, ticker) are `aria-hidden` with `tabIndex={-1}`. The original control (the card) stays the accessible path.
 - **Gating.** Hover effects sit inside `@media (hover: hover) and (pointer: fine)`. Every entrance and loop has a `prefers-reduced-motion: reduce` rule that removes the movement but keeps the state visible.
 
+## 8. Site shell (`src/components/AppShell.jsx`, `SiteHeader.jsx`)
+
+Every route renders inside one **layout route** in `App.jsx`: `<Route element={<AppShell />}>` wraps all pages, and `AppShell` draws the shared header followed by `<Outlet />`, where React Router places the matched page. Pages do not draw their own header or a "← HOME" link. Links that go up one level, such as "← ALL GAMES" on a game page, stay.
+
+- **Links** come from `NAV_LINKS` in `src/utils/siteNav.js`, rendered with `NavLink`, so the current page gets `aria-current="page"`. The CSS styles that attribute, not a class. A nested route such as `/games/:id` keeps its parent link marked.
+- **The header stays mounted across routes**, so anything it reads once goes stale. It re-reads the login state from `localStorage` whenever the path changes; login and logout always navigate, so this is enough without a shared auth store. A route change also closes the menu and the account dropdown.
+- **Solid on scroll** without a scroll listener: a hidden 80px sentinel at the top of the document is watched by an `IntersectionObserver`, and the header gets `.scrolled` once it leaves the viewport.
+- **Below 1100px** the link row (which needs about 1080px) is replaced by a menu button: a disclosure (`aria-expanded`, `aria-controls="site-menu"`) that opens the same links as a panel. Escape or a click outside closes it. Below 768px the header padding shrinks.
+- **Login and SignUp** show the header too, so people can leave the form.
+- Header styles live in `src/components/SiteHeader.css` (moved out of `Home.css`).
+
 ## Phase 1 scope: Live Games (`/games`)
 
 Files in scope: `src/pages/LiveGames.jsx`, `src/pages/LiveGames.css`, new `src/styles/tokens.css`, new `src/components/ScrollReveal.jsx`, new `src/components/PillNav.jsx`, their pure helpers in `src/utils/`, `src/main.jsx` (import tokens only), and new tests in `frontend/tests/`.

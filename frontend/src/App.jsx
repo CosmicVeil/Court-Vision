@@ -12,28 +12,32 @@ import Predictions from "./pages/Predictions.jsx";
 import Contact from "./pages/Contact.jsx";
 import Privacy from "./pages/Privacy.jsx";
 import NotFound from "./pages/NotFound.jsx";
+import AppShell from "./components/AppShell.jsx";
 
 
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/stats" element={<Stats />} />
-        <Route path="/recommendations" element={<Recommendations />} />
-        <Route path="/favourites" element={<Favourites />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/create-account" element={<SignUp />} />
-        <Route path="/games" element={<LiveGames />} />
-        <Route path="/games/:gameId" element={<LiveGameDetail />} />
-        <Route path="/predictions" element={<Predictions />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/privacy" element={<Privacy />} />
-        <Route
-          path="/recommendations/:stat"
-          element={<RecommendationChart />}
-        />
-        <Route path="*" element={<NotFound />} />
+        {/* Layout route: every page renders inside AppShell, below the shared header. */}
+        <Route element={<AppShell />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/stats" element={<Stats />} />
+          <Route path="/recommendations" element={<Recommendations />} />
+          <Route path="/favourites" element={<Favourites />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/create-account" element={<SignUp />} />
+          <Route path="/games" element={<LiveGames />} />
+          <Route path="/games/:gameId" element={<LiveGameDetail />} />
+          <Route path="/predictions" element={<Predictions />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route
+            path="/recommendations/:stat"
+            element={<RecommendationChart />}
+          />
+          <Route path="*" element={<NotFound />} />
+        </Route>
       </Routes>
     </Router>
   );

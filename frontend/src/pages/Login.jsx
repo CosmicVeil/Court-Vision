@@ -42,7 +42,6 @@ const Login = () => {
     <div className="login-wrapper">
       <div className="login-container">
         <div className="stats-nav-top" style={{ marginBottom: '1.5rem', justifyContent: 'center' }}>
-          <Link to="/" className="back-to-home">← HOME</Link>
           <span className="cv-section-badge">ACCESS PORTAL</span>
         </div>
         <div className="login-header">

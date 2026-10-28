@@ -16,7 +16,6 @@ function Contact() {
       <div className="contact-shell">
       <header className="contact-header">
         <div className="stats-nav-top">
-          <Link to="/" className="back-to-home">← HOME</Link>
           <span className="cv-section-badge">DEVELOPMENT INTEL</span>
         </div>
       </header>

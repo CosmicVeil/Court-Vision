@@ -11,20 +11,6 @@ const NotFound = () => {
       <div className="notfound-glow"></div>
       <div className="notfound-court-lines"></div>
 
-      {/* Floating Header */}
-      <header className="header">
-        <div className="header-left">
-          <Link to="/" className="header-title">COURT VISION</Link>
-        </div>
-        <nav className="header-nav">
-          <Link to="/">HOME</Link>
-          <Link to="/games">LIVE GAMES</Link>
-          <Link to="/stats">STATS</Link>
-          <Link to="/predictions">PREDICTIONS</Link>
-          <Link to="/recommendations">AI RADAR</Link>
-        </nav>
-      </header>
-
       {/* Main 404 Glass Card */}
       <main className="notfound-content">
         <div className="notfound-card">

@@ -95,7 +95,6 @@ const SignUp = () => {
     <div className="signup-wrapper">
       <div className="signup-container">
         <div className="stats-nav-top" style={{ marginBottom: '1.5rem', justifyContent: 'center' }}>
-          <Link to="/" className="back-to-home">← HOME</Link>
           <span className="cv-section-badge">JOIN THE PLATFORM</span>
         </div>
         <div className="signup-header">

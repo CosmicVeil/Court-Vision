@@ -10,7 +10,6 @@ function Privacy() {
       <div className="privacy-shell">
         <header className="privacy-header">
           <div className="stats-nav-top">
-            <Link to="/" className="back-to-home">← HOME</Link>
             <span className="cv-section-badge">PRIVACY &amp; COOKIES</span>
           </div>
         </header>

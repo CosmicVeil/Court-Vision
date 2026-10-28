@@ -171,7 +171,6 @@ const Recommendations = () => {
     <div className="recommendations-wrapper">
       <header className="recommendations-header">
         <div className="stats-nav-top">
-          <Link to="/" className="back-to-home">← HOME</Link>
           <span className="cv-section-badge">INTELLIGENCE RADAR</span>
         </div>
         <h1 className="recommendations-title">

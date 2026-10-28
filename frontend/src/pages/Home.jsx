@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import "./Home.css";
 import AIPredictions from "../components/AIPredictions";
 import PlayerStatsModal from "../components/PlayerStatsModal";
-import { isAuthenticated, getUser, logout } from "../utils/auth";
+import { isAuthenticated } from "../utils/auth";
 import { buildApiUrl } from "../config/api";
 import { samePlayerName } from "../utils/playerNames";
 import { extractWeeklyPraPlayer, formatPraGameDate } from "../utils/weeklyPra";
@@ -187,11 +187,8 @@ const VISION_LETTERS = [
 ];
 
 const Home = () => {
-  const navigate = useNavigate();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(() => isAuthenticated());
-  const [user, setUser] = useState(null);
+  // The shared header owns login state; Home only reads it once to pick its closing CTA.
+  const [isLoggedIn] = useState(() => isAuthenticated());
 
   // States for search and popup modal
   const [searchQuery, setSearchQuery] = useState("");
@@ -248,23 +245,15 @@ const Home = () => {
     }
   };
 
-  useEffect(() => {
-    const authenticated = isAuthenticated();
-    setIsLoggedIn(authenticated);
-    if (authenticated) setUser(getUser());
-  }, []);
-
   // Scroll-reveal animations
   useScrollReveal();
 
-  // Header scroll & 3D Court Scroll Effect
-  const [headerScrolled, setHeaderScrolled] = useState(false);
+  // 3D Court Scroll Effect
   const heroRef = useRef(null);
 
   useEffect(() => {
     const onScroll = () => {
       const scrollY = window.scrollY;
-      setHeaderScrolled(scrollY > 80);
       if (!heroRef.current) return;
       const el = heroRef.current;
 
@@ -418,15 +407,6 @@ const Home = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  useEffect(() => {
-    const handler = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target))
-        setIsDropdownOpen(false);
-    };
-    if (isDropdownOpen) document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [isDropdownOpen]);
-
   // Click outside to dismiss search results
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -472,58 +452,8 @@ const Home = () => {
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
-  const handleLogout = async () => {
-    await logout();
-    setIsLoggedIn(false); setUser(null); setIsDropdownOpen(false);
-    navigate("/");
-  };
-
   return (
     <div className="main-wrapper">
-      <header className={`header ${headerScrolled ? 'scrolled' : ''}`}>
-        <div className="header-left">
-          <span className="header-title">COURT VISION</span>
-        </div>
-        <nav className="header-nav">
-          <Link to="/stats">STATS</Link>
-          <Link to="/games">LIVE GAMES</Link>
-          <Link to="/predictions">PREDICTIONS</Link>
-          <Link to="/recommendations">RECOMMENDATIONS</Link>
-          <Link to="/favourites">FAVOURITES</Link>
-          <Link to="/contact">CONTACT</Link>
-          <Link to="/privacy">PRIVACY</Link>
-        </nav>
-        <div className="header-profile" ref={dropdownRef}>
-          <button className="profile-btn" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
-            {isLoggedIn && user
-              ? <div className="profile-initials">{user.first_name?.[0]?.toUpperCase()}{user.last_name?.[0]?.toUpperCase()}</div>
-              : <img src="/images/profile_image.jpg" alt="Profile" className="profile-img" />}
-          </button>
-          {isDropdownOpen && (
-            <div className="profile-dropdown">
-              {isLoggedIn && user ? (
-                <>
-                  <div className="dropdown-user-info">
-                    <div className="dropdown-user-name">{user.first_name} {user.last_name}</div>
-                    <div className="dropdown-user-email">{user.email}</div>
-                  </div>
-                  <div className="dropdown-divider" />
-                  <Link to="/favourites" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>My Favourites</Link>
-                  <Link to="/recommendations" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Recommendations</Link>
-                  <div className="dropdown-divider" />
-                  <button className="dropdown-item logout-btn" onClick={handleLogout}>Logout</button>
-                </>
-              ) : (
-                <>
-                  <Link to="/login" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Login</Link>
-                  <Link to="/create-account" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Create Account</Link>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </header>
-
       {/* ─── HERO: Nike-style cinematic scroll ─────────────── */}
       <section className="cv-hero-wrapper" ref={heroRef}>
         <div className="cv-hero-sticky">
