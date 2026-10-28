@@ -20,6 +20,7 @@ window.fetch = function (input, init) {
 };
 
 import App from './App.jsx'
+import './styles/tokens.css'
 import './pages/Home.css'
 
 import ReactGA from "react-ga4";
