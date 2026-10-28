@@ -690,4 +690,332 @@
     line-height: 14px;
     min-height: 28px;
   }
+
+  .sync-dock {
+    width: calc(100% - 2 * var(--gutter));
+    justify-content: space-between;
+  }
+}
+
+/* Interaction layer: entrance choreography, live data motion and pointer play.
+   Only transform, translate, scale, rotate and opacity animate. */
+
+/* Heading words rise in one after another on first load. */
+.lg-title-word {
+  display: inline-block;
+  animation: rise .9s var(--ease-brand) both;
+  animation-delay: calc(80ms + var(--word, 0) * 90ms);
+}
+
+/* A stat number ticks in whenever its value changes (the span is keyed by value). */
+.stat-tick {
+  display: inline-block;
+  animation: tick-in .6s var(--ease-brand) both;
+}
+
+.lg-live-page .lg-stat-strip > div:nth-child(2) .stat-tick { animation-delay: 60ms; }
+.lg-live-page .lg-stat-strip > div:nth-child(3) .stat-tick { animation-delay: 120ms; }
+.lg-live-page .lg-stat-strip > div:nth-child(4) .stat-tick { animation-delay: 180ms; }
+
+/* Orbiting live chips around the heading. Three nested layers so each motion owns
+   one property: the slot places and tilts, the drift reacts to hover, the chip floats. */
+.lg-title-stage {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.hero-orbit {
+  display: none;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.orbit-slot {
+  position: absolute;
+  translate: 0 -50%;
+  rotate: var(--r, 0deg);
+}
+
+.orbit-drift {
+  transition: translate .7s var(--ease-brand);
+}
+
+.orbit-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--space) * 2);
+  height: 2.25rem;
+  padding: 0 calc(var(--space) * 4);
+  border: 1px solid rgba(255, 100, 54, 0.45);
+  border-radius: var(--radius-full);
+  background: rgba(14, 14, 18, 0.92);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 0 18px rgba(255, 100, 54, 0.18);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: .5px;
+  white-space: nowrap;
+  text-decoration: none;
+  pointer-events: auto;
+  animation: appear .5s var(--ease-brand) var(--chip-delay, 0s) both,
+    float 6s ease-in-out var(--float-delay, 0s) infinite alternate;
+}
+
+.orbit-chip-status { color: var(--color-ember-orange); }
+
+@media (min-width: 1100px) {
+  .hero-orbit { display: block; }
+}
+
+/* Score ticker under the tabs. */
+.lg-ticker {
+  overflow: hidden;
+  max-width: var(--container-page);
+  margin: 0 auto calc(var(--space) * 8);
+  border-block: 1px solid var(--border-glass);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: marquee var(--marquee-duration, 40s) linear infinite;
+}
+
+.ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--space) * 2);
+  padding: calc(var(--space) * 3) calc(var(--space) * 6);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: .5px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.ticker-item + .ticker-item { border-left: 1px solid rgba(255, 255, 255, 0.08); }
+.ticker-status { color: var(--color-stone); }
+.ticker-item.is-live .ticker-status { color: var(--color-ember-orange); }
+
+/* Floating sync dock: slides up once the hero has scrolled away. */
+.sync-dock {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--space) * 5);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space) * 4);
+  height: 3.25rem;
+  padding: 0 calc(var(--space) * 1.5) 0 calc(var(--space) * 5);
+  border: 1px solid rgba(255, 100, 54, 0.35);
+  border-radius: var(--radius-full);
+  background: rgba(14, 14, 18, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #fff;
+  opacity: 0;
+  translate: -50% 160%;
+  transition: translate var(--duration-slow) var(--ease-brand), opacity var(--duration-base) var(--ease-brand);
+}
+
+.sync-dock[data-visible] {
+  opacity: 1;
+  translate: -50% 0;
+}
+
+.sync-dock-live {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--space) * 2);
+  white-space: nowrap;
+}
+
+.sync-dock-timer {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space) * 1.5);
+  color: var(--color-stone);
+  font-size: 10px;
+}
+
+.sync-dock-bar {
+  display: block;
+  width: 6rem;
+  height: 3px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.sync-dock-fill {
+  display: block;
+  height: 100%;
+  background: var(--color-ember-orange);
+  transform-origin: 0 50%;
+  animation: countdown var(--countdown, 30s) linear both;
+}
+
+.sync-dock-refresh {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: none;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, #ff6436, #e04a1c);
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: scale var(--duration-fast) var(--ease-brand);
+}
+
+.sync-dock-refresh:active { scale: .92; }
+.sync-dock-refresh[data-spinning] { animation: spin-once .6s var(--ease-brand); }
+
+.sync-dock-refresh:focus-visible {
+  outline: 2px solid var(--color-ember-orange);
+  outline-offset: 3px;
+}
+
+/* Cards: corner CTA, live ripple, score pop, then pointer tilt and spotlight. */
+.lg-live-page .game-card {
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(var(--lift, 0px));
+}
+
+.lg-live-page .game-card-header { position: relative; }
+
+.lg-live-page .expand-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--space) * 2);
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  color: #fff;
+}
+
+.lg-live-page .expand-btn:hover {
+  background: none;
+  box-shadow: none;
+  transform: none;
+}
+
+.cta-label {
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 100, 54, 0.4);
+  border-radius: var(--radius-full);
+  background: rgba(255, 100, 54, 0.12);
+  transition: opacity var(--duration-base) var(--ease-brand), translate var(--duration-base) var(--ease-brand);
+}
+
+.cta-arrow {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, #ff6436, #e04a1c);
+  font-size: .9rem;
+  rotate: -45deg;
+  transition: rotate var(--duration-base) var(--ease-brand), scale var(--duration-fast) var(--ease-brand);
+}
+
+.game-card-link:hover .cta-arrow,
+.game-card-link:focus-visible .cta-arrow { rotate: 0deg; }
+
+.game-card-link:active .cta-arrow { scale: .9; }
+
+.game-card-link:focus-visible { outline: none; }
+
+.game-card-link:focus-visible .game-card {
+  outline: 2px solid var(--color-ember-orange);
+  outline-offset: 3px;
+}
+
+.lg-live-page .game-card.live .pulse-dot {
+  position: relative;
+}
+
+.lg-live-page .game-card.live .pulse-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #ff3b30;
+  animation: ripple 2s var(--ease-brand) infinite;
+}
+
+[data-score-pop] {
+  display: inline-block;
+  animation: score-pop .7s var(--ease-brand);
+}
+
+.lg-live-page .game-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 100, 54, 0.16), transparent 60%);
+  opacity: 0;
+  transition: opacity var(--duration-base) var(--ease-brand);
+}
+
+/* Pointer-only play: the hover reveal of the CTA label, tilt lift, spotlight and orbit drift.
+   Touch devices keep the label visible and skip the rest. */
+@media (hover: hover) and (pointer: fine) {
+  .cta-label {
+    opacity: 0;
+    translate: 8px 0;
+  }
+
+  .game-card-link:hover .cta-label,
+  .game-card-link:focus-visible .cta-label {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  .lg-live-page .game-card-link:hover .game-card { --lift: -6px; }
+  .lg-live-page .game-card-link:hover .game-card::after { opacity: 1; }
+
+  .lg-hero:hover .orbit-drift { translate: var(--hx, 0) var(--hy, 0); }
+  .orbit-chip:hover { border-color: var(--color-ember-orange); }
+
+  .lg-ticker:hover .ticker-track { animation-play-state: paused; }
+  .ticker-item:hover .ticker-matchup { color: var(--color-ember-orange); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Entrances and loops stop; state changes still show, just without movement. */
+  .lg-title-word,
+  .stat-tick,
+  .orbit-chip,
+  .ticker-track,
+  [data-score-pop],
+  .sync-dock-refresh[data-spinning],
+  .lg-live-page .game-card.live .pulse-dot::after {
+    animation: none !important;
+  }
+
+  .lg-live-page .game-card { transform: none; }
+  .lg-ticker { overflow-x: auto; }
+  .sync-dock,
+  .orbit-drift { transition-property: opacity; }
 }

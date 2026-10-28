@@ -79,6 +79,19 @@ For segmented tabs (Today / Upcoming on Live Games).
 
 Persistent chrome keeps a constant height regardless of its text: the hero meta row (last sync time, refresh button), the tab bar, and the pagination bar. Status text is a single line (`white-space: nowrap; overflow: hidden; text-overflow: ellipsis`) with a reserved `min-height`. Changing "3 LIVE" to "4 LIVE" or a new sync time must not move anything around it.
 
+## 7. Interaction layer
+
+Scroll reveals alone are not enough: pages should also respond to the pointer and to live data. Shared keyframes live in `tokens.css` (`rise`, `tick-in`, `appear`, `float`, `marquee`, `countdown`, `score-pop`, `ripple`, `spin-once`); pages choose where to use them.
+
+- **Entrance choreography, once per load.** Display headings split into words that `rise` in with a 90ms stagger.
+- **Data-driven motion.** Motion happens when the data changes, not on a timer. A stat value is keyed by its value, so it `tick-in`s only when it changes. A score that changed since the last fetch gets a fresh key and `score-pop`s. Compute what changed in a pure helper.
+- **Floating chips (creative placement).** Small live-data chips are anchored to a side edge of a heading (`left/right: calc(100% + gap)`), never placed by percentage, so they can't cover the text at any width. Use three nested layers so each motion owns one property: the slot places and tilts, the drift layer moves on hover, the chip floats. Desktop only (1100px and up).
+- **Floating dock.** Controls the user needs while scrolling move into a fixed pill that slides up once the hero leaves the viewport (an IntersectionObserver on the hero). When hidden, it is `inert` and `aria-hidden`.
+- **Pointer play on cards.** Tilt (at most 4°) and a spotlight follow the pointer through CSS variables written in `requestAnimationFrame`, with no React state per move. Primary actions sit in a corner as an arrow button whose label slides out on hover; touch devices always show the label.
+- **Ticker.** A marquee of live data, with two copies on the track so translating by -50% loops seamlessly. It pauses on hover and scrolls by hand under reduced motion.
+- **Decorative duplicates of real controls** (chips, ticker) are `aria-hidden` with `tabIndex={-1}`. The original control (the card) stays the accessible path.
+- **Gating.** Hover effects sit inside `@media (hover: hover) and (pointer: fine)`. Every entrance and loop has a `prefers-reduced-motion: reduce` rule that removes the movement but keeps the state visible.
+
 ## Phase 1 scope: Live Games (`/games`)
 
 Files in scope: `src/pages/LiveGames.jsx`, `src/pages/LiveGames.css`, new `src/styles/tokens.css`, new `src/components/ScrollReveal.jsx`, new `src/components/PillNav.jsx`, their pure helpers in `src/utils/`, `src/main.jsx` (import tokens only), and new tests in `frontend/tests/`.

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { formatGameTime, STATUS_FINAL, STATUS_LIVE, STATUS_SCHEDULED } from '../utils/liveGames';
 
-export function GameMatchup({ game }) {
+export function GameMatchup({ game, scoreChanges }) {
   const status = Number(game.status);
   const isLive = status === STATUS_LIVE;
   const isFinal = status === STATUS_FINAL;
@@ -21,6 +21,8 @@ export function GameMatchup({ game }) {
         {['away', 'home'].map((side, index) => {
           const team = game[side];
           const opponent = game[side === 'away' ? 'home' : 'away'];
+          // A changed score gets a new key so the element remounts and replays its pop animation.
+          const popped = Boolean(scoreChanges?.[side]);
           return (
             <div key={side} className="matchup-team-wrap">
               <div className={`team-block ${!isFuture && team.score > opponent.score ? 'winning' : ''}`}>
@@ -31,7 +33,8 @@ export function GameMatchup({ game }) {
                 )}
                 <span className="team-tricode">{team.tricode}</span>
                 {team.record && <span className="team-record">{team.record}</span>}
-                <span data-numeric className={`team-score ${isFuture ? 'score-future' : ''}`}>
+                <span data-numeric className={`team-score ${isFuture ? 'score-future' : ''}`}
+                  key={popped ? `${side}-${team.score}` : side} data-score-pop={popped ? '' : undefined}>
                   {isFuture ? '–' : team.score}
                 </span>
               </div>
