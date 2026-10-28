@@ -31,7 +31,7 @@ export function GameMatchup({ game }) {
                 )}
                 <span className="team-tricode">{team.tricode}</span>
                 {team.record && <span className="team-record">{team.record}</span>}
-                <span className={`team-score ${isFuture ? 'score-future' : ''}`}>
+                <span data-numeric className={`team-score ${isFuture ? 'score-future' : ''}`}>
                   {isFuture ? '–' : team.score}
                 </span>
               </div>

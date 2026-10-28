@@ -4,14 +4,18 @@ import { buildApiUrl } from '../config/api';
 import { GameMatchup } from '../components/GameBoxScore';
 import { LIVE_GAMES_REFRESH_MS, STATUS_LIVE, getGameDetailPath } from '../utils/liveGames';
 import { buildUpcomingGamesEndpoint, getUpcomingPaginationView, normalizeUpcomingGamesPage } from '../utils/upcomingGamesPagination';
+import PillNav from '../components/PillNav';
+import ScrollReveal from '../components/ScrollReveal';
+import { getLiveGamesStats } from '../utils/liveGamesStats';
+import { getRevealDelay } from '../utils/scrollReveal';
 import './LiveGames.css';
 
 const GAME_STATUS_ORDER = { 2: 0, 1: 1, 3: 2 };
 
-function GameCard({ game }) {
+function GameCard({ game, index }) {
   const isLive = Number(game.status) === STATUS_LIVE;
   return (
-    <Link to={getGameDetailPath(game.gameId)} className="game-card-link">
+    <Link to={getGameDetailPath(game.gameId)} className="game-card-link" data-reveal data-defer style={{ '--reveal-delay': getRevealDelay(index) }}>
       <article className={`game-card ${isLive ? 'live' : Number(game.status) === 3 ? 'final' : 'future'}`}>
         {isLive && <div className="live-pulse-ring" />}
         <div className="game-card-header">
@@ -73,38 +77,40 @@ export default function LiveGames() {
   );
   const pagination = getUpcomingPaginationView({ page: upcomingPage, totalPages: upcomingTotalPages, totalGames: upcomingTotalGames, loading: upcomingLoading });
   const games = tab === 'today' ? displayToday : upcomingGames;
+  const stats = getLiveGamesStats({ todayGames, upcomingTotalGames, lastUpdated, loading });
+  const revealKey = `${tab}:${upcomingPage}:${loading}:${games.map(g => g.gameId).join(',')}`;
 
-  return <div className="lg-page">
-    <div className="lg-hero">
+  return <div className="lg-page lg-live-page">
+    <section className="lg-hero">
       <div className="stats-nav-top">
         <Link to="/" className="back-to-home">← HOME</Link>
-        <span className="cv-section-badge">REAL-TIME ARENA</span>
+        <span className="cv-section-badge" data-slot="eyebrow">REAL-TIME ARENA</span>
       </div>
-      <h1 className="lg-title">NBA <span className="text-ember">LIVE SLATE</span></h1>
-      <p className="lg-subtitle">Live game scores, active box scores &amp; possession stats</p>
-      {lastUpdated && (
-        <div className="last-updated">
-          <span>LAST SYNC: {lastUpdated.toLocaleTimeString()}</span>
-          <button className="refresh-btn" onClick={fetchGames}>↻ REFRESH</button>
-        </div>
-      )}
-    </div>
-    <div className="lg-tabs">
-      <button className={`lg-tab ${tab === 'today' ? 'active' : ''}`} onClick={() => setTab('today')}>
-        TODAY'S SLATE
-        {liveGames.length > 0 && <span className="live-badge">{liveGames.length} LIVE</span>}
-      </button>
-      <button className={`lg-tab ${tab === 'upcoming' ? 'active' : ''}`} onClick={() => setTab('upcoming')}>
-        UPCOMING GAMES
-        {upcomingTotalGames > 0 && <span className="count-badge">{upcomingTotalGames}</span>}
-      </button>
-    </div>
-    <div className="lg-content">
+      <h1 className="lg-title" data-slot="display-heading">NBA <span className="text-ember">LIVE SLATE</span></h1>
+      <p className="lg-subtitle" data-slot="lead">Live game scores, active box scores &amp; possession stats</p>
+      <dl className="lg-stat-strip" data-slot="stat-strip">
+        {stats.map(({ key, label, value }) => <div key={key}><dt>{label}</dt><dd data-numeric>{value}</dd></div>)}
+      </dl>
+      <div className="last-updated lg-meta-row">
+        {lastUpdated && (
+          <>
+            <span data-numeric className="lg-meta-text">LAST SYNC: {lastUpdated.toLocaleTimeString()}</span>
+            <button className="refresh-btn" onClick={fetchGames}>↻ REFRESH</button>
+          </>
+        )}
+      </div>
+    </section>
+    <PillNav className="lg-tabs" label="Game lists" idPrefix="lg" panelId="lg-panel" value={tab} onChange={setTab}
+      items={[
+        { id: 'today', label: <><span className="lg-tab-label">TODAY'S SLATE</span>{liveGames.length > 0 && <span data-numeric className="live-badge">{liveGames.length} LIVE</span>}</> },
+        { id: 'upcoming', label: <><span className="lg-tab-label">UPCOMING GAMES</span>{upcomingTotalGames > 0 && <span data-numeric className="count-badge">{upcomingTotalGames}</span>}</> },
+      ]} />
+    <div className="lg-content" id="lg-panel" role="tabpanel" aria-labelledby={`lg-tab-${tab}`}>
       {loading ? (
         <div className="lg-loading"><div className="spinner" /><p>LOADING REAL-TIME SLATE...</p></div>
       ) : games.length === 0 ? (
         <div className="no-games">
-          {tab === 'today' && <div className="trend-empty-radar" style={{ margin: '0 auto 1.5rem' }}><div className="trend-empty-dot" /></div>}
+          {tab === 'today' && <div className="trend-empty-radar" data-defer style={{ margin: '0 auto 1.5rem' }}><div className="trend-empty-dot" /></div>}
           <h3>{tab === 'today' ? 'NO LIVE GAMES SCHEDULED TODAY' : 'NO UPCOMING GAMES FOUND'}</h3>
           {tab === 'today' && (
             <>
@@ -115,12 +121,12 @@ export default function LiveGames() {
         </div>
       ) : (
         <>
-          <div className="games-grid">{games.map(game => <GameCard key={game.gameId} game={game} />)}</div>
+          <div className="games-grid" data-reveal="fade">{games.map((game, index) => <GameCard key={game.gameId} game={game} index={index} />)}</div>
           {tab === 'upcoming' && (
             <nav className="lg-pagination" aria-label="Upcoming games pages">
               <div className="lg-pagination-controls">
                 <button className="lg-pagination-btn" disabled={pagination.previousDisabled} onClick={() => setUpcomingPage(page => Math.max(1, page - 1))}>Previous Page</button>
-                <div className="lg-pagination-info"><div className="lg-page-label">{pagination.pageLabel}</div><div className="lg-page-count">{pagination.countLabel}</div></div>
+                <div className="lg-pagination-info"><div data-numeric className="lg-page-label">{pagination.pageLabel}</div><div data-numeric className="lg-page-count">{pagination.countLabel}</div></div>
                 <button className="lg-pagination-btn" disabled={pagination.nextDisabled} onClick={() => setUpcomingPage(page => Math.min(upcomingTotalPages, page + 1))}>Next Page</button>
               </div>
             </nav>
@@ -128,5 +134,6 @@ export default function LiveGames() {
         </>
       )}
     </div>
+    <ScrollReveal scanKey={revealKey} />
   </div>;
 }

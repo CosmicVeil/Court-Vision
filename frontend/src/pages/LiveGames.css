@@ -62,7 +62,7 @@
   font-weight: 700;
   letter-spacing: 1px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform var(--duration-base) var(--ease-brand), opacity var(--duration-base) var(--ease-brand);
 }
 
 .refresh-btn:hover {
@@ -75,19 +75,28 @@
 /* ---------- Tabs ---------- */
 .lg-tabs {
   display: flex;
-  justify-content: center;
-  gap: 12px;
-  margin-bottom: 36px;
-  flex-wrap: wrap;
+  width: max-content;
+  max-width: 100%;
+  min-height: 54px;
+  gap: calc(var(--space));
+  margin: 0 auto 36px;
+  padding: calc(var(--space));
+  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
+  border: 1px solid rgba(255, 100, 54, 0.18);
+  border-radius: var(--radius-full, 9999px);
+  flex-wrap: nowrap;
 }
 
 .lg-tab {
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-height: 44px;
   gap: 8px;
   padding: 10px 24px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 100, 54, 0.18);
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: var(--radius-full, 9999px);
   color: var(--color-stone, #8e8c94);
   font-family: var(--font-mono, monospace);
@@ -95,25 +104,29 @@
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
+  white-space: nowrap;
   cursor: pointer;
-  transition: all 0.2s ease;
 }
 
-.lg-tab:hover {
-  color: #fff;
-  border-color: rgba(255, 100, 54, 0.4);
-  background: rgba(255, 100, 54, 0.1);
+@media (hover: hover) and (pointer: fine) {
+  .lg-tab:hover { color: #fff; }
 }
 
-.lg-tab.active {
-  background: linear-gradient(135deg, #ff6436, #e04a1c);
-  border-color: transparent;
+.lg-tab.active,
+.lg-tab[data-indicator-target] {
   color: #fff;
-  font-weight: 800;
-  box-shadow: 0 0 20px rgba(255, 100, 54, 0.45);
+}
+
+.lg-tab.active { font-weight: 800; }
+
+.lg-tab-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .live-badge {
+  flex-shrink: 0;
   padding: 2px 8px;
   background: #ff3b30;
   color: #fff;
@@ -122,6 +135,8 @@
   font-weight: 800;
   letter-spacing: 1px;
   animation: pulseLiveBadge 1.5s infinite;
+  min-width: calc(7ch + var(--space) * 6);
+  text-align: center;
 }
 
 @keyframes pulseLiveBadge {
@@ -130,11 +145,14 @@
 }
 
 .count-badge {
+  flex-shrink: 0;
   padding: 2px 8px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
   font-size: 9px;
   font-weight: 800;
+  min-width: calc(3ch + var(--space) * 4);
+  text-align: center;
 }
 
 /* ---------- Content & Grid ---------- */
@@ -160,6 +178,7 @@
 }
 
 .lg-pagination-controls {
+  max-width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -186,7 +205,7 @@
   letter-spacing: 1.5px;
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform var(--duration-base) var(--ease-brand), opacity var(--duration-base) var(--ease-brand);
   white-space: nowrap;
 }
 
@@ -207,7 +226,11 @@
 }
 
 .lg-pagination-info {
-  min-width: 200px;
+  width: 34ch;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  max-width: 100%;
+  min-width: 0;
   text-align: center;
 }
 
@@ -217,12 +240,20 @@
   font-family: var(--font-mono, monospace);
   font-size: 12px;
   font-weight: 700;
+  min-height: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .lg-page-count {
   color: var(--color-stone, #8e8c94);
   font-family: var(--font-mono, monospace);
   font-size: 11px;
+  min-height: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .lg-loading {
@@ -581,3 +612,82 @@
 .lg-detail-card { max-width: 1100px; margin: 0 auto; }
 .lg-detail-page .lg-hero { padding-bottom: 28px; }
 .matchup-team-wrap { display: contents; }
+
+/* Phase 1: list-page overrides leave the shared game detail styling intact. */
+.lg-live-page .lg-title {
+  font-size: clamp(var(--text-display-sm), 5vw, var(--text-display-md));
+  letter-spacing: var(--tracking-display);
+  line-height: var(--leading-display);
+}
+
+.lg-live-page .lg-stat-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: calc(var(--space) * 6);
+  max-width: 48rem;
+  margin: calc(var(--space) * 8) auto calc(var(--space) * 6);
+}
+
+.lg-meta-row {
+  display: flex;
+  justify-content: center;
+  min-height: 32px;
+  max-width: 100%;
+}
+
+.lg-meta-text {
+  min-width: 0;
+  min-height: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lg-live-page .refresh-btn { flex-shrink: 0; }
+
+.lg-live-page [data-slot="pill-indicator"] {
+  background: linear-gradient(135deg, #ff6436, #e04a1c);
+  box-shadow: 0 0 20px rgba(255, 100, 54, 0.45);
+}
+
+.lg-live-page .game-card {
+  transition: transform var(--duration-base) var(--ease-brand);
+}
+
+.lg-live-page .expand-btn {
+  transition: transform var(--duration-base) var(--ease-brand), opacity var(--duration-base) var(--ease-brand);
+}
+
+@media (max-width: 800px) {
+  .lg-live-page .lg-stat-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lg-live-page .lg-stat-strip > div:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .lg-tabs {
+    width: 100%;
+  }
+
+  .lg-tab {
+    flex: 1 1 0;
+    flex-direction: column;
+    height: 76px;
+    min-width: 0;
+    gap: calc(var(--space));
+    padding: 10px 8px;
+    letter-spacing: .5px;
+  }
+
+  .lg-tab-label {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 14px;
+    min-height: 28px;
+  }
+}
