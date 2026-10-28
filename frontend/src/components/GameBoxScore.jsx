@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { formatGameTime, STATUS_FINAL, STATUS_LIVE, STATUS_SCHEDULED } from '../utils/liveGames';
+import PillNav from './PillNav';
+import { getColumnLeaders } from '../utils/gameDetail';
+import { formatGameTime, formatPeriod, STATUS_FINAL, STATUS_LIVE, STATUS_SCHEDULED } from '../utils/liveGames';
 
 export function GameMatchup({ game, scoreChanges }) {
   const status = Number(game.status);
@@ -14,7 +16,7 @@ export function GameMatchup({ game, scoreChanges }) {
     <>
       <div className={`status-badge ${isLive ? 'badge-live' : isFinal ? 'badge-final' : 'badge-upcoming'}`}>
         {isLive && <span className="pulse-dot" />}
-        {isLive ? `Q${game.period} · ${game.gameClock || ''}` : game.statusText}
+        {isLive ? `${formatPeriod(game.period)} · ${game.gameClock || ''}` : game.statusText}
         {tipoffTime && <span className="game-tipoff-time"> · {tipoffTime}</span>}
       </div>
       <div className="matchup">
@@ -80,17 +82,21 @@ export function QuarterTable({ home, away }) {
   );
 }
 
-function PlayerRow({ player, onClick, isFuture }) {
+function PlayerRow({ player, onClick, isFuture, leaders = {}, index = 0 }) {
+  // The best value in each column for this team gets a marker.
+  const lead = key => (!isFuture && leaders[key] !== null && leaders[key] !== undefined && Number(player[key]) === leaders[key] ? 'is-leader' : '');
   return (
-    <tr className={`player-row ${player.oncourt ? 'oncourt' : ''}`} onClick={() => onClick(player)}>
+    <tr className={`player-row bs-row ${player.oncourt ? 'oncourt' : ''}`} onClick={() => onClick(player)}
+      style={{ '--i': Math.min(index, 12) }}>
       <td className="player-name-cell">
         {player.oncourt && <span className="live-dot" />}
         <span className="pname">{player.name}</span>
         <span className="ppos">{player.position}</span>
       </td>
       <td>{isFuture ? '–' : player.min}</td>
-      <td className="stat-highlight">{player.pts}</td>
-      <td>{player.reb}</td><td>{player.ast}</td><td>{player.stl}</td><td>{player.blk}</td>
+      <td className={`stat-highlight ${lead('pts')}`}>{player.pts}</td>
+      <td className={lead('reb')}>{player.reb}</td><td className={lead('ast')}>{player.ast}</td>
+      <td className={lead('stl')}>{player.stl}</td><td className={lead('blk')}>{player.blk}</td>
       {isFuture ? (
         <>
           <td className="season-stat">{player.season_ppg ?? '–'}</td>
@@ -115,21 +121,20 @@ export function BoxScore({ game, onPlayerClick }) {
   const players = game.players?.[tab] || [];
   const starters = players.slice(0, 5);
   const bench = players.slice(5);
+  const leaders = getColumnLeaders(players);
 
   useEffect(() => setTab('home'), [game.gameId]);
 
   return (
     <div className="boxscore">
-      <div className="bs-tabs">
-        {['away', 'home'].map(side => (
-          <button key={side} className={`bs-tab ${tab === side ? 'active' : ''}`} onClick={() => setTab(side)}>
-            {game[side].logo && <img src={game[side].logo} alt="" className="tab-logo" />}
-            {game[side].city} {game[side].name}
-          </button>
-        ))}
-      </div>
+      <PillNav className="bs-tabs" tabClassName="bs-tab" label="Box score team" idPrefix="bs" panelId="bs-panel"
+        value={tab} onChange={setTab}
+        items={['away', 'home'].map(side => ({
+          id: side,
+          label: <>{game[side].logo && <img src={game[side].logo} alt="" className="tab-logo" />}{game[side].city} {game[side].name}</>,
+        }))} />
       {isFuture && <div className="future-note">Season averages shown &nbsp;·&nbsp; Game stats update at tip-off</div>}
-      <div className="player-table-wrap">
+      <div className="player-table-wrap" id="bs-panel" role="tabpanel" aria-labelledby={`bs-tab-${tab}`}>
         <table className="player-table">
           <thead>
             <tr>
@@ -141,11 +146,13 @@ export function BoxScore({ game, onPlayerClick }) {
               )}
             </tr>
           </thead>
-          <tbody>
+          {/* Keyed by team so switching tabs remounts the rows and replays their staggered entrance;
+              a background refresh keeps the key, so rows don't re-animate every 30 seconds. */}
+          <tbody key={tab}>
             {starters.length > 0 && <tr className="group-header"><td colSpan={12}>{isFuture ? 'Roster (by PPG)' : 'Starters'}</td></tr>}
-            {starters.map(player => <PlayerRow key={player.personId || player.name} player={player} onClick={onPlayerClick} isFuture={isFuture} />)}
+            {starters.map((player, index) => <PlayerRow key={player.personId || player.name} player={player} onClick={onPlayerClick} isFuture={isFuture} leaders={leaders} index={index} />)}
             {bench.length > 0 && <tr className="group-header"><td colSpan={12}>Bench</td></tr>}
-            {bench.map(player => <PlayerRow key={player.personId || player.name} player={player} onClick={onPlayerClick} isFuture={isFuture} />)}
+            {bench.map((player, index) => <PlayerRow key={player.personId || player.name} player={player} onClick={onPlayerClick} isFuture={isFuture} leaders={leaders} index={index + 5} />)}
             {players.length === 0 && <tr><td colSpan={12} className="no-data">No player data available</td></tr>}
           </tbody>
         </table>

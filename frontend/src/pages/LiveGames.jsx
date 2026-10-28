@@ -187,7 +187,7 @@ export default function LiveGames() {
     </div>
     <ScrollReveal scanKey={revealKey} />
     {lastUpdated && (
-      <SyncDock watchRef={heroRef} liveCount={liveGames.length} lastUpdated={lastUpdated}
+      <SyncDock watchRef={heroRef} label={`${liveGames.length} LIVE`} live={liveGames.length > 0} lastUpdated={lastUpdated}
         intervalMs={LIVE_GAMES_REFRESH_MS} onRefresh={fetchGames} />
     )}
   </div>;

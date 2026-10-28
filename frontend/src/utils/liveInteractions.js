@@ -1,4 +1,4 @@
-import { STATUS_LIVE, STATUS_SCHEDULED } from './liveGames.js';
+import { STATUS_LIVE, STATUS_SCHEDULED, formatPeriod } from './liveGames.js';
 
 // Hand-placed positions around the hero heading: x/y place the chip, r tilts it,
 // hx/hy is where it drifts when the hero is hovered.
@@ -47,7 +47,7 @@ function describe(game) {
   const matchup = status === STATUS_SCHEDULED
     ? `${away} vs ${home}`
     : `${away} ${game.away?.score ?? 0} – ${game.home?.score ?? 0} ${home}`;
-  const label = status === STATUS_LIVE ? `Q${game.period} ${game.gameClock || ''}`.trim() : game.statusText || '';
+  const label = status === STATUS_LIVE ? `${formatPeriod(game.period)} ${game.gameClock || ''}`.trim() : game.statusText || '';
   return { gameId: game.gameId, live: status === STATUS_LIVE, matchup, status: label };
 }
 
