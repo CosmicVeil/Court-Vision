@@ -53,7 +53,23 @@
 
 /* ---------- Reset & Global ---------- */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
+
+/* Scrollbars in the ember theme (tokens.css stays colour-free). The standard properties cover
+   Firefox and Chrome 121+; the ::-webkit- rules cover Safari. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 100, 54, 0.4) transparent;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: var(--radius-full);
+  background: rgba(255, 100, 54, 0.4) padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 100, 54, 0.7); }
+::-webkit-scrollbar-corner { background: transparent; }
 
 body {
   background: var(--color-onyx);

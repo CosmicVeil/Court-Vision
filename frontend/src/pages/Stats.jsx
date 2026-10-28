@@ -1,32 +1,52 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { isFavorite, toggleFavorite, getFavorites } from '../utils/favorites';
 import { isAuthenticated } from '../utils/auth';
 import { buildApiUrl } from '../config/api';
+import { scrollToIfAbove } from '../utils/scroll';
 import { samePlayerName } from '../utils/playerNames';
+import PlayerCard from '../components/PlayerCard';
 import PlayerStatsModal from '../components/PlayerStatsModal';
+import useFlip from '../hooks/useFlip';
+import useListQuery from '../hooks/useListQuery';
+import ScrollReveal from '../components/ScrollReveal';
+import { getSeasonCardStats } from '../utils/playerCard';
 import './Stats.css';
 
+// Everything the URL may carry for this list, with its default (only non-defaults show up).
+const LIST_DEFAULTS = { q: '', team: '', position: '', season: '', sort: 'name', order: 'asc', page: 1, view: 'table' };
+const LIST_ALLOWED = {
+  sort: ['name', 'team', 'position', 'ppg', 'apg', 'rpg', 'spg', 'bpg', 'fg_pct', 'fg3_pct', 'ft_pct', 'games'],
+  order: ['asc', 'desc'],
+  season: ['2020', '2021', '2022', '2023', '2024', '2025', '2026'],
+  view: ['table', 'cards'],
+};
+
 const Stats = () => {
+  const [query, updateQuery] = useListQuery(LIST_DEFAULTS, LIST_ALLOWED);
+  const { q: searchTerm, team: selectedTeam, position: selectedPosition, season: selectedYear,
+    sort: sortBy, order: sortOrder, page: currentPage, view: viewMode } = query;
+  // The search box keeps its own draft so typing never waits on a router update.
+  const [searchDraft, setSearchDraft] = useState(searchTerm);
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTeam, setSelectedTeam] = useState('');
-  const [selectedPosition, setSelectedPosition] = useState('');
   const [teams, setTeams] = useState([]);
   const [positions, setPositions] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalPlayers, setTotalPlayers] = useState(0);
-  const [sortBy, setSortBy] = useState('name');
-  const [sortOrder, setSortOrder] = useState('asc');
-  const [viewMode, setViewMode] = useState('table'); // 'table' or 'cards'
   const [favorites, setFavorites] = useState(new Set()); // Track favorites for re-renders
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [loadingPlayer, setLoadingPlayer] = useState(false);
-  const [selectedYear, setSelectedYear] = useState('');
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const gridRef = useRef(null);
+  const resultsRef = useRef(null);
+  useFlip(gridRef);
+
+  const goToPage = (page) => {
+    updateQuery({ page });
+    scrollToIfAbove(resultsRef.current);
+  };
 
 
 
@@ -115,10 +135,17 @@ const Stats = () => {
   useEffect(() => {
     fetchTeams();
     fetchPositions();
-    fetchPlayers();
+  }, []);
+
+  // Each change aborts the previous request, so a slow older response can never overwrite a
+  // newer one (last request wins).
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchPlayers(controller.signal);
+    return () => controller.abort();
   }, [currentPage, searchTerm, selectedTeam, selectedPosition, selectedYear, sortBy, sortOrder]);
 
-  const fetchPlayers = async () => {
+  const fetchPlayers = async (signal) => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -133,17 +160,19 @@ const Stats = () => {
       if (selectedPosition) params.append('position', selectedPosition);
       if (selectedYear) params.append('year', selectedYear);
 
-      const response = await fetch(buildApiUrl(`players?${params}`));
+      const response = await fetch(buildApiUrl(`players?${params}`), { signal });
       if (!response.ok) throw new Error('Failed to fetch players');
       
       const data = await response.json();
+      if (signal.aborted) return;
       setPlayers(data.players || []);
       setTotalPages(data.pagination?.total_pages || 1);
       setTotalPlayers(data.pagination?.total || 0);
     } catch (err) {
+      if (signal.aborted) return;
       setError(err.message);
     } finally {
-      setLoading(false);
+      if (!signal.aborted) setLoading(false);
     }
   };
 
@@ -172,31 +201,25 @@ const Stats = () => {
   };
 
   const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
-    setCurrentPage(1);
+    setSearchDraft(e.target.value);
+    updateQuery({ q: e.target.value, page: 1 });
   };
 
   const handleTeamFilter = (e) => {
-    setSelectedTeam(e.target.value);
-    setCurrentPage(1);
+    updateQuery({ team: e.target.value, page: 1 });
   };
 
   const handlePositionFilter = (e) => {
-    setSelectedPosition(e.target.value);
-    setCurrentPage(1);
+    updateQuery({ position: e.target.value, page: 1 });
   };
 
   const handleYearFilter = (e) => {
-    setSelectedYear(e.target.value);
-    setCurrentPage(1);
+    updateQuery({ season: e.target.value, page: 1 });
   };
 
   const clearFilters = () => {
-    setSearchTerm('');
-    setSelectedTeam('');
-    setSelectedPosition('');
-    setSelectedYear('');
-    setCurrentPage(1);
+    setSearchDraft('');
+    updateQuery({ q: '', team: '', position: '', season: '', page: 1 });
   };
 
   // Players arrive pre-sorted from the backend
@@ -204,17 +227,13 @@ const Stats = () => {
 
   const handleSort = (newSortBy) => {
     if (sortBy === newSortBy) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+      updateQuery({ order: sortOrder === 'asc' ? 'desc' : 'asc', page: 1 });
     } else {
-      setSortBy(newSortBy);
       // Default descending for stats (highest first), ascending for text fields
-      if (newSortBy === 'name' || newSortBy === 'team' || newSortBy === 'position') {
-        setSortOrder('asc');
-      } else {
-        setSortOrder('desc');
-      }
+      const isText = newSortBy === 'name' || newSortBy === 'team' || newSortBy === 'position';
+      updateQuery({ sort: newSortBy, order: isText ? 'asc' : 'desc', page: 1 });
     }
-    setCurrentPage(1);
+    scrollToIfAbove(resultsRef.current);
   };
 
   if (loading && players.length === 0) {
@@ -240,6 +259,8 @@ const Stats = () => {
 
   return (
     <div className="stats-container">
+      {/* Rescans when the card view opens or a new page of players arrives. */}
+      <ScrollReveal scanKey={viewMode === 'cards' ? players : null} />
       <div className="stats-header">
         <div className="stats-nav-top">
           <span className="cv-section-badge">PLAYER DATABASE</span>
@@ -254,7 +275,7 @@ const Stats = () => {
           <input
             type="text"
             placeholder="Search players..."
-            value={searchTerm}
+            value={searchDraft}
             onChange={handleSearch}
             className="search-input"
           />
@@ -297,17 +318,17 @@ const Stats = () => {
       </div>
 
       {/* View Mode and Sorting */}
-      <div className="controls-section">
+      <div className="controls-section" ref={resultsRef}>
         <div className="view-mode-toggle">
           <button 
             className={`view-btn ${viewMode === 'table' ? 'active' : ''}`}
-            onClick={() => setViewMode('table')}
+            onClick={() => updateQuery({ view: 'table' })}
           >
             Table View
           </button>
           <button 
             className={`view-btn ${viewMode === 'cards' ? 'active' : ''}`}
-            onClick={() => setViewMode('cards')}
+            onClick={() => updateQuery({ view: 'cards' })}
           >
             Card View
           </button>
@@ -364,11 +385,15 @@ const Stats = () => {
             Games {sortBy === 'games' && (sortOrder === 'asc' ? '↑' : '↓')}
           </button>
         </div>
+        {/* Announces reloads to screen readers too; the dimmed results alone are visual only. */}
+        <span data-slot="results-status" role="status" data-numeric>
+          {loading ? 'Updating…' : `${totalPlayers} players`}
+        </span>
       </div>
 
       {/* Players Display */}
       {viewMode === 'table' ? (
-        <div className="table-container">
+        <div className="table-container" data-results aria-busy={loading}>
           <div className="table-wrapper">
             <table className="players-table">
               <thead>
@@ -454,106 +479,52 @@ const Stats = () => {
           </div>
         </div>
       ) : (
-        <div className="players-grid">
-          {sortedPlayers.map(player => (
-            <div key={player.id} className="player-card stats-card-clickable" onClick={() => handlePlayerClick(player)}>
-              <div className="player-header">
-                <div className="player-header-top">
-                  <h3 className="player-name">{player.name}</h3>
-                  <button
-                    className={`favorite-btn-card ${favorites.has(player.id) ? 'favorited' : ''}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleFavoriteToggle(player);
-                    }}
-                    title={favorites.has(player.id) ? 'Remove from favorites' : 'Add to favorites'}
-                  >
-                    {favorites.has(player.id) ? 'FAVORITED' : 'ADD FAV'}
-                  </button>
-                </div>
-                <div className="player-team-position">
-                  <span className="team-badge">{player.team}</span>
-                  <span className="position-badge">{player.position}</span>
-                </div>
-              </div>
-              
-              <div className="player-info">
-                <div className="player-details">
-                  <span className="player-age">Age: {player.age}</span>
-                </div>
-              </div>
-
-              <div className="player-stats">
-                <h4>Current Season Stats</h4>
-                <div className="stats-grid">
-                  <div className="stat-item">
-                    <span className="stat-label">PPG</span>
-                    <span className="stat-value">{player.stats?.ppg_last?.toFixed(1) || '0.0'}</span>
-                  </div>
-                  <div className="stat-item">
-                    <span className="stat-label">APG</span>
-                    <span className="stat-value">{player.stats?.apg_last?.toFixed(1) || '0.0'}</span>
-                  </div>
-                  <div className="stat-item">
-                    <span className="stat-label">RPG</span>
-                    <span className="stat-value">{player.stats?.rpg_last?.toFixed(1) || '0.0'}</span>
-                  </div>
-                  <div className="stat-item">
-                    <span className="stat-label">SPG</span>
-                    <span className="stat-value">{player.stats?.spg_last?.toFixed(1) || '0.0'}</span>
-                  </div>
-                  <div className="stat-item">
-                    <span className="stat-label">BPG</span>
-                    <span className="stat-value">{player.stats?.bpg_last?.toFixed(1) || '0.0'}</span>
-                  </div>
-                  <div className="stat-item">
-                    <span className="stat-label">FG%</span>
-                    <span className="stat-value">{player.stats?.fg_pct_last?.toFixed(1) || '0.0'}%</span>
-                  </div>
-                  <div className="stat-item">
-                    <span className="stat-label">3P%</span>
-                    <span className="stat-value">{player.stats?.fg3_pct_last?.toFixed(1) || '0.0'}%</span>
-                  </div>
-                  <div className="stat-item">
-                    <span className="stat-label">FT%</span>
-                    <span className="stat-value">{player.stats?.ft_pct_last?.toFixed(1) || '0.0'}%</span>
-                  </div>
-                  <div className="stat-item">
-                    <span className="stat-label">Games</span>
-                    <span className="stat-value">{player.stats?.games_played || 0}</span>
+        <div className="pc-grid" ref={gridRef} data-results aria-busy={loading}>
+          {sortedPlayers.map((player, index) => {
+            const { main, extra } = getSeasonCardStats(player);
+            return (
+              <PlayerCard
+                key={player.id}
+                index={index}
+                player={player}
+                stats={main}
+                statsLabel="Current Season Stats"
+                extraStats={extra}
+                isFavorite={favorites.has(player.id)}
+                onToggleFavorite={() => handleFavoriteToggle(player)}
+                onOpen={() => handlePlayerClick(player)}
+                ctaLabel="Full profile"
+              >
+                <div className="player-trends">
+                  <h4>Performance Trends</h4>
+                  <div className="trends-grid">
+                    <div className="trend-item">
+                      <span className="trend-label">Consistency</span>
+                      <span className="trend-value consistency">{player.trends?.consistency_score?.toFixed(2) || '0.00'}</span>
+                    </div>
+                    <div className="trend-item">
+                      <span className="trend-label">PPG Trend</span>
+                      <span className={`trend-value ${(player.trends?.ppg_trend || 0) > 0 ? 'positive' : (player.trends?.ppg_trend || 0) < 0 ? 'negative' : 'neutral'}`}>
+                        {(player.trends?.ppg_trend || 0) > 0 ? '+' : ''}{player.trends?.ppg_trend?.toFixed(1) || '0.0'}
+                      </span>
+                    </div>
+                    <div className="trend-item">
+                      <span className="trend-label">APG Trend</span>
+                      <span className={`trend-value ${(player.trends?.apg_trend || 0) > 0 ? 'positive' : (player.trends?.apg_trend || 0) < 0 ? 'negative' : 'neutral'}`}>
+                        {(player.trends?.apg_trend || 0) > 0 ? '+' : ''}{player.trends?.apg_trend?.toFixed(1) || '0.0'}
+                      </span>
+                    </div>
+                    <div className="trend-item">
+                      <span className="trend-label">RPG Trend</span>
+                      <span className={`trend-value ${(player.trends?.rpg_trend || 0) > 0 ? 'positive' : (player.trends?.rpg_trend || 0) < 0 ? 'negative' : 'neutral'}`}>
+                        {(player.trends?.rpg_trend || 0) > 0 ? '+' : ''}{player.trends?.rpg_trend?.toFixed(1) || '0.0'}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-
-              <div className="player-trends">
-                <h4>Performance Trends</h4>
-                <div className="trends-grid">
-                  <div className="trend-item">
-                    <span className="trend-label">Consistency</span>
-                    <span className="trend-value consistency">{player.trends?.consistency_score?.toFixed(2) || '0.00'}</span>
-                  </div>
-                  <div className="trend-item">
-                    <span className="trend-label">PPG Trend</span>
-                    <span className={`trend-value ${(player.trends?.ppg_trend || 0) > 0 ? 'positive' : (player.trends?.ppg_trend || 0) < 0 ? 'negative' : 'neutral'}`}>
-                      {(player.trends?.ppg_trend || 0) > 0 ? '+' : ''}{player.trends?.ppg_trend?.toFixed(1) || '0.0'}
-                    </span>
-                  </div>
-                  <div className="trend-item">
-                    <span className="trend-label">APG Trend</span>
-                    <span className={`trend-value ${(player.trends?.apg_trend || 0) > 0 ? 'positive' : (player.trends?.apg_trend || 0) < 0 ? 'negative' : 'neutral'}`}>
-                      {(player.trends?.apg_trend || 0) > 0 ? '+' : ''}{player.trends?.apg_trend?.toFixed(1) || '0.0'}
-                    </span>
-                  </div>
-                  <div className="trend-item">
-                    <span className="trend-label">RPG Trend</span>
-                    <span className={`trend-value ${(player.trends?.rpg_trend || 0) > 0 ? 'positive' : (player.trends?.rpg_trend || 0) < 0 ? 'negative' : 'neutral'}`}>
-                      {(player.trends?.rpg_trend || 0) > 0 ? '+' : ''}{player.trends?.rpg_trend?.toFixed(1) || '0.0'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
+              </PlayerCard>
+            );
+          })}
         </div>
       )}
 
@@ -561,7 +532,7 @@ const Stats = () => {
       <div className="pagination">
         <div className="pagination-controls">
           <button 
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+            onClick={() => goToPage(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
             className="pagination-btn"
           >
@@ -581,7 +552,7 @@ const Stats = () => {
           </div>
           
           <button 
-            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+            onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage === totalPages}
             className="pagination-btn"
           >
@@ -589,12 +560,6 @@ const Stats = () => {
           </button>
         </div>
       </div>
-
-      {loading && (
-        <div className="loading-overlay">
-          <div className="loading">Loading more players...</div>
-        </div>
-      )}
 
       <PlayerStatsModal player={selectedPlayer} loading={loadingPlayer} onClose={() => setSelectedPlayer(null)} />
 

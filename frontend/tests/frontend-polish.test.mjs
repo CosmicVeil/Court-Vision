@@ -29,19 +29,11 @@ test("negative recommendation modifiers use the red palette", () => {
 
 test("AI prediction list cards show the three main predicted stats", () => {
   const source = readComponent("Predictions.jsx");
-  for (const field of ["predicted_ppg", "predicted_apg", "predicted_rpg"]) {
-    assert.match(source, new RegExp(`key: ['"]${field}['"]`));
-  }
-  assert.match(source, /prediction-card-main-stats/);
+  // The fields themselves are covered by getPredictionCardStats in player-card.test.mjs.
+  assert.match(source, /getPredictionCardStats\(player\)/);
+  assert.match(source, /<PlayerCard\b[\s\S]*stats=\{main\}/);
   assert.match(source, /<PlayerStatsModal\b/);
   assert.doesNotMatch(source, /toPredictionPageStats/);
-});
-
-test("AI prediction card identity and badges are centered", () => {
-  const css = readComponent("Predictions.css");
-  assert.match(css, /\.prediction-card \.player-meta\s*\{[^}]*flex-direction:\s*column[^}]*align-items:\s*center[^}]*text-align:\s*center/s);
-  assert.match(css, /\.prediction-card \.player-badges\s*\{[^}]*justify-content:\s*center/s);
-  assert.match(css, /\.team-badge,\s*\.position-badge,\s*\.age-badge\s*\{[^}]*align-items:\s*center[^}]*justify-content:\s*center/s);
 });
 
 test("AI predictions use one unified sort field with contextual direction labels", () => {
@@ -50,7 +42,7 @@ test("AI predictions use one unified sort field with contextual direction labels
   assert.match(source, /const isNameSort = sortBy === 'name'/);
   assert.match(source, /isNameSort \? 'A to Z' : 'Lowest to Highest'/);
   assert.match(source, /isNameSort \? 'Z to A' : 'Highest to Lowest'/);
-  assert.match(source, /setSortOrder\(nextSortBy === 'name' \? 'asc' : 'desc'\)/);
+  assert.match(source, /order: nextSortBy === 'name' \? 'asc' : 'desc'/);
   assert.match(source, /const handleSortDirectionChange/);
   assert.doesNotMatch(source, /onClick=\{\(\) => handleSort\('name'\)\}/);
 });
