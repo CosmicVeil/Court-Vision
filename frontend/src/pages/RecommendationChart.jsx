@@ -156,23 +156,26 @@ const RecommendationChart = () => {
                             const lastKeyVal = Number(player[lastKey] ?? 0);
                             const predictedKeyVal = Number(player[predictedKey] ?? 0);
 
-                            // Dynamically scale progress bar lengths
+                            // Bar fill as a 0-1 fraction of the stat's scale; CSS scales the bar by it
                             const maxScale = stat === 'PRA' ? 60 : stat === 'PPG' ? 40 : 20;
-                            const currentWidth = Math.min((lastKeyVal / maxScale) * 100, 100);
-                            const predictedWidth = Math.min((predictedKeyVal / maxScale) * 100, 100);
+                            const currentFill = Math.min(Math.max(lastKeyVal / maxScale, 0), 1);
+                            const predictedFill = Math.min(Math.max(predictedKeyVal / maxScale, 0), 1);
 
                             return (
-                            <div 
-                                key={player.PLAYER_NAME ?? index} 
+                            <div
+                                key={player.PLAYER_NAME ?? index}
                                 className="recommendation-card analytic-card"
-                                onClick={() => handlePlayerClick(player)}
                             >
                                 <div className="card-header">
                                     <span className="rank-badge">#{index + 1}</span>
                                     <span className="category-badge team-code">{player.TEAM}</span>
                                 </div>
                                 <div className="card-body">
-                                    <h3 className="insight-title">{player.PLAYER_NAME}</h3>
+                                    <h3 className="insight-title">
+                                        <button type="button" className="card-open" onClick={() => handlePlayerClick(player)}>
+                                            {player.PLAYER_NAME}
+                                        </button>
+                                    </h3>
                                     
                                     <div className="player-meta-badges">
                                         <span className="meta-badge-item age">AGE {player.AGE}</span>
@@ -191,7 +194,7 @@ const RecommendationChart = () => {
                                                 <span className="bar-val">{lastKeyVal.toFixed(1)}</span>
                                             </div>
                                             <div className="bar-track">
-                                                <div className="bar-fill current" style={{ width: `${currentWidth}%` }}></div>
+                                                <div className="bar-fill current" style={{ '--fill': currentFill }}></div>
                                             </div>
                                         </div>
 
@@ -201,7 +204,7 @@ const RecommendationChart = () => {
                                                 <span className="bar-val">{predictedKeyVal.toFixed(1)}</span>
                                             </div>
                                             <div className="bar-track">
-                                                <div className="bar-fill projected" style={{ width: `${predictedWidth}%` }}></div>
+                                                <div className="bar-fill projected" style={{ '--fill': predictedFill }}></div>
                                             </div>
                                         </div>
                                     </div>
