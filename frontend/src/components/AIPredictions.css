@@ -57,51 +57,8 @@
   transform: translateY(-2px);
 }
 
-/* ---------- Player Grid & Cards ---------- */
-.players-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 24px;
-  margin-bottom: 36px;
-}
-
-.player-card {
-  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
-  border: 1px solid rgba(255, 100, 54, 0.18);
-  border-radius: var(--radius-xl, 20px);
-  padding: 24px;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.player-card:hover {
-  transform: translateY(-6px);
-  border-color: rgba(255, 100, 54, 0.5);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 24px rgba(255, 100, 54, 0.2);
-}
-
-.player-rank {
-  position: absolute;
-  top: 18px;
-  right: 18px;
-  background: rgba(255, 100, 54, 0.15);
-  border: 1px solid var(--color-ember-orange, #ff6436);
-  color: var(--color-ember-orange, #ff6436);
-  padding: 3px 10px;
-  border-radius: 6px;
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-}
-
+/* The cards are PlayerCard now (PlayerCard.css). These class names are also rendered by other
+   pages, and page CSS is global, so their old rules stay to avoid restyling those pages. */
 .player-info {
   margin-bottom: 18px;
   padding-right: 48px;
@@ -124,14 +81,6 @@
   letter-spacing: 0.5px;
 }
 
-/* ---------- Stat Comparison Block ---------- */
-.player-stat {
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 16px;
-}
-
 .stat-comparison {
   display: flex;
   align-items: center;
@@ -139,20 +88,7 @@
   gap: 12px;
 }
 
-.stat-past, .stat-current {
-  flex: 1;
-  text-align: center;
-}
-
-.stat-value-small {
-  font-family: var(--font-mono, monospace);
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: #ffffff;
-  margin-bottom: 4px;
-}
-
-.stat-label-small, .stat-label {
+.stat-label {
   font-family: var(--font-mono, monospace);
   font-size: 9px;
   color: var(--color-stone, #8e8c94);
@@ -177,62 +113,6 @@
   color: #ef5350;
   text-shadow: 0 0 14px rgba(239, 83, 80, 0.4);
 }
-
-.stat-arrow-indicator {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-family: var(--font-mono, monospace);
-  font-weight: 800;
-}
-
-.stat-arrow-indicator.positive {
-  background: rgba(76, 175, 80, 0.15);
-  border: 1px solid rgba(76, 175, 80, 0.35);
-  color: #4caf50;
-}
-
-.stat-arrow-indicator.negative {
-  background: rgba(239, 83, 80, 0.15);
-  border: 1px solid rgba(239, 83, 80, 0.35);
-  color: #ef5350;
-}
-
-.arrow-glyph {
-  font-size: 14px;
-  line-height: 1;
-}
-
-.diff-val {
-  font-size: 10px;
-}
-
-/* Breakout Multi-Grid */
-.breakout-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.breakout-stat {
-  text-align: center;
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: 8px;
-  padding: 8px 4px;
-}
-
-.stat-arrow-small {
-  font-family: var(--font-mono, monospace);
-  font-size: 12px;
-  font-weight: 800;
-  margin: 2px 0;
-}
-
-.stat-arrow-small.positive, .stat-value-small.positive { color: #4caf50; }
-.stat-arrow-small.negative, .stat-value-small.negative { color: #ef5350; }
 
 /* Loading & Empty States */
 .ai-predictions-container .loading,

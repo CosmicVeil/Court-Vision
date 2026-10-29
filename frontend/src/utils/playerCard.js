@@ -45,6 +45,26 @@ export function getPredictionCardStats(player) {
   return { main, extra };
 }
 
+// The home "Projected leaders" panel gets the model's raw rows (PREDICTED_PPG, PPG_LAST, …,
+// shooting as fractions). Cards lead with the tab's own stat, then fill up with PPG/APG/RPG.
+export function getLeaderCardStats(player, lead = 'ppg') {
+  const keys = [lead, ...PREDICTION_MAIN.filter(key => key !== lead)].slice(0, PREDICTION_MAIN.length);
+  const main = keys.map(key => {
+    const field = key.toUpperCase();
+    return {
+      key,
+      label: PREDICTION_STATS.find(item => item.key === key).unit,
+      value: formatStat(player?.[`PREDICTED_${field}`]),
+      delta: getStatDelta(player?.[`${field}_LAST`], player?.[`PREDICTED_${field}`]),
+    };
+  });
+  const extra = SHOOTING.map(({ key, label }) => {
+    const fraction = toFinite(player?.[`${key.toUpperCase()}_LAST`]);
+    return { key, label, value: formatStat(fraction === null ? null : fraction * 100, percent) };
+  });
+  return { main, extra };
+}
+
 export function getSeasonCardStats(player) {
   const stats = player?.stats || {};
   const stat = (key, label, options) => ({ key, label, value: formatStat(stats[`${key}_last`], options) });
