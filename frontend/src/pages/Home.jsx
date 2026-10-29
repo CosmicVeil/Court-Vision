@@ -154,7 +154,7 @@ function TrendingSection({ onPlayerClick }) {
         </div>
         <div className="trend-empty-info">
           <h3>NO LIVE GAMES TODAY</h3>
-          <p className="featured-time">Neural projection models & player stat trackers are active for upcoming matchups</p>
+          <p className="featured-time">Next-season XGBoost projections and full season stats are still a click away</p>
           <Link to="/games" className="cta-button primary trend-empty-cta">VIEW GAME SCHEDULE →</Link>
         </div>
       </div>
@@ -733,7 +733,7 @@ const Home = () => {
               <div className="step-number">02</div>
               <div className="step-content">
                 <h3>EXPLORE & ANALYZE</h3>
-                <p>Dive deep into real-time possession metrics, matchup efficiency ratings, and neural prediction models.</p>
+                <p>Dig into live box scores, multi-season player stats, and XGBoost projections for next season.</p>
               </div>
             </div>
             <div className="step-connector" />
@@ -751,10 +751,10 @@ const Home = () => {
       <section className="ai-section scroll-reveal">
         <div className="ai-content">
           <div className="cv-section-badge-wrapper">
-            <span className="cv-section-badge">NEURAL INTEL</span>
+            <span className="cv-section-badge">XGBOOST FORECASTING</span>
           </div>
-          <h2 className="section-title">AI MATCHUP <span className="text-ember">PREDICTIONS</span></h2>
-          <p className="section-description">Advanced neural networks analyzing team pace, offensive rating & player match-ups</p>
+          <h2 className="section-title">PROJECTED <span className="text-ember">LEADERS</span></h2>
+          <p className="section-description">XGBoost models trained on past seasons project next season's top scorers, playmakers, rebounders and breakout players</p>
           <AIPredictions onPlayerClick={handlePlayerClick} />
         </div>
       </section>

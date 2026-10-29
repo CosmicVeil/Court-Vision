@@ -174,10 +174,10 @@ const Recommendations = () => {
           <span className="cv-section-badge">INTELLIGENCE RADAR</span>
         </div>
         <h1 className="recommendations-title">
-          NEURAL <span className="text-ember">RECOMMENDATIONS</span>
+          BREAKOUT <span className="text-ember">RECOMMENDATIONS</span>
         </h1>
         <p className="recommendations-subtitle">
-          Breakout indicators, algorithmic scoring forecasts, and deep-learning performance metrics
+          Players our XGBoost model projects to make the biggest per-game jumps next season, measured against their current numbers
         </p>
       </header>
 
