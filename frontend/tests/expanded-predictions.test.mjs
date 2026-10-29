@@ -54,6 +54,7 @@ test("home AI panel exposes steals and blocks tabs", () => {
   const source = readSource("AIPredictions.jsx");
   assert.match(source, /top_steals/);
   assert.match(source, /top_blocks/);
-  assert.match(source, /PREDICTED_SPG/);
-  assert.match(source, /PREDICTED_BPG/);
+  // Each tab's card leads with the stat it ranks by (fields mapped in getLeaderCardStats).
+  assert.match(source, /id: 'steals', label: 'Top Steals', lead: 'spg'/);
+  assert.match(source, /id: 'blocks', label: 'Top Blocks', lead: 'bpg'/);
 });

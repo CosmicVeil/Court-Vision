@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFrontend as read, readSource } from './helpers.mjs';
 
-const { formatStat, getStatDelta, getPredictionCardStats, getSeasonCardStats, getChangedStatKeys } =
+const { formatStat, getStatDelta, getPredictionCardStats, getLeaderCardStats, getSeasonCardStats, getChangedStatKeys } =
   await import('../src/utils/playerCard.js').catch(() => ({}));
 
 test('only values that differ from the previous render count as changed', () => {
@@ -51,6 +51,24 @@ test('prediction cards lead with predicted PPG/APG/RPG and their change, then cu
   ]);
 });
 
+test('home leader cards lead with the tab\'s stat, map the raw model fields, and show shooting as percent', () => {
+  assert.equal(typeof getLeaderCardStats, 'function');
+  const row = {
+    PREDICTED_PPG: 29.81, PPG_LAST: 33.5, PREDICTED_APG: 7.95, APG_LAST: 8.3,
+    PREDICTED_RPG: 8.2, RPG_LAST: 8.2, PREDICTED_SPG: 1.62, SPG_LAST: 1.4,
+    FG_PCT_LAST: 0.476, FG3_PCT_LAST: 0.366, FT_PCT_LAST: null,
+  };
+  const { main, extra } = getLeaderCardStats(row, 'spg');
+  assert.deepEqual(main, [
+    { key: 'spg', label: 'SPG', value: '1.6', delta: { text: '+0.2', direction: 'up' } },
+    { key: 'ppg', label: 'PPG', value: '29.8', delta: { text: '−3.7', direction: 'down' } },
+    { key: 'apg', label: 'APG', value: '8.0', delta: { text: '−0.4', direction: 'down' } },
+  ]);
+  assert.deepEqual(extra.map(stat => stat.value), ['47.6%', '36.6%', '0.0%']);
+  assert.deepEqual(getLeaderCardStats(row).main.map(stat => stat.key), ['ppg', 'apg', 'rpg'], 'defaults to PPG first');
+  assert.deepEqual(getLeaderCardStats(row, 'rpg').main.map(stat => stat.key), ['rpg', 'ppg', 'apg']);
+});
+
 test('season cards lead with PPG/APG/RPG, then the rest of the season line', () => {
   assert.equal(typeof getSeasonCardStats, 'function');
   const { main, extra } = getSeasonCardStats({
@@ -76,7 +94,11 @@ test('PlayerCard opens through a real button, keeps favourites separate, and use
   assert.doesNotMatch(card, /<div[^>]*onClick/);
 });
 
-test('Stats and Predictions render PlayerCard instead of clickable divs, and reveal it', () => {
+test('Stats, Predictions and the home leaders panel render PlayerCard instead of clickable divs', () => {
+  const leaders = readSource('AIPredictions.jsx');
+  assert.match(leaders, /<PlayerCard\b[\s\S]*stats=\{main\}[\s\S]*onOpen=/);
+  assert.match(leaders, /<div className="pc-grid">/);
+  assert.doesNotMatch(leaders, /className="player-card"|renderPlayerCard/);
   for (const file of ['Stats.jsx', 'Predictions.jsx']) {
     const page = readSource(file);
     assert.match(page, /<PlayerCard\b/, file);

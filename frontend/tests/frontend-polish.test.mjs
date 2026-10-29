@@ -4,8 +4,9 @@ import { readSource as readComponent } from "./helpers.mjs";
 
 test("authenticated visitors do not render the final homepage account CTA", () => {
   const source = readComponent("Home.jsx");
-  assert.match(source, /\{!isLoggedIn && \(\s*<section className="cta-section">/);
-  assert.match(source, /to="\/create-account"/);
+  // Home has a single closing CTA; inside it, the account link is the only signed-out-only part.
+  assert.equal(source.match(/className="home-section home-cta"/g)?.length, 1);
+  assert.match(source, /\{!isLoggedIn && \(\s*<Link to="\/create-account" className="cta-button secondary large">CREATE FREE ACCOUNT<\/Link>\s*\)\}/);
   // Logging in moved to the shared header, which every page (Home included) renders.
   assert.match(readComponent("SiteHeader.jsx"), /to="\/login"/);
 });

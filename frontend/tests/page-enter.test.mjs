@@ -21,7 +21,7 @@ test("enterDelay reuses the reveal stagger and its cap", () => {
 });
 
 // Pages whose content is on screen at mount; Live Games, Predictions and Stats load in through
-// PageHero and data-reveal instead, and Home has its own scroll reveal.
+// PageHero and data-reveal instead, and Home's sections sit below its intro (home-refresh.test.mjs).
 const pages = {
   "Recommendations.jsx": 4,
   "RecommendationChart.jsx": 2,
