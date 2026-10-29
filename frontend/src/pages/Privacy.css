@@ -7,7 +7,7 @@
   min-height: 100vh;
   background: var(--bg-main, #08080a);
   color: var(--text-primary, #ffffff);
-  padding: 110px 24px 70px;
+  padding: calc(var(--header-height) + var(--space) * 10) var(--gutter) calc(var(--space) * 18);
   position: relative;
   z-index: 2;
   font-family: var(--font-body, 'Inter', sans-serif);
@@ -40,45 +40,15 @@
   opacity: 0.6;
 }
 
-.privacy-header {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.privacy-header .stats-nav-top {
-  flex-wrap: wrap;
-}
-
-.privacy-hero {
-  text-align: center;
-  margin-bottom: 48px;
-  overflow-wrap: anywhere;
-}
-
-.privacy-hero h1 {
-  font-size: clamp(2.5rem, 5vw, 4.2rem);
-  margin-bottom: 12px;
-  font-family: var(--font-heading, 'Inter', sans-serif);
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: -0.5px;
-  color: #ffffff;
-  line-height: 1.08;
-}
-
-.privacy-intro {
-  font-size: clamp(15px, 1.8vw, 17px);
-  color: var(--color-stone, #8e8c94);
-  max-width: 650px;
-  margin: 0 auto;
-  line-height: 1.7;
-}
+/* PageHero brings the eyebrow, heading and lead; the date sits just under it. */
+.privacy-shell .page-hero { margin-bottom: calc(var(--space) * 3); }
 
 .privacy-updated {
-  margin-top: 18px;
-  font-family: var(--font-mono, monospace);
+  margin: 0 0 calc(var(--space) * 10);
+  text-align: center;
+  font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone);
 }
 
 .privacy-sections,
@@ -182,12 +152,12 @@
 
 .privacy-page a:focus-visible {
   outline: 2px solid var(--color-ember-orange, #ff6436);
-  outline-offset: 4px;
+  outline-offset: 3px;
 }
 
 .privacy-footer {
   max-width: 760px;
-  margin: 40px auto 0;
+  margin: calc(var(--space) * 10) auto 0;
   display: flex;
   justify-content: space-between;
   flex-wrap: wrap;
@@ -199,13 +169,8 @@
 }
 
 @media (max-width: 480px) {
-  .privacy-page {
-    padding-left: 12px;
-    padding-right: 12px;
-  }
-
   .privacy-card,
   .privacy-disclaimer {
-    padding: 22px 18px;
+    padding: calc(var(--space) * 6) calc(var(--space) * 5);
   }
 }

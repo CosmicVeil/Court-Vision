@@ -1,20 +1,20 @@
 /* ============================================================
    COURT VISION — 404 NOT FOUND PAGE
    Obsidian Glass Arena Theme + Ember Orange Design Tokens
+   Page CSS is global, so every class here starts with notfound-.
    ============================================================ */
 
-.notfound-container {
+.notfound-page {
   min-height: 100vh;
-  background: var(--bg-main, #08080a);
-  color: var(--text-primary, #ffffff);
+  background: var(--bg-main);
+  color: var(--color-pure-white);
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 110px 24px 60px;
+  padding: calc(var(--header-height) + var(--space) * 10) var(--gutter) calc(var(--space) * 18);
   position: relative;
   overflow: hidden;
-  font-family: var(--font-body, 'Inter', sans-serif);
+  font-family: var(--font-body);
 }
 
 .notfound-glow {
@@ -26,182 +26,159 @@
   height: 600px;
   background: radial-gradient(circle, rgba(255, 100, 54, 0.15) 0%, rgba(255, 100, 54, 0.03) 45%, transparent 70%);
   pointer-events: none;
-  z-index: 1;
 }
 
 .notfound-court-lines {
   position: absolute;
   inset: 0;
-  background-image: 
+  background-image:
     radial-gradient(circle at center, transparent 35%, rgba(255, 255, 255, 0.02) 36%, transparent 37%),
     linear-gradient(to bottom, transparent 49.8%, rgba(255, 255, 255, 0.03) 50%, transparent 50.2%);
   pointer-events: none;
-  z-index: 1;
-}
-
-.notfound-content {
-  position: relative;
-  z-index: 10;
-  width: 100%;
-  max-width: 620px;
-  display: flex;
-  justify-content: center;
 }
 
 .notfound-card {
-  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
-  border: 1px solid rgba(255, 100, 54, 0.25);
-  border-radius: var(--radius-xl, 24px);
-  padding: 48px 36px;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8), 0 0 32px rgba(255, 100, 54, 0.15);
-  text-align: center;
+  position: relative;
   width: 100%;
+  max-width: 620px;
+  min-width: 0;
+  padding: calc(var(--space) * 12) calc(var(--space) * 9);
   display: flex;
   flex-direction: column;
   align-items: center;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
+  border: 1px solid rgba(255, 100, 54, 0.25);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8), 0 0 32px rgba(255, 100, 54, 0.15);
 }
 
-.notfound-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
-  background: rgba(255, 100, 54, 0.12);
-  border: 1px solid rgba(255, 100, 54, 0.35);
-  border-radius: var(--radius-full, 9999px);
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--color-ember-orange, #ff6436);
+.notfound-card [data-slot="eyebrow"] {
+  max-width: 100%;
+  margin-bottom: calc(var(--space) * 6);
   letter-spacing: 1.5px;
-  text-transform: uppercase;
-  margin-bottom: 24px;
 }
 
-.badge-dot {
+.notfound-dot {
+  flex: none;
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--color-ember-orange, #ff6436);
-  box-shadow: 0 0 8px var(--color-ember-orange, #ff6436);
+  background: var(--color-ember-orange);
+  box-shadow: 0 0 8px var(--color-ember-orange);
 }
 
-.notfound-code-container {
+.notfound-code {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: calc(var(--space) * 3);
+  margin-bottom: calc(var(--space) * 4);
 }
 
 .notfound-digit {
-  font-family: var(--font-heading, 'Inter', sans-serif);
+  font-family: var(--font-heading);
   font-size: clamp(4.5rem, 10vw, 6.5rem);
   font-weight: 900;
   line-height: 1;
-  color: #ffffff;
   letter-spacing: -2px;
   text-shadow: 0 0 40px rgba(255, 255, 255, 0.2);
 }
 
-.notfound-ball-icon {
+.notfound-ball {
   width: clamp(52px, 8vw, 76px);
   height: clamp(52px, 8vw, 76px);
   border-radius: 50%;
-  background: radial-gradient(circle at 32% 28%, #ffaa78 0%, var(--color-ember-orange, #ff6436) 46%, #b22f08 85%, #571100 100%);
-  box-shadow: 
-    inset -8px -8px 16px rgba(0,0,0,0.85),
-    inset 4px 4px 10px rgba(255,215,170,0.45),
-    0 8px 24px rgba(255,100,54,0.5);
+  background: radial-gradient(circle at 32% 28%, #ffaa78 0%, var(--color-ember-orange) 46%, #b22f08 85%, #571100 100%);
+  box-shadow:
+    inset -8px -8px 16px rgba(0, 0, 0, 0.85),
+    inset 4px 4px 10px rgba(255, 215, 170, 0.45),
+    0 8px 24px rgba(255, 100, 54, 0.5);
   position: relative;
   overflow: hidden;
 }
 
-.ball-seam-h {
+.notfound-seam-h,
+.notfound-seam-v {
   position: absolute;
-  width: 100%;
-  height: 2px;
-  top: 50%;
-  left: 0;
-  transform: translateY(-50%);
   background: rgba(15, 15, 15, 0.85);
 }
 
-.ball-seam-v {
-  position: absolute;
-  width: 2px;
-  height: 100%;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(15, 15, 15, 0.85);
-}
+.notfound-seam-h { width: 100%; height: 2px; top: 50%; left: 0; translate: 0 -50%; }
+.notfound-seam-v { width: 2px; height: 100%; top: 0; left: 50%; translate: -50% 0; }
 
 .notfound-title {
-  font-family: var(--font-heading, 'Inter', sans-serif);
-  font-size: clamp(1.8rem, 3.5vw, 2.4rem);
+  margin: 0 0 calc(var(--space) * 3);
+  font-family: var(--font-heading);
+  font-size: clamp(var(--text-2xl), 5vw, 2.4rem);
   font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: -0.5px;
-  color: #ffffff;
-  margin: 0 0 12px;
 }
 
 .notfound-description {
-  font-size: 15px;
-  color: var(--color-stone, #8e8c94);
-  line-height: 1.6;
+  margin: 0 0 calc(var(--space) * 8);
   max-width: 440px;
-  margin: 0 0 32px;
+  font-size: 15px;
+  line-height: 1.6;
 }
 
 .notfound-actions {
   display: flex;
-  gap: 12px;
   flex-wrap: wrap;
   justify-content: center;
+  gap: calc(var(--space) * 3);
   width: 100%;
 }
 
 .notfound-btn {
-  padding: 12px 22px;
-  border-radius: var(--radius-full, 9999px);
-  font-family: var(--font-mono, monospace);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--space) * 2);
+  padding: calc(var(--space) * 3) calc(var(--space) * 5.5);
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 100, 54, 0.25);
+  color: var(--color-pure-white);
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.25s ease;
   text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  transition: background var(--duration-base) var(--ease-brand), border-color var(--duration-base) var(--ease-brand),
+    box-shadow var(--duration-base) var(--ease-brand), transform var(--duration-base) var(--ease-brand);
 }
 
-.notfound-btn.primary {
-  background: var(--color-ember-orange, #ff6436);
-  color: #ffffff;
-  border: 1px solid var(--color-ember-orange, #ff6436);
+.notfound-btn:hover {
+  background: rgba(255, 100, 54, 0.15);
+  border-color: var(--color-ember-orange);
+  transform: translateY(-2px);
+}
+
+.notfound-btn-primary {
+  background: var(--color-ember-orange);
+  border-color: var(--color-ember-orange);
   box-shadow: 0 4px 20px rgba(255, 100, 54, 0.4);
 }
 
-.notfound-btn.primary:hover {
+.notfound-btn-primary:hover {
   background: #ff7d56;
-  transform: translateY(-2px);
   box-shadow: 0 6px 28px rgba(255, 100, 54, 0.6);
 }
 
-.notfound-btn.secondary {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 100, 54, 0.25);
-  color: #ffffff;
+.notfound-btn:focus-visible {
+  outline: 2px solid var(--color-ember-orange);
+  outline-offset: 3px;
 }
 
-.notfound-btn.secondary:hover {
-  background: rgba(255, 100, 54, 0.15);
-  border-color: var(--color-ember-orange, #ff6436);
-  transform: translateY(-2px);
+@media (max-width: 480px) {
+  .notfound-card { padding: calc(var(--space) * 10) calc(var(--space) * 5); }
+  .notfound-btn { flex: 1 1 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notfound-btn:hover { transform: none; }
 }

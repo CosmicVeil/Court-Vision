@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import "./Contact.css";
+import PageHero from "../components/PageHero";
 import { enterDelay } from "../utils/scrollReveal";
 
 const LinkedInIcon = () => (
@@ -11,101 +12,104 @@ const LinkedInIcon = () => (
 function Contact() {
   return (
     <main className="contact-page">
-      <div className="contact-ambient contact-ambient-one" />
-      <div className="contact-ambient contact-ambient-two" />
+      <div className="contact-ambient contact-ambient-one" aria-hidden="true" />
+      <div className="contact-ambient contact-ambient-two" aria-hidden="true" />
 
       <div className="contact-shell">
-      <header className="contact-header" data-enter>
-        <div className="stats-nav-top">
-          <span className="cv-section-badge">DEVELOPMENT INTEL</span>
-        </div>
-      </header>
+        <PageHero
+          eyebrow="DEVELOPMENT INTEL"
+          title="THE ARCHITECTS BEHIND"
+          accent="COURT VISION"
+          lead="Turning NBA box-score data into XGBoost forecasts and live game insights. Meet the engineers building the platform."
+        />
 
-      <section className="contact-hero" aria-labelledby="contact-title" data-enter style={enterDelay(1)}>
-        <h1 id="contact-title">THE ARCHITECTS BEHIND <span className="text-ember">COURT VISION</span></h1>
-        <p className="contact-intro">
-          Turning NBA box-score data into XGBoost forecasts and live game insights. Meet the engineers building the platform.
-        </p>
-      </section>
+        <article className="contact-project-card" data-enter style={enterDelay(1)}>
+          <div>
+            <p className="contact-label">LIVE PROJECT</p>
+            <h2>Court Vision Analytics</h2>
+            <p>Explore the public NBA intelligence platform.</p>
+          </div>
+          <a className="contact-domain" href="https://courtvision.works" target="_blank" rel="noreferrer">
+            <span>courtvision.works</span><small>VISIT PLATFORM <span aria-hidden="true">↗</span></small>
+          </a>
+        </article>
 
-      <article className="contact-project-card" data-enter style={enterDelay(2)}>
-        <div><p className="contact-label">LIVE PROJECT</p><h2>Court Vision Analytics</h2><p>Explore the public NBA intelligence platform.</p></div>
-        <a className="contact-domain" href="https://courtvision.works" target="_blank" rel="noreferrer"><span>courtvision.works</span><small>VISIT PLATFORM ↗</small></a>
-      </article>
+        <section className="contact-team" aria-labelledby="team-title">
+          <div className="contact-section-head" data-enter style={enterDelay(2)}>
+            <span className="cv-section-badge" data-slot="eyebrow">OUR TEAM</span>
+            <h2 id="team-title" data-slot="display-heading">The people behind the platform.</h2>
+          </div>
 
-      <section className="contact-team" aria-labelledby="team-title" data-enter style={enterDelay(3)}>
-        <div className="contact-section-heading">
-          <p className="contact-eyebrow">OUR TEAM</p>
-          <h2 id="team-title">The people behind the platform.</h2>
-        </div>
-
-        <div className="contact-team-grid">
-          <article className="team-card team-card-featured">
-            <div className="team-card-topline">
-              <div className="team-initials">MD</div>
-              <span className="team-status"><i /> Available to connect</span>
-            </div>
-            <div className="team-card-content">
-              <p className="contact-label">BACKEND &amp; ML</p>
-              <h3>Mohan Dixit</h3>
-              <p className="team-role">Backend/ML Developer</p>
-              <p className="team-bio">
-                Mohan develops the data pipelines, prediction systems, and production infrastructure
-                that turn live NBA information into useful basketball insight.
-              </p>
-              <div className="team-skills" aria-label="Mohan's focus areas">
-                <span>Python</span>
-                <span>PyTorch</span>
-                <span>XGBoost</span>
+          <div className="contact-team-grid">
+            <article className="contact-team-card" data-enter style={enterDelay(3)}>
+              <div className="contact-team-topline">
+                <div className="contact-team-initials" aria-hidden="true">MD</div>
+                <span className="contact-team-status"><i aria-hidden="true" /> Available to connect</span>
               </div>
-            </div>
-            <a
-              className="team-linkedin"
-              href="https://www.linkedin.com/in/mohan-dixit-6396922b5/"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <LinkedInIcon /> Connect on LinkedIn <span aria-hidden="true">↗</span>
-            </a>
-          </article>
-
-          <article className="team-card team-card-featured">
-            <div className="team-card-topline">
-              <div className="team-initials">VU</div>
-              <span className="team-status"><i /> Available to connect</span>
-            </div>
-            <div className="team-card-content">
-              <p className="contact-label">BACKEND &amp; FRONTEND</p>
-              <h3>Varun Uday</h3>
-              <p className="team-role">Frontend/Backend Developer</p>
-              <p className="team-bio">
-                Varun develops and maintains the Flask API layer, real-time NBA data collection, and
-                prediction-serving endpoints that power Court Vision's live outcome forecasts.
-              </p>
-              <div className="team-skills" aria-label="Varun's focus areas">
-                <span>Flask</span>
-                <span>Scikit-Learn</span>
-                <span>Pandas &amp; NumPy</span>
-                <span>JS</span>
+              <div className="contact-team-content">
+                <p className="contact-label">BACKEND &amp; ML</p>
+                <h3>Mohan Dixit</h3>
+                <p className="contact-team-role">Backend/ML Developer</p>
+                <p className="contact-team-bio">
+                  Mohan develops the data pipelines, prediction systems, and production infrastructure
+                  that turn live NBA information into useful basketball insight.
+                </p>
+                <ul className="contact-team-skills" aria-label="Mohan's focus areas">
+                  <li>Python</li>
+                  <li>PyTorch</li>
+                  <li>XGBoost</li>
+                </ul>
               </div>
-            </div>
-            <a
-              className="team-linkedin"
-              href="https://www.linkedin.com/in/varunuday"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <LinkedInIcon /> Connect on LinkedIn <span aria-hidden="true">↗</span>
-            </a>
-          </article>
-        </div>
-      </section>
+              <a
+                className="contact-team-link"
+                href="https://www.linkedin.com/in/mohan-dixit-6396922b5/"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <LinkedInIcon /> Connect on LinkedIn <span aria-hidden="true">↗</span>
+              </a>
+            </article>
 
-      <footer className="contact-footer" data-enter style={enterDelay(4)}>
-        <span>COURT VISION</span>
-        <span>NBA analytics, made clear.</span>
-        <Link to="/privacy">Privacy &amp; Cookies</Link>
-      </footer>
+            <article className="contact-team-card" data-enter style={enterDelay(4)}>
+              <div className="contact-team-topline">
+                <div className="contact-team-initials" aria-hidden="true">VU</div>
+                <span className="contact-team-status"><i aria-hidden="true" /> Available to connect</span>
+              </div>
+              <div className="contact-team-content">
+                <p className="contact-label">BACKEND &amp; FRONTEND</p>
+                <h3>Varun Uday</h3>
+                <p className="contact-team-role">Frontend/Backend Developer</p>
+                <p className="contact-team-bio">
+                  Varun develops and maintains the Flask API layer, real-time NBA data collection, and
+                  prediction-serving endpoints that power Court Vision's live outcome forecasts.
+                </p>
+                <ul className="contact-team-skills" aria-label="Varun's focus areas">
+                  <li>Flask</li>
+                  <li>Scikit-Learn</li>
+                  <li>Pandas &amp; NumPy</li>
+                  <li>JS</li>
+                </ul>
+              </div>
+              <a
+                className="contact-team-link"
+                href="https://www.linkedin.com/in/varunuday"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <LinkedInIcon /> Connect on LinkedIn <span aria-hidden="true">↗</span>
+              </a>
+            </article>
+          </div>
+        </section>
+
+        <footer className="contact-footer" data-enter style={enterDelay(5)}>
+          {/* Real separators, so the line still reads apart when copied or read aloud. */}
+          <span>COURT VISION</span>
+          <span className="contact-footer-sep" aria-hidden="true">·</span>
+          <span>NBA analytics, made clear.</span>
+          <span className="contact-footer-sep" aria-hidden="true">·</span>
+          <Link to="/privacy">Privacy &amp; Cookies</Link>
+        </footer>
       </div>
     </main>
   );

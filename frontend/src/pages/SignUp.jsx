@@ -1,8 +1,17 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import "./SignUp.css";
+import "./Auth.css";
 import { enterDelay } from "../utils/scrollReveal";
 import { signup } from "../utils/auth";
+
+// One entry per input; validateForm() below holds the rules, keyed by the same names.
+const FIELDS = [
+  { name: "firstName", label: "FIRST NAME", type: "text", placeholder: "Enter your first name", autoComplete: "given-name" },
+  { name: "lastName", label: "LAST NAME", type: "text", placeholder: "Enter your last name", autoComplete: "family-name" },
+  { name: "email", label: "EMAIL", type: "email", placeholder: "Enter your email", autoComplete: "email" },
+  { name: "password", label: "PASSWORD", type: "password", placeholder: "Enter your password", autoComplete: "new-password" },
+  { name: "confirmPassword", label: "CONFIRM PASSWORD", type: "password", placeholder: "Confirm your password", autoComplete: "new-password" },
+];
 
 const SignUp = () => {
   const navigate = useNavigate();
@@ -63,6 +72,9 @@ const SignUp = () => {
 
     setErrors(newErrors);
     setSubmitError("");
+    // Send keyboard and screen-reader users to the first field that needs fixing.
+    const firstInvalid = FIELDS.find(({ name }) => newErrors[name]);
+    if (firstInvalid) document.getElementById(firstInvalid.name)?.focus();
     return Object.keys(newErrors).length === 0;
   };
 
@@ -93,112 +105,59 @@ const SignUp = () => {
   };
 
   return (
-    <div className="signup-wrapper">
-      <div className="signup-container">
-        <div className="stats-nav-top" data-enter style={{ marginBottom: '1.5rem', justifyContent: 'center' }}>
-          <span className="cv-section-badge">JOIN THE PLATFORM</span>
-        </div>
-        <div className="signup-header" data-enter style={enterDelay(1)}>
-          <h1 className="signup-title">CREATE <span className="text-ember">ACCOUNT</span></h1>
-        </div>
-        <form className="signup-form" data-enter style={enterDelay(2)} onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="firstName">FIRST NAME</label>
-            <input
-              type="text"
-              id="firstName"
-              name="firstName"
-              value={formData.firstName}
-              onChange={handleChange}
-              required
-              placeholder="Enter your first name"
-              className={errors.firstName ? "error" : ""}
-              disabled={loading}
-            />
-            {errors.firstName && <span className="error-message">{errors.firstName}</span>}
-          </div>
-          <div className="form-group">
-            <label htmlFor="lastName">LAST NAME</label>
-            <input
-              type="text"
-              id="lastName"
-              name="lastName"
-              value={formData.lastName}
-              onChange={handleChange}
-              required
-              placeholder="Enter your last name"
-              className={errors.lastName ? "error" : ""}
-              disabled={loading}
-            />
-            {errors.lastName && <span className="error-message">{errors.lastName}</span>}
-          </div>
-          <div className="form-group">
-            <label htmlFor="email">EMAIL</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              placeholder="Enter your email"
-              className={errors.email ? "error" : ""}
-              disabled={loading}
-            />
-            {errors.email && <span className="error-message">{errors.email}</span>}
-          </div>
-          <div className="form-group">
-            <label htmlFor="password">PASSWORD</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              placeholder="Enter your password"
-              className={errors.password ? "error" : ""}
-              disabled={loading}
-            />
-            {errors.password && <span className="error-message">{errors.password}</span>}
-          </div>
-          <div className="form-group">
-            <label htmlFor="confirmPassword">CONFIRM PASSWORD</label>
-            <input
-              type="password"
-              id="confirmPassword"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-              placeholder="Confirm your password"
-              className={errors.confirmPassword ? "error" : ""}
-              disabled={loading}
-            />
-            {errors.confirmPassword && <span className="error-message">{errors.confirmPassword}</span>}
-          </div>
+    <main className="auth-page">
+      <div className="auth-card">
+        <header className="auth-head">
+          <span className="cv-section-badge" data-slot="eyebrow" data-enter>JOIN THE PLATFORM</span>
+          <h1 className="auth-title" data-slot="display-heading" data-enter style={enterDelay(1)}>
+            CREATE <span className="text-ember">ACCOUNT</span>
+          </h1>
+          <p className="auth-lead" data-slot="lead" data-enter style={enterDelay(2)}>
+            Save players to your watchlist and keep them on every device.
+          </p>
+        </header>
+        <form className="auth-form" data-enter style={enterDelay(3)} onSubmit={handleSubmit} noValidate>
+          {FIELDS.map(({ name, label, type, placeholder, autoComplete }) => (
+            <div className="auth-field" key={name}>
+              <label htmlFor={name}>{label}</label>
+              <input
+                type={type}
+                id={name}
+                name={name}
+                autoComplete={autoComplete}
+                value={formData[name]}
+                onChange={handleChange}
+                required
+                placeholder={placeholder}
+                aria-invalid={Boolean(errors[name])}
+                aria-describedby={errors[name] ? `${name}-error` : undefined}
+                disabled={loading}
+              />
+              {errors[name] && <span className="auth-field-error" id={`${name}-error`}>{errors[name]}</span>}
+            </div>
+          ))}
           {submitError && (
-            <div className="submit-error">
+            <div className="auth-error" role="alert">
               {submitError}
             </div>
           )}
-          <button type="submit" className="signup-submit-btn" disabled={loading}>
+          <button type="submit" className="auth-submit" disabled={loading}>
             {loading ? "CREATING ACCOUNT..." : "CREATE ACCOUNT"}
           </button>
         </form>
-        <div className="signup-footer" data-enter style={enterDelay(3)}>
+        <div className="auth-footer" data-enter style={enterDelay(4)}>
           <p>
             Already have an account?{" "}
-            <Link to="/login" className="signup-link">
+            <Link to="/login" className="auth-link">
               Login
             </Link>
           </p>
-          <Link to="/" className="signup-link">
+          <Link to="/" className="auth-link">
             Back to Home
           </Link>
         </div>
       </div>
-    </div>
+    </main>
   );
 };
 
