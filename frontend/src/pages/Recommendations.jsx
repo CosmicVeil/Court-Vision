@@ -51,7 +51,6 @@ const FALLBACK_PLAYERS = {
 };
 
 const Recommendations = () => {
-  const [selectedCategory, setSelectedCategory] = useState('players');
   const [topPerformers, setTopPerformers] = useState({});
   const [spotlightLoading, setSpotlightLoading] = useState(true);
 
@@ -182,110 +181,101 @@ const Recommendations = () => {
       </header>
 
       <div className="recommendations-content">
-        <div className="category-tabs">
-          <button
-            className={`tab-button ${selectedCategory === 'players' ? 'active' : ''}`}
-            onClick={() => setSelectedCategory('players')}
-          >
-            Insights & Analysis
-          </button>
-        </div>
-
-        {selectedCategory === 'players' && (
-          <div className="recommendations-section">
-            
-            {/* Live AI Spotlight Section */}
-            <div className="spotlight-section">
-              <h2 className="spotlight-heading">LIVE AI RADAR</h2>
-              <p className="spotlight-subheading">The #1 predicted breakout players across the league next season</p>
-              {spotlightLoading ? (
-                <div className="spotlight-loader-wrap">
-                  <div className="spotlight-spinner"></div>
-                  <p className="spotlight-loader">Calculating AI Forecasts...</p>
-                </div>
-              ) : (
-                <div className="spotlight-grid">
-                  {['PPG', 'APG', 'RPG'].map((s) => {
-                    const player = topPerformers[s] || FALLBACK_PLAYERS[s];
-                    const improvement = player[`${s}_IMPROVEMENT`] || 0;
-                    const label = s === 'PPG' ? 'Scoring Outbreak' : s === 'APG' ? 'Playmaking Visionary' : 'Glass Dominator';
-                    
-                    return (
-                      <div 
-                        key={s} 
-                        className="spotlight-card"
-                        onClick={() => handlePlayerClick({ name: player.PLAYER_NAME || player.name, team: player.TEAM || player.team, position: player.POSITION || player.position })}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <div className="spotlight-badge-row">
-                          <span className="spotlight-stat-tag">{s} Spotlight</span>
-                          <span className="spotlight-role-tag">{label}</span>
-                        </div>
-                        <h3 className="spotlight-player-name">{player.PLAYER_NAME}</h3>
-                        <div className="spotlight-team-badge">{player.TEAM} · {player.POSITION}</div>
-                        
-                        <div className={`spotlight-growth-badge ${improvement >= 0 ? 'positive' : 'negative'}`}>
-                          {improvement >= 0 ? '+' : ''}{improvement.toFixed(1)}% {s} Breakout
-                        </div>
-                        
-                        <div className="spotlight-stats-list">
-                          {['PPG', 'APG', 'RPG'].map((statName) => {
-                            const lastVal = player[`${statName}_LAST`] || 0;
-                            const predVal = player[`PREDICTED_${statName}`] || 0;
-                            const impVal = player[`${statName}_IMPROVEMENT`] || 0;
-                            const isMainStat = statName === s;
-                            
-                            return (
-                              <div key={statName} className={`spotlight-stat-row ${isMainStat ? 'highlighted' : ''}`}>
-                                <span className="stat-label">{statName}</span>
-                                <div className="spotlight-stat-comparison">
-                                  <span className="spotlight-stat-val">{lastVal.toFixed(1)}</span>
-                                  <span className="spotlight-stat-arrow">→</span>
-                                  <span className="spotlight-stat-val predicted">{predVal.toFixed(1)}</span>
-                                </div>
-                                <span className={`spotlight-stat-growth ${impVal >= 0 ? 'positive' : 'negative'}`}>
-                                  {impVal >= 0 ? '+' : ''}{impVal.toFixed(1)}%
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
+        <div className="recommendations-section">
+          
+          {/* Live AI Spotlight Section */}
+          <div className="spotlight-section">
+            <h2 className="spotlight-heading">LIVE AI RADAR</h2>
+            <p className="spotlight-subheading">The #1 predicted breakout players across the league next season</p>
+            {spotlightLoading ? (
+              <div className="spotlight-loader-wrap">
+                <div className="spotlight-spinner"></div>
+                <p className="spotlight-loader">Calculating AI Forecasts...</p>
+              </div>
+            ) : (
+              <div className="spotlight-grid">
+                {['PPG', 'APG', 'RPG'].map((s) => {
+                  const player = topPerformers[s] || FALLBACK_PLAYERS[s];
+                  const improvement = player[`${s}_IMPROVEMENT`] || 0;
+                  const label = s === 'PPG' ? 'Scoring Outbreak' : s === 'APG' ? 'Playmaking Visionary' : 'Glass Dominator';
+                  
+                  return (
+                    <div key={s} className="spotlight-card">
+                      <div className="spotlight-badge-row">
+                        <span className="spotlight-stat-tag">{s} Spotlight</span>
+                        <span className="spotlight-role-tag">{label}</span>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <h2 className="section-heading">Basketball Insights & Trends</h2>
-            <p className="section-description">
-              Discover key insights, trends, and analysis powered by AI to help you understand the game better
-            </p>
-            <div className="recommendations-grid">
-              {insights.map((insight) => (
-                <div key={insight.id} className="recommendation-card insight-card">
-                  <div className="card-header">
-                    <div className="insight-icon">{insight.icon}</div>
-                    <div className="category-badge">{insight.category}</div>
-                  </div>
-                  <div className="card-body">
-                    <h3 className="insight-title">{insight.title}</h3>
-                    <p className="recommendation-reason">{insight.description}</p>
-                    <div className="insight-details">
-                      <span className="details-text">{insight.details}</span>
+                      <h3 className="spotlight-player-name">
+                        <button
+                          type="button"
+                          className="card-open"
+                          onClick={() => handlePlayerClick({ name: player.PLAYER_NAME || player.name, team: player.TEAM || player.team, position: player.POSITION || player.position })}
+                        >
+                          {player.PLAYER_NAME}
+                        </button>
+                      </h3>
+                      <div className="spotlight-team-badge">{player.TEAM} · {player.POSITION}</div>
+                      
+                      <div className={`spotlight-growth-badge ${improvement >= 0 ? 'positive' : 'negative'}`}>
+                        {improvement >= 0 ? '+' : ''}{improvement.toFixed(1)}% {s} Breakout
+                      </div>
+                      
+                      <div className="spotlight-stats-list">
+                        {['PPG', 'APG', 'RPG'].map((statName) => {
+                          const lastVal = player[`${statName}_LAST`] || 0;
+                          const predVal = player[`PREDICTED_${statName}`] || 0;
+                          const impVal = player[`${statName}_IMPROVEMENT`] || 0;
+                          const isMainStat = statName === s;
+                          
+                          return (
+                            <div key={statName} className={`spotlight-stat-row ${isMainStat ? 'highlighted' : ''}`}>
+                              <span className="stat-label">{statName}</span>
+                              <div className="spotlight-stat-comparison">
+                                <span className="spotlight-stat-val">{lastVal.toFixed(1)}</span>
+                                <span className="spotlight-stat-arrow">→</span>
+                                <span className="spotlight-stat-val predicted">{predVal.toFixed(1)}</span>
+                              </div>
+                              <span className={`spotlight-stat-growth ${impVal >= 0 ? 'positive' : 'negative'}`}>
+                                {impVal >= 0 ? '+' : ''}{impVal.toFixed(1)}%
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                  <div className="card-footer">
-                    <Link to={insight.link} className="view-stats-link">
-                      Explore More →
-                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <h2 className="section-heading">Basketball Insights & Trends</h2>
+          <p className="section-description">
+            Discover key insights, trends, and analysis powered by AI to help you understand the game better
+          </p>
+          <div className="recommendations-grid">
+            {insights.map((insight) => (
+              <div key={insight.id} className="recommendation-card insight-card">
+                <div className="card-header">
+                  <div className="insight-icon">{insight.icon}</div>
+                  <div className="category-badge">{insight.category}</div>
+                </div>
+                <div className="card-body">
+                  <h3 className="insight-title">{insight.title}</h3>
+                  <p className="recommendation-reason">{insight.description}</p>
+                  <div className="insight-details">
+                    <span className="details-text">{insight.details}</span>
                   </div>
                 </div>
-              ))}
-            </div>
+                <div className="card-footer">
+                  <Link to={insight.link} className="view-stats-link">
+                    Explore More →
+                  </Link>
+                </div>
+              </div>
+            ))}
           </div>
-        )}
-
+        </div>
       </div>
 
       <PlayerStatsModal player={selectedPlayer} loading={loadingPlayer} onClose={() => setSelectedPlayer(null)} />
