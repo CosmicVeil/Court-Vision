@@ -21,25 +21,3 @@ export const normalizeUpcomingGamesPage = (payload = {}) => {
     page,
   };
 };
-
-export const getUpcomingPaginationView = ({
-  page,
-  totalPages,
-  totalGames,
-  loading,
-}) => {
-  const safeTotalPages = Math.max(1, positiveInteger(totalPages));
-  const safePage = Math.min(positiveInteger(page), safeTotalPages);
-  const safeTotalGames = Math.max(0, Number.parseInt(totalGames, 10) || 0);
-  const start = safeTotalGames === 0
-    ? 0
-    : ((safePage - 1) * UPCOMING_GAMES_PAGE_SIZE) + 1;
-  const end = Math.min(safePage * UPCOMING_GAMES_PAGE_SIZE, safeTotalGames);
-
-  return {
-    previousDisabled: Boolean(loading) || safePage === 1,
-    nextDisabled: Boolean(loading) || safePage === safeTotalPages,
-    pageLabel: `Page ${safePage} of ${safeTotalPages}`,
-    countLabel: `Showing ${start} - ${end} of ${safeTotalGames} games`,
-  };
-};

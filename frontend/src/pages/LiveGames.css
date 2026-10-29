@@ -167,95 +167,6 @@
   gap: 24px;
 }
 
-.lg-pagination {
-  max-width: 1200px;
-  width: 100%;
-  margin: 40px auto 20px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  box-sizing: border-box;
-}
-
-.lg-pagination-controls {
-  max-width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
-  border: 1px solid rgba(255, 100, 54, 0.18);
-  border-radius: var(--radius-xl, 20px);
-  padding: 16px 28px;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
-  margin: 0 auto;
-}
-
-.lg-pagination-btn {
-  padding: 10px 24px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 100, 54, 0.25);
-  border-radius: var(--radius-full, 9999px);
-  color: #fff;
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: transform var(--duration-base) var(--ease-brand), opacity var(--duration-base) var(--ease-brand);
-  white-space: nowrap;
-}
-
-.lg-pagination-btn:hover:not(:disabled) {
-  background: rgba(255, 100, 54, 0.15);
-  border-color: var(--color-ember-orange, #ff6436);
-  box-shadow: 0 0 16px rgba(255, 100, 54, 0.25);
-}
-
-.lg-pagination-btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.lg-pagination-btn:focus-visible {
-  outline: 2px solid var(--color-ember-orange, #ff6436);
-  outline-offset: 3px;
-}
-
-.lg-pagination-info {
-  width: 34ch;
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
-  max-width: 100%;
-  min-width: 0;
-  text-align: center;
-}
-
-.lg-page-label {
-  margin-bottom: 4px;
-  color: #fff;
-  font-family: var(--font-mono, monospace);
-  font-size: 12px;
-  font-weight: 700;
-  min-height: 18px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.lg-page-count {
-  color: var(--color-stone, #8e8c94);
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
-  min-height: 18px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .lg-loading {
   text-align: center;
   padding: 6rem 2rem;
@@ -594,16 +505,6 @@
 }
 
 @media (max-width: 600px) {
-  .lg-pagination-controls {
-    width: 100%;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .lg-pagination-btn {
-    width: min(100%, 220px);
-  }
-
   .expand-btn {
     max-width: 100%;
   }

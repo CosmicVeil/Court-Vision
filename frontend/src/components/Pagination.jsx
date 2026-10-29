@@ -3,8 +3,8 @@ import './Pagination.css';
 
 // Previous / "Page X of Y" + range / Next. The page decides what a page change does
 // (onPageChange), so it can update the URL and scroll back to its own results.
-export default function Pagination({ page, totalPages, totalItems, pageSize, itemLabel, onPageChange }) {
-  const view = getPaginationView({ page, totalPages, totalItems, pageSize, itemLabel });
+export default function Pagination({ page, totalPages, totalItems, pageSize, itemLabel, loading, onPageChange }) {
+  const view = getPaginationView({ page, totalPages, totalItems, pageSize, itemLabel, loading });
 
   return (
     <nav className="pager" aria-label="Pagination">
