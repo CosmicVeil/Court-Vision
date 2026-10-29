@@ -1,91 +1,82 @@
 /* ============================================================
    COURT VISION — CONTACT / TEAM
    Obsidian Glass Arena Theme + Ember Orange Design Tokens
+   Page CSS is global, so every class here starts with contact-.
    ============================================================ */
 
 .contact-page {
   min-height: 100vh;
-  background: var(--bg-main, #08080a);
-  color: var(--text-primary, #ffffff);
-  padding: 110px 24px 70px;
+  background: var(--bg-main);
+  color: var(--color-pure-white);
+  padding: calc(var(--header-height) + var(--space) * 10) var(--gutter) calc(var(--space) * 18);
   position: relative;
   z-index: 2;
-  font-family: var(--font-body, 'Inter', sans-serif);
+  font-family: var(--font-body);
+  overflow: hidden;
 }
 
 .contact-shell {
   width: min(calc(100% - 2rem), 1160px);
   margin: 0 auto;
+  position: relative;
 }
 
-.contact-header {
-  text-align: center;
-  margin-bottom: 24px;
+.contact-ambient {
+  position: absolute;
+  width: 480px;
+  height: 480px;
+  background: radial-gradient(circle, rgba(255, 100, 54, 0.12), transparent 70%);
+  filter: blur(60px);
+  pointer-events: none;
 }
 
-.contact-hero {
-  text-align: center;
-  margin-bottom: 48px;
-}
+.contact-ambient-one { top: -100px; left: -180px; }
+.contact-ambient-two { top: 45%; right: -220px; opacity: 0.6; }
 
-.contact-hero h1 {
-  font-size: clamp(2.5rem, 5vw, 4.2rem);
-  margin-bottom: 12px;
-  font-family: var(--font-heading, 'Inter', sans-serif);
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: -0.5px;
-  color: #ffffff;
-  line-height: 1.08;
-}
-
-.contact-intro {
-  font-size: clamp(15px, 1.8vw, 17px);
-  color: var(--color-stone, #8e8c94);
-  max-width: 650px;
-  margin: 0 auto;
-  line-height: 1.6;
-}
-
-/* ---------- Project Card ---------- */
-.contact-project-card {
+/* ---------- Glass cards (project + team) ---------- */
+.contact-project-card,
+.contact-team-card {
+  min-width: 0;
   background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
-  border: 1px solid rgba(255, 100, 54, 0.18);
-  border-radius: var(--radius-xl, 20px);
-  padding: 36px 32px;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+  overflow-wrap: anywhere;
+}
+
+.contact-project-card {
   max-width: 900px;
-  margin: 0 auto 56px;
+  margin: 0 auto calc(var(--space) * 14);
+  padding: calc(var(--space) * 8);
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 20px;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+  gap: calc(var(--space) * 5);
 }
 
 .contact-label {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
-  color: var(--color-ember-orange, #ff6436);
+  color: var(--color-ember-orange);
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  margin-bottom: 6px;
+  margin: 0 0 calc(var(--space) * 1.5);
 }
 
 .contact-project-card h2 {
-  font-family: var(--font-heading, 'Inter', sans-serif);
-  font-size: 1.6rem;
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
   font-weight: 800;
-  color: #fff;
-  margin: 0 0 6px;
+  margin: 0 0 calc(var(--space) * 1.5);
 }
 
-.contact-project-card p {
-  color: var(--color-stone, #8e8c94);
-  font-size: 14px;
+.contact-project-card p:not(.contact-label) {
+  color: var(--color-stone);
+  font-size: var(--text-sm);
   margin: 0;
 }
 
@@ -95,183 +86,237 @@
   align-items: flex-end;
   background: rgba(255, 100, 54, 0.12);
   border: 1px solid rgba(255, 100, 54, 0.35);
-  padding: 12px 24px;
-  border-radius: 12px;
+  padding: calc(var(--space) * 3) calc(var(--space) * 6);
+  border-radius: var(--radius-md);
   text-decoration: none;
-  color: #fff;
-  transition: all 0.2s ease;
+  color: var(--color-pure-white);
+  transition: background var(--duration-base) var(--ease-brand), border-color var(--duration-base) var(--ease-brand),
+    box-shadow var(--duration-base) var(--ease-brand), transform var(--duration-base) var(--ease-brand);
 }
 
 .contact-domain:hover {
   background: rgba(255, 100, 54, 0.22);
-  border-color: var(--color-ember-orange, #ff6436);
+  border-color: var(--color-ember-orange);
   box-shadow: 0 0 20px rgba(255, 100, 54, 0.3);
   transform: translateY(-2px);
 }
 
-.contact-domain span {
-  font-family: var(--font-mono, monospace);
+.contact-domain > span {
+  font-family: var(--font-mono);
   font-weight: 800;
   font-size: 15px;
-  color: var(--color-ember-orange, #ff6436);
+  color: var(--color-ember-orange);
 }
 
 .contact-domain small {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
   font-size: 10px;
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone);
   letter-spacing: 1px;
 }
 
-/* ---------- Team Section ---------- */
+/* ---------- Team ---------- */
 .contact-team {
   max-width: 900px;
   margin: 0 auto;
 }
 
-.contact-section-heading {
+.contact-section-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: calc(var(--space) * 8);
   text-align: center;
-  margin-bottom: 32px;
 }
 
-.contact-eyebrow {
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--color-ember-orange, #ff6436);
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  margin-bottom: 6px;
-}
+.contact-section-head [data-slot="eyebrow"] { margin-bottom: calc(var(--space) * 4); }
 
-.contact-section-heading h2 {
-  font-family: var(--font-heading, 'Inter', sans-serif);
-  font-size: 2rem;
+.contact-section-head h2 {
+  font-family: var(--font-heading);
+  font-size: clamp(var(--text-xl), 4vw, var(--text-2xl));
   font-weight: 800;
-  color: #fff;
   margin: 0;
 }
 
+/* min(100%, 22rem): a track may never be wider than the grid itself. A bare 360px minimum
+   was wider than a phone's content box, so the cards ran off the right edge at 375px. */
 .contact-team-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: calc(var(--space) * 6);
 }
 
-.team-card {
-  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
-  border: 1px solid rgba(255, 100, 54, 0.18);
-  border-radius: var(--radius-xl, 20px);
-  padding: 32px;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+.contact-team-card {
+  padding: calc(var(--space) * 8);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  transition: transform var(--duration-slow) var(--ease-brand), border-color var(--duration-slow) var(--ease-brand),
+    box-shadow var(--duration-slow) var(--ease-brand);
 }
 
-.team-card:hover {
+.contact-team-card:hover,
+.contact-team-card:has(.contact-team-link:focus-visible) {
   transform: translateY(-6px);
-  border-color: rgba(255, 100, 54, 0.5);
+  border-color: var(--border-focus);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 24px rgba(255, 100, 54, 0.2);
 }
 
-.team-card-topline {
+.contact-team-topline {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: calc(var(--space) * 3);
+  margin-bottom: calc(var(--space) * 4);
 }
 
-.team-initials {
+.contact-team-initials {
   width: 44px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: rgba(255, 100, 54, 0.15);
-  border: 1px solid var(--color-ember-orange, #ff6436);
-  color: var(--color-ember-orange, #ff6436);
+  border: 1px solid var(--color-ember-orange);
+  color: var(--color-ember-orange);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
   font-weight: 800;
   font-size: 15px;
 }
 
-.team-status {
-  font-family: var(--font-mono, monospace);
+.contact-team-status {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--space) * 2);
+  font-family: var(--font-mono);
   font-size: 10px;
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone);
   letter-spacing: 1px;
 }
 
-.team-card-content h3 {
-  font-family: var(--font-heading, 'Inter', sans-serif);
-  font-size: 1.5rem;
+.contact-team-status i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 8px #4ade80;
+}
+
+.contact-team-content h3 {
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
   font-weight: 800;
-  color: #fff;
-  margin: 4px 0 2px;
+  margin: calc(var(--space)) 0 calc(var(--space) * 0.5);
 }
 
-.team-role {
-  font-family: var(--font-mono, monospace);
-  font-size: 12px;
-  color: var(--color-ember-orange, #ff6436);
-  margin-bottom: 12px;
+.contact-team-role {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-ember-orange);
+  margin: 0 0 calc(var(--space) * 3);
 }
 
-.team-bio {
-  color: var(--color-stone, #8e8c94);
-  font-size: 13.5px;
+.contact-team-bio {
+  color: var(--color-stone);
+  font-size: var(--text-sm);
   line-height: 1.6;
-  margin-bottom: 20px;
+  margin: 0 0 calc(var(--space) * 5);
 }
 
-.team-skills {
+.contact-team-skills {
   display: flex;
-  gap: 8px;
+  gap: calc(var(--space) * 2);
   flex-wrap: wrap;
-  margin-bottom: 24px;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 calc(var(--space) * 6);
 }
 
-.team-skills span {
+.contact-team-skills li {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-family: var(--font-mono, monospace);
+  padding: calc(var(--space)) calc(var(--space) * 2.5);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
   font-size: 10px;
-  color: #fff;
 }
 
-.team-link {
+.contact-team-link {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
+  gap: calc(var(--space) * 2);
+  width: fit-content;
+  max-width: 100%;
+  padding: calc(var(--space) * 2.5) calc(var(--space) * 5);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 100, 54, 0.25);
-  border-radius: var(--radius-full, 9999px);
-  color: #fff;
+  border-radius: var(--radius-full);
+  color: var(--color-pure-white);
   text-decoration: none;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1px;
   text-transform: uppercase;
-  transition: all 0.2s ease;
-  width: fit-content;
+  transition: background var(--duration-base) var(--ease-brand), border-color var(--duration-base) var(--ease-brand),
+    box-shadow var(--duration-base) var(--ease-brand);
 }
 
-.team-link svg {
+.contact-team-link svg {
   width: 14px;
   height: 14px;
+  flex: none;
 }
 
-.team-link:hover {
+.contact-team-link:hover {
   background: rgba(255, 100, 54, 0.15);
-  border-color: var(--color-ember-orange, #ff6436);
+  border-color: var(--color-ember-orange);
   box-shadow: 0 0 16px rgba(255, 100, 54, 0.25);
+}
+
+/* ---------- Footer ---------- */
+.contact-footer {
+  max-width: 900px;
+  margin: calc(var(--space) * 10) auto 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: calc(var(--space) * 2) calc(var(--space) * 3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: var(--color-stone);
+  text-align: center;
+}
+
+.contact-footer-sep { color: var(--color-ember-orange); }
+
+.contact-footer a { color: var(--color-ember-orange); }
+.contact-footer a:hover { color: var(--color-pure-white); }
+
+.contact-page a:focus-visible {
+  outline: 2px solid var(--color-ember-orange);
+  outline-offset: 3px;
+}
+
+@media (max-width: 480px) {
+  .contact-project-card,
+  .contact-team-card {
+    padding: calc(var(--space) * 6) calc(var(--space) * 5);
+  }
+
+  .contact-domain { align-items: flex-start; }
+
+  /* Stacked on phones: each item gets its own line, so the dots would only dangle. */
+  .contact-footer { flex-direction: column; }
+  .contact-footer-sep { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contact-domain:hover,
+  .contact-team-card:hover,
+  .contact-team-card:has(.contact-team-link:focus-visible) { transform: none; }
 }

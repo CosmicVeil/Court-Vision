@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import "./Login.css";
+import "./Auth.css";
 import { enterDelay } from "../utils/scrollReveal";
 import { isAuthenticated, login } from "../utils/auth";
 
@@ -40,21 +40,25 @@ const Login = () => {
   };
 
   return (
-    <div className="login-wrapper">
-      <div className="login-container">
-        <div className="stats-nav-top" data-enter style={{ marginBottom: '1.5rem', justifyContent: 'center' }}>
-          <span className="cv-section-badge">ACCESS PORTAL</span>
-        </div>
-        <div className="login-header" data-enter style={enterDelay(1)}>
-          <h1 className="login-title">AUTHENTICATE <span className="text-ember">ACCOUNT</span></h1>
-        </div>
-        <form className="login-form" data-enter style={enterDelay(2)} onSubmit={handleSubmit}>
-          <div className="form-group">
+    <main className="auth-page">
+      <div className="auth-card">
+        <header className="auth-head">
+          <span className="cv-section-badge" data-slot="eyebrow" data-enter>ACCESS PORTAL</span>
+          <h1 className="auth-title" data-slot="display-heading" data-enter style={enterDelay(1)}>
+            AUTHENTICATE <span className="text-ember">ACCOUNT</span>
+          </h1>
+          <p className="auth-lead" data-slot="lead" data-enter style={enterDelay(2)}>
+            Sign in to keep your saved players in sync.
+          </p>
+        </header>
+        <form className="auth-form" data-enter style={enterDelay(3)} onSubmit={handleSubmit}>
+          <div className="auth-field">
             <label htmlFor="email">EMAIL</label>
             <input
               type="email"
               id="email"
               name="email"
+              autoComplete="email"
               value={formData.email}
               onChange={handleChange}
               required
@@ -62,12 +66,13 @@ const Login = () => {
               disabled={loading}
             />
           </div>
-          <div className="form-group">
+          <div className="auth-field">
             <label htmlFor="password">PASSWORD</label>
             <input
               type="password"
               id="password"
               name="password"
+              autoComplete="current-password"
               value={formData.password}
               onChange={handleChange}
               required
@@ -76,27 +81,27 @@ const Login = () => {
             />
           </div>
           {error && (
-            <div className="login-error">
+            <div className="auth-error" role="alert">
               {error}
             </div>
           )}
-          <button type="submit" className="login-submit-btn" disabled={loading}>
+          <button type="submit" className="auth-submit" disabled={loading}>
             {loading ? "LOGGING IN..." : "LOGIN"}
           </button>
         </form>
-        <div className="login-footer" data-enter style={enterDelay(3)}>
+        <div className="auth-footer" data-enter style={enterDelay(4)}>
           {!isAuthenticated() && <p>
             Don't have an account?{" "}
-            <Link to="/create-account" className="login-link">
+            <Link to="/create-account" className="auth-link">
               Create Account
             </Link>
           </p>}
-          <Link to="/" className="login-link">
+          <Link to="/" className="auth-link">
             Back to Home
           </Link>
         </div>
       </div>
-    </div>
+    </main>
   );
 };
 

@@ -78,9 +78,9 @@ test("Privacy page uses the Contact theme with readable prose and narrow-screen 
   const page = readPrivacy();
   const css = readPrivacy("Privacy.css");
   assert.match(page, /import "\.\/Privacy\.css"/);
-  assert.match(page, /className="cv-section-badge"/);
-  assert.match(page, /<h1 id="privacy-title">PRIVACY &amp; <span className="text-ember">COOKIES<\/span><\/h1>/);
-  assert.match(page, /plain-English summary/);
+  // PageHero renders the cv-section-badge eyebrow, the h1 with its ember accent, and the lead.
+  assert.match(page, /<PageHero\s+eyebrow="PRIVACY & COOKIES"\s+title="PRIVACY &"\s+accent="COOKIES"/);
+  assert.match(page, /lead="A plain-English summary/);
   assert.match(page, /Last updated: October 18, 2026/);
   assert.match(page, /privacy-ambient-one/);
   assert.match(page, /privacy-ambient-two/);
@@ -91,7 +91,6 @@ test("Privacy page uses the Contact theme with readable prose and narrow-screen 
   assert.match(css, /width: min\(calc\(100% - 2rem\), 1160px\);/);
   assert.match(css, /overflow: hidden/);
   assert.match(css, /overflow-wrap: anywhere/);
-  assert.match(css, /\.privacy-header \.stats-nav-top\s*\{[^}]*flex-wrap: wrap/s);
   assert.match(css, /backdrop-filter: blur\(20px\)/);
   assert.match(css, /:focus-visible/);
   assert.match(css, /@media \(max-width: 480px\)/);

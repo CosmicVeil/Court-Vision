@@ -1,0 +1,182 @@
+/* ============================================================
+   COURT VISION — AUTH (Login + Create Account)
+   Obsidian Glass Arena Theme + Ember Orange Design Tokens
+   Both forms share one anatomy, so they share one stylesheet. Page CSS is global, so
+   every class here starts with auth-.
+   ============================================================ */
+
+.auth-page {
+  min-height: 100vh;
+  background: var(--bg-main);
+  color: var(--color-pure-white);
+  padding: calc(var(--header-height) + var(--space) * 10) var(--gutter) calc(var(--space) * 18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+  font-family: var(--font-body);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 480px;
+  min-width: 0;
+  padding: calc(var(--space) * 10) calc(var(--space) * 9);
+  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
+  border: 1px solid rgba(255, 100, 54, 0.25);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(255, 100, 54, 0.15);
+}
+
+/* Same anatomy as PageHero, scaled to a card: eyebrow, display heading, lead. */
+.auth-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: calc(var(--space) * 7);
+  text-align: center;
+}
+
+.auth-head [data-slot="eyebrow"] { margin-bottom: calc(var(--space) * 5); }
+
+.auth-title {
+  margin: 0 0 calc(var(--space) * 2);
+  font-family: var(--font-heading);
+  font-size: clamp(var(--text-xl), 6vw, var(--text-2xl));
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.auth-lead {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space) * 4);
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space) * 1.5);
+}
+
+.auth-field label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-stone);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.auth-field input {
+  min-width: 0;
+  padding: calc(var(--space) * 3) calc(var(--space) * 4.5);
+  border: 1px solid rgba(255, 100, 54, 0.2);
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.5);
+  color: var(--color-pure-white);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  transition: border-color var(--duration-fast) var(--ease-brand), background var(--duration-fast) var(--ease-brand),
+    box-shadow var(--duration-fast) var(--ease-brand);
+}
+
+.auth-field input:focus-visible {
+  outline: 2px solid var(--color-ember-orange);
+  outline-offset: 3px;
+  border-color: var(--color-ember-orange);
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.auth-field input[aria-invalid="true"] { border-color: rgba(239, 83, 80, 0.7); }
+
+.auth-field-error {
+  color: #ef5350;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+}
+
+.auth-error {
+  background: rgba(229, 57, 53, 0.12);
+  border: 1px solid rgba(229, 57, 53, 0.4);
+  color: #ef5350;
+  padding: calc(var(--space) * 2.5) calc(var(--space) * 3.5);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: center;
+}
+
+.auth-submit {
+  margin-top: calc(var(--space) * 2);
+  padding: calc(var(--space) * 3) calc(var(--space) * 6);
+  background: linear-gradient(135deg, #ff6436, #e04a1c);
+  color: var(--color-pure-white);
+  border: none;
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(255, 100, 54, 0.4);
+  transition: transform var(--duration-base) var(--ease-brand), box-shadow var(--duration-base) var(--ease-brand);
+}
+
+.auth-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 0 28px rgba(255, 100, 54, 0.6);
+}
+
+.auth-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.auth-footer {
+  margin-top: calc(var(--space) * 6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--space) * 2);
+  font-size: var(--text-sm);
+  color: var(--color-stone);
+  text-align: center;
+}
+
+.auth-footer p { margin: 0; }
+
+.auth-link {
+  color: var(--color-ember-orange);
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition: color var(--duration-fast) var(--ease-brand);
+}
+
+.auth-link:hover { color: var(--color-pure-white); }
+
+.auth-submit:focus-visible,
+.auth-link:focus-visible {
+  outline: 2px solid var(--color-ember-orange);
+  outline-offset: 3px;
+}
+
+@media (max-width: 480px) {
+  .auth-card { padding: calc(var(--space) * 8) calc(var(--space) * 5); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-submit:hover:not(:disabled) { transform: none; }
+}

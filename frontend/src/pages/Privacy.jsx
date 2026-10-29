@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import "./Privacy.css";
+import PageHero from "../components/PageHero";
 import { enterDelay } from "../utils/scrollReveal";
 
 function Privacy() {
@@ -9,19 +10,13 @@ function Privacy() {
       <div className="privacy-ambient privacy-ambient-two" aria-hidden="true" />
 
       <div className="privacy-shell">
-        <header className="privacy-header" data-enter>
-          <div className="stats-nav-top">
-            <span className="cv-section-badge">PRIVACY &amp; COOKIES</span>
-          </div>
-        </header>
-
-        <section className="privacy-hero" aria-labelledby="privacy-title" data-enter style={enterDelay(1)}>
-          <h1 id="privacy-title">PRIVACY &amp; <span className="text-ember">COOKIES</span></h1>
-          <p className="privacy-intro">
-            A plain-English summary of what Court Vision stores and why.
-          </p>
-          <p className="privacy-updated">Last updated: October 18, 2026</p>
-        </section>
+        <PageHero
+          eyebrow="PRIVACY & COOKIES"
+          title="PRIVACY &"
+          accent="COOKIES"
+          lead="A plain-English summary of what Court Vision stores and why."
+        />
+        <p className="privacy-updated" data-enter style={enterDelay(1)}>Last updated: October 18, 2026</p>
 
         <aside className="privacy-disclaimer" role="note" data-enter style={enterDelay(2)}>
           <p className="privacy-label">DISCLAIMER</p>
