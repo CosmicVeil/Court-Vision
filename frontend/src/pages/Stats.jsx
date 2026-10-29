@@ -5,11 +5,13 @@ import { isAuthenticated } from '../utils/auth';
 import { buildApiUrl } from '../config/api';
 import { scrollToIfAbove } from '../utils/scroll';
 import { samePlayerName } from '../utils/playerNames';
+import PageHero from '../components/PageHero';
 import PlayerCard from '../components/PlayerCard';
 import PlayerStatsModal from '../components/PlayerStatsModal';
 import useFlip from '../hooks/useFlip';
 import useListQuery from '../hooks/useListQuery';
 import ScrollReveal from '../components/ScrollReveal';
+import { getStatsHeroStats } from '../utils/pageHero';
 import { getSeasonCardStats } from '../utils/playerCard';
 import './Stats.css';
 
@@ -236,9 +238,24 @@ const Stats = () => {
     scrollToIfAbove(resultsRef.current);
   };
 
+  // Built before the early returns, so the first load and errors keep the same heading.
+  const hero = (
+    <PageHero
+      eyebrow="PLAYER DATABASE"
+      title="NBA PLAYER"
+      accent="STATISTICS"
+      lead="Browse and analyze comprehensive player performance metrics, season averages, and AI projections"
+      stats={getStatsHeroStats({
+        ready: !error && (!loading || players.length > 0),
+        total: totalPlayers, year: selectedYear, sort: sortBy, order: sortOrder, page: currentPage, totalPages,
+      })}
+    />
+  );
+
   if (loading && players.length === 0) {
     return (
       <div className="stats-container">
+        {hero}
         <div className="loading">Loading NBA players...</div>
       </div>
     );
@@ -248,6 +265,7 @@ const Stats = () => {
     const serverUrl = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5001' : 'https://court-vision-zxuj.onrender.com');
     return (
       <div className="stats-container">
+        {hero}
         <div className="error">
           Error: {error}
           <br />
@@ -261,13 +279,7 @@ const Stats = () => {
     <div className="stats-container">
       {/* Rescans when the card view opens or a new page of players arrives. */}
       <ScrollReveal scanKey={viewMode === 'cards' ? players : null} />
-      <div className="stats-header">
-        <div className="stats-nav-top">
-          <span className="cv-section-badge">PLAYER DATABASE</span>
-        </div>
-        <h1>NBA PLAYER <span className="text-ember">STATISTICS</span></h1>
-        <p>Browse and analyze comprehensive player performance metrics, season averages, and AI projections</p>
-      </div>
+      {hero}
 
       {/* Filters */}
       <div className="filters-section">

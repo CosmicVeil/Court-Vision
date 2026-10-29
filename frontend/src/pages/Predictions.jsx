@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import PageHero from '../components/PageHero';
 import PlayerCard from '../components/PlayerCard';
 import PlayerStatsModal from '../components/PlayerStatsModal';
 import useFlip from '../hooks/useFlip';
@@ -11,6 +12,7 @@ import { isAuthenticated } from '../utils/auth';
 import { buildApiUrl } from '../config/api';
 import { scrollToIfAbove } from '../utils/scroll';
 import { samePlayerName } from '../utils/playerNames';
+import { getPredictionsHeroStats } from '../utils/pageHero';
 import { getPredictionCardStats } from '../utils/playerCard';
 import './Predictions.css';
 
@@ -242,13 +244,16 @@ const Predictions = () => {
     <div className="predictions-container">
       {/* New cards arrive with each fetch, so the reveal rescans when the list changes. */}
       <ScrollReveal scanKey={predictions} />
-      <div className="predictions-header">
-        <div className="stats-nav-top">
-          <span className="cv-section-badge">AI FORECASTING</span>
-        </div>
-        <h1>NEURAL MATCHUP <span className="text-ember">PREDICTIONS</span></h1>
-        <p>Advanced neural network models forecasting player performance, breakout indicators, and season trends</p>
-      </div>
+      <PageHero
+        eyebrow="XGBOOST FORECASTING"
+        title="NEXT SEASON"
+        accent="PREDICTIONS"
+        lead="Gradient-boosted (XGBoost) models trained on past seasons project every player's per-game stats for next season"
+        stats={getPredictionsHeroStats({
+          ready: !error && (!loading || predictions.length > 0),
+          total: totalPlayers, sort: sortBy, order: sortOrder, page: currentPage, totalPages,
+        })}
+      />
 
       <div className="filters-section">
         <div className="filter-group">

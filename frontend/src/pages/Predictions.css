@@ -13,33 +13,6 @@
   font-family: var(--font-body, 'Inter', sans-serif);
 }
 
-/* ---------- Header ---------- */
-.predictions-header {
-  text-align: center;
-  margin-bottom: 36px;
-  position: relative;
-  z-index: 10;
-}
-
-.predictions-header h1 {
-  font-size: clamp(2.5rem, 5vw, 4.2rem);
-  margin-bottom: 12px;
-  font-family: var(--font-heading, 'Inter', sans-serif);
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: -0.5px;
-  color: #ffffff;
-  line-height: 1.08;
-}
-
-.predictions-header p {
-  font-size: clamp(15px, 1.8vw, 17px);
-  color: var(--color-stone, #8e8c94);
-  max-width: 650px;
-  margin: 0 auto;
-  line-height: 1.6;
-}
-
 /* ---------- Filters Bar ---------- */
 .filters-section {
   display: flex;

@@ -1,0 +1,54 @@
+/* PageHero: the list pages' heading block. Base stat-strip styles (border, dt/dd order and
+   sizes) come from [data-slot="stat-strip"] in tokens.css. */
+.page-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 auto calc(var(--space) * 10);
+  text-align: center;
+}
+
+.page-hero [data-slot="eyebrow"] { margin-bottom: calc(var(--space) * 5); }
+
+.ph-title {
+  margin: 0 0 calc(var(--space) * 3);
+  color: var(--color-pure-white);
+  font-family: var(--font-heading);
+  font-size: clamp(var(--text-display-sm), 5vw, var(--text-display-md));
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+/* Words rise in one after another, once, on first load. */
+.ph-word {
+  display: inline-block;
+  animation: rise .9s var(--ease-brand) both;
+  animation-delay: calc(80ms + var(--word, 0) * 90ms);
+}
+
+.ph-lead { margin: 0 auto; font-size: clamp(15px, 1.8vw, 17px); line-height: 1.6; }
+
+.ph-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: calc(var(--space) * 6);
+  width: 100%;
+  max-width: 48rem;
+  margin: calc(var(--space) * 8) 0 0;
+}
+
+/* A value ticks in when it changes (the span is keyed by value), staggered across the strip. */
+.ph-stat-value {
+  display: inline-block;
+  animation: tick-in .6s var(--ease-brand) both;
+  animation-delay: calc(var(--stat, 0) * 60ms);
+}
+
+@media (max-width: 800px) {
+  .ph-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ph-word,
+  .ph-stat-value { animation: none; }
+}

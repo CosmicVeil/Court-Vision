@@ -1433,8 +1433,9 @@ html[data-motion] .detail-momentum:not([data-revealed]) .period-bar { transform:
   white-space: nowrap;
 }
 
-/* Sortable headers: the whole label is a button; the arrow shows the current direction. */
-.sort-btn {
+/* Sortable headers: the whole label is a button; the arrow shows the current direction.
+   Scoped to the box score: a bare .sort-btn here would restyle the Stats sort buttons. */
+.boxscore .sort-btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -1450,24 +1451,24 @@ html[data-motion] .detail-momentum:not([data-revealed]) .period-bar { transform:
   transition: color var(--duration-fast) var(--ease-brand);
 }
 
-.sort-arrow {
+.boxscore .sort-arrow {
   font-size: 9px;
   opacity: .35;
   transition: opacity var(--duration-fast) var(--ease-brand);
 }
 
-.sort-btn[data-active] { color: #fff; }
-.sort-btn[data-active] .sort-arrow { opacity: 1; color: var(--color-ember-orange); }
+.boxscore .sort-btn[data-active] { color: #fff; }
+.boxscore .sort-btn[data-active] .sort-arrow { opacity: 1; color: var(--color-ember-orange); }
 
-.sort-btn:focus-visible {
+.boxscore .sort-btn:focus-visible {
   outline: 2px solid var(--color-ember-orange);
   outline-offset: 2px;
   border-radius: 2px;
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .sort-btn:hover { color: #fff; }
-  .sort-btn:hover .sort-arrow { opacity: .8; }
+  .boxscore .sort-btn:hover { color: #fff; }
+  .boxscore .sort-btn:hover .sort-arrow { opacity: .8; }
 }
 
 .lg-detail-page .group-header td {

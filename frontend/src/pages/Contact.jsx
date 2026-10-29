@@ -23,7 +23,7 @@ function Contact() {
       <section className="contact-hero" aria-labelledby="contact-title">
         <h1 id="contact-title">THE ARCHITECTS BEHIND <span className="text-ember">COURT VISION</span></h1>
         <p className="contact-intro">
-          Transforming raw NBA tracking telemetry into actionable neural forecasting. Meet the engineers engineering the platform.
+          Turning NBA box-score data into XGBoost forecasts and live game insights. Meet the engineers building the platform.
         </p>
       </section>
 

@@ -13,14 +13,6 @@
   font-family: var(--font-body, 'Inter', sans-serif);
 }
 
-/* ---------- Header ---------- */
-.stats-header {
-  text-align: center;
-  margin-bottom: 40px;
-  position: relative;
-  z-index: 10;
-}
-
 .stats-nav-top {
   display: flex;
   align-items: center;
@@ -52,25 +44,6 @@
   transform: translateX(-3px);
   border-color: var(--color-ember-orange, #ff6436);
   box-shadow: 0 0 16px rgba(255, 100, 54, 0.3);
-}
-
-.stats-header h1 {
-  font-size: clamp(2.5rem, 5vw, 4.2rem);
-  margin-bottom: 12px;
-  font-family: var(--font-heading, 'Inter', sans-serif);
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: -0.5px;
-  color: #ffffff;
-  line-height: 1.08;
-}
-
-.stats-header p {
-  font-size: clamp(15px, 1.8vw, 17px);
-  color: var(--color-stone, #8e8c94);
-  max-width: 650px;
-  margin: 0 auto;
-  line-height: 1.6;
 }
 
 /* ---------- Filters & Controls (Obsidian Glass) ---------- */
