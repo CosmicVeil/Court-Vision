@@ -3,39 +3,37 @@ import { Link } from "react-router-dom";
 import "./Home.css";
 import AIPredictions from "../components/AIPredictions";
 import PlayerStatsModal from "../components/PlayerStatsModal";
+import ScrollReveal from "../components/ScrollReveal";
 import { isAuthenticated } from "../utils/auth";
 import { buildApiUrl } from "../config/api";
 import { samePlayerName } from "../utils/playerNames";
 import { extractWeeklyPraPlayer, formatPraGameDate } from "../utils/weeklyPra";
+import { enterDelay, getRevealDelay } from "../utils/scrollReveal";
 
-/* Scroll-reveal hook using IntersectionObserver */
-function useScrollReveal() {
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('revealed');
-          }
-        });
-      },
-      { threshold: 0.05, rootMargin: '0px 0px 100px 0px' }
-    );
-    document.querySelectorAll('.scroll-reveal, .scroll-reveal-left, .scroll-reveal-scale').forEach((el) => {
-      observer.observe(el);
-    });
-    return () => observer.disconnect();
-  }, []);
+// Inline style placing a data-reveal element at `index` in its section's stagger.
+const revealDelay = index => ({ '--reveal-delay': getRevealDelay(index) });
+
+// The eyebrow / display heading / lead anatomy every section below the intro shares.
+function SectionHead({ id, eyebrow, title, accent, lead }) {
+  return (
+    <div className="home-section-head" data-reveal>
+      <span className="cv-section-badge" data-slot="eyebrow">{eyebrow}</span>
+      <h2 id={id} className="home-section-title" data-slot="display-heading">
+        {title} <span className="text-ember">{accent}</span>
+      </h2>
+      {lead && <p className="home-section-lead" data-slot="lead">{lead}</p>}
+    </div>
+  );
 }
 
-function TrendingGameCard({ game }) {
+function TrendingGameCard({ game, index }) {
   const isLive = game.status === 2;
   const isFinal = game.status === 3;
   const isFuture = game.status === 1;
   const homeWin = game.home.score > game.away.score;
   const awayWin = game.away.score > game.home.score;
   return (
-    <div className="featured-card">
+    <div className="featured-card" data-reveal style={revealDelay(index)}>
       <div className={`featured-badge ${isLive ? "" : "upcoming"}`}>
         {isLive && <span className="trend-live-dot" />}
         {isLive ? `LIVE · Q${game.period}` : isFinal ? "FINAL" : game.statusText}
@@ -64,19 +62,25 @@ function TrendingGameCard({ game }) {
   );
 }
 
-function PRACard({ player, onPlayerClick }) {
+// The name is the button; its ::after stretches over the card, so the whole card stays clickable
+// and keyboard users reach it with Tab (same pattern as PlayerCard).
+function PRACard({ player, onPlayerClick, index }) {
   if (!player) return null;
   return (
-    <div
-      className="featured-card pra-card clickable-pra-card"
-      onClick={() => onPlayerClick && onPlayerClick({ name: player.name, team: player.team, position: player.position })}
-      style={{ cursor: 'pointer' }}
-    >
+    <article className="featured-card pra-card" data-reveal style={revealDelay(index)}>
       <div className="featured-badge highlight">
         WEEK'S BEST PRA {player.is_live && <><span className="trend-live-dot" /> LIVE</>}
       </div>
       <div className="featured-content">
-        <h3 className="pra-name">{player.name}</h3>
+        <h3 className="pra-name">
+          <button
+            type="button"
+            className="pra-open"
+            onClick={() => onPlayerClick && onPlayerClick({ name: player.name, team: player.team, position: player.position })}
+          >
+            {player.name}
+          </button>
+        </h3>
         <p className="pra-meta">{player.team} · {player.position}</p>
         <p className="pra-game-meta"><span>vs {player.opponent}</span> · {formatPraGameDate(player.game_date)}</p>
         <div className="pra-stats-row">
@@ -85,15 +89,16 @@ function PRACard({ player, onPlayerClick }) {
           <div className="pra-stat"><span className="pra-val">{player.ast}</span><span className="pra-lbl">AST</span></div>
           <div className="pra-stat pra-total"><span className="pra-val">{player.pra}</span><span className="pra-lbl">PRA</span></div>
         </div>
-        <div className="featured-link">
+        <div className="featured-link" aria-hidden="true">
           Click for Full Stats →
         </div>
       </div>
-    </div>
+    </article>
   );
 }
 
-function TrendingSection({ onPlayerClick }) {
+// onSettled tells Home the cards are in the DOM, so ScrollReveal can rescan for them.
+function TrendingSection({ onPlayerClick, onSettled }) {
   const [liveGames, setLiveGames] = useState([]);
   const [praPlayer, setPraPlayer] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -128,16 +133,17 @@ function TrendingSection({ onPlayerClick }) {
         console.error("Trending fetch failed", e);
       } finally {
         setLoading(false);
+        onSettled(true);
       }
     };
     fetch_();
-  }, []);
+  }, [onSettled]);
 
   if (loading) {
     return (
-      <div className="featured-grid">
+      <div className="featured-grid" data-defer aria-busy="true">
         {[0, 1, 2].map(i => (
-          <div key={i} className="featured-card trend-skeleton">
+          <div key={i} className="featured-card trend-skeleton" data-reveal style={revealDelay(i)}>
             <div className="skeleton-badge" /><div className="skeleton-body" />
           </div>
         ))}
@@ -146,7 +152,7 @@ function TrendingSection({ onPlayerClick }) {
   }
 
   const cards = liveGames.length === 0 && !praPlayer ? (
-    <div className="featured-card trend-empty">
+    <div className="featured-card trend-empty" data-reveal>
       <div className="featured-badge upcoming">LIVE SLATE</div>
       <div className="featured-content trend-empty-content">
         <div className="trend-empty-radar">
@@ -161,13 +167,19 @@ function TrendingSection({ onPlayerClick }) {
     </div>
   ) : (
     <>
-      {liveGames.map(g => <TrendingGameCard key={g.gameId} game={g} />)}
-      {praPlayer && <PRACard player={praPlayer} onPlayerClick={onPlayerClick} />}
+      {liveGames.map((g, i) => <TrendingGameCard key={g.gameId} game={g} index={i} />)}
+      {praPlayer && <PRACard player={praPlayer} onPlayerClick={onPlayerClick} index={liveGames.length} />}
     </>
   );
 
-  return <div className="featured-grid">{cards}</div>;
+  return <div className="featured-grid" data-defer>{cards}</div>;
 }
+
+const STEPS = [
+  { number: "01", title: "CREATE YOUR ACCOUNT", text: "Sign up in seconds and personalize your analytics feed with your favorite NBA franchises and players." },
+  { number: "02", title: "EXPLORE & ANALYZE", text: "Dig into live box scores, multi-season player stats, and XGBoost projections for next season." },
+  { number: "03", title: "STAY AHEAD", text: "Receive daily value recommendations, automated injury adjustments, and real-time game probabilities." },
+];
 
 const COURT_LETTERS = [
   { char: "C", id: 0 },
@@ -189,6 +201,10 @@ const VISION_LETTERS = [
 const Home = () => {
   // The shared header owns login state; Home only reads it once to pick its closing CTA.
   const [isLoggedIn] = useState(() => isAuthenticated());
+  // Flips once the trending fetch settles; ScrollReveal rescans so the arriving cards animate in.
+  const [trendingSettled, setTrendingSettled] = useState(false);
+  // Same idea for the projected-leader cards, which change with each tab.
+  const [leadersContent, setLeadersContent] = useState('');
 
   // States for search and popup modal
   const [searchQuery, setSearchQuery] = useState("");
@@ -245,13 +261,14 @@ const Home = () => {
     }
   };
 
-  // Scroll-reveal animations
-  useScrollReveal();
-
   // 3D Court Scroll Effect
   const heroRef = useRef(null);
 
   useEffect(() => {
+    // Under reduced motion the intro is a still title card: no scroll-linked sequence, and
+    // Home.css shrinks the wrapper to one screen. Re-checked if the preference changes.
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
     const onScroll = () => {
       const scrollY = window.scrollY;
       if (!heroRef.current) return;
@@ -402,9 +419,22 @@ const Home = () => {
       el.style.setProperty('--cv-ui-op', Math.max(0, 1 - p / 0.12));
     };
 
-    window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener('scroll', onScroll);
+    const syncMotion = () => {
+      window.removeEventListener('scroll', onScroll);
+      if (reducedMotion.matches) {
+        if (heroRef.current) heroRef.current.style.cssText = '';
+        return;
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    };
+
+    syncMotion();
+    reducedMotion.addEventListener('change', syncMotion);
+    return () => {
+      reducedMotion.removeEventListener('change', syncMotion);
+      window.removeEventListener('scroll', onScroll);
+    };
   }, []);
 
   // Click outside to dismiss search results
@@ -644,8 +674,8 @@ const Home = () => {
 
           {/* Hero UI CTA buttons */}
           <div className="cv-hero-ui">
-            <p className="hero-subtitle">AI-powered basketball analytics, live stats &amp; predictions</p>
-            <div className="hero-cta">
+            <p className="hero-subtitle" data-enter>AI-powered basketball analytics, live stats &amp; predictions</p>
+            <div className="hero-cta" data-enter style={enterDelay(1)}>
               <Link to="/stats" className="cta-button primary">EXPLORE STATS</Link>
               <Link to="/recommendations" className="cta-button secondary">GET RECOMMENDATIONS</Link>
             </div>
@@ -655,27 +685,30 @@ const Home = () => {
       </section>
 
       {/* ─── SEARCH SECTION (Underneath Court Vision) ─── */}
-      <section className="court-search-section scroll-reveal">
+      <section className="home-section court-search-section" aria-labelledby="home-search-title">
         <div className="court-search-container" ref={searchContainerRef}>
-          <div className="cv-section-badge-wrapper">
-            <span className="cv-section-badge">PLAYER SEARCH</span>
-          </div>
-          <h2 className="court-search-title">SEARCH ANY <span className="text-ember">NBA ATHLETE</span></h2>
-          <p className="court-search-subtitle">Instant telemetry, season trajectories, and AI-projected performance metrics</p>
-          
-          <div className="hero-search-wrapper">
+          <SectionHead
+            id="home-search-title"
+            eyebrow="PLAYER SEARCH"
+            title="SEARCH ANY"
+            accent="NBA ATHLETE"
+            lead="Instant telemetry, season trajectories, and AI-projected performance metrics"
+          />
+
+          <div className="hero-search-wrapper" data-reveal style={revealDelay(1)}>
             <div className="search-bar-container">
               <svg className="search-icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
               <input 
                 type="text" 
                 className="search-input-field" 
                 placeholder="Search NBA player by name (e.g. Luka Dončić, Shai, Giannis)..." 
+                aria-label="Search NBA players by name"
                 value={searchQuery} 
                 onChange={(e) => setSearchQuery(e.target.value)} 
               />
               {isSearching && <div className="search-spinner"></div>}
               {searchQuery && (
-                <button className="clear-search-btn" onClick={() => setSearchQuery("")}>
+                <button type="button" className="clear-search-btn" aria-label="Clear search" onClick={() => setSearchQuery("")}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
               )}
@@ -684,13 +717,13 @@ const Home = () => {
             {searchResults.length > 0 && (
               <div className="search-results-dropdown">
                 {searchResults.map((player) => (
-                  <div key={player.name} className="search-result-item" onClick={() => { setSelectedPlayer(player); setSearchResults([]); setSearchQuery(""); }}>
-                    <div className="search-result-player-info">
+                  <button type="button" key={player.name} className="search-result-item" onClick={() => { setSelectedPlayer(player); setSearchResults([]); setSearchQuery(""); }}>
+                    <span className="search-result-player-info">
                       <span className="search-result-player-name">{player.name}</span>
                       <span className="search-result-player-meta">{player.position} · Age {player.age}</span>
-                    </div>
+                    </span>
                     <span className="search-result-player-team">{player.team}</span>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -701,92 +734,78 @@ const Home = () => {
         </div>
       </section>
 
-
-      <section className="featured-section scroll-reveal">
+      <section className="home-section featured-section" aria-labelledby="home-trending-title">
         <div className="featured-container">
-          <div className="cv-section-badge-wrapper">
-            <span className="cv-section-badge">LIVE INTEL</span>
-          </div>
-          <h2 className="section-title">TRENDING <span className="text-ember">NOW</span></h2>
-          <p className="section-description">Live scores, upcoming matchups, and this week's standout performers</p>
-          <TrendingSection onPlayerClick={handlePlayerClick} />
+          <SectionHead
+            id="home-trending-title"
+            eyebrow="LIVE INTEL"
+            title="TRENDING"
+            accent="NOW"
+            lead="Live scores, upcoming matchups, and this week's standout performers"
+          />
+          <TrendingSection onPlayerClick={handlePlayerClick} onSettled={setTrendingSettled} />
         </div>
       </section>
 
-      <section className="how-it-works-section scroll-reveal">
+      <section className="home-section how-it-works-section" aria-labelledby="home-steps-title">
         <div className="how-it-works-container">
-          <div className="cv-section-badge-wrapper">
-            <span className="cv-section-badge">WORKFLOW</span>
-          </div>
-          <h2 className="section-title">HOW IT <span className="text-ember">WORKS</span></h2>
-          <p className="section-description">Unlock the full power of AI-driven basketball predictive intelligence in three steps</p>
-          <div className="steps-container">
-            <div className="step-item">
-              <div className="step-number">01</div>
-              <div className="step-content">
-                <h3>CREATE YOUR ACCOUNT</h3>
-                <p>Sign up in seconds and personalize your analytics feed with your favorite NBA franchises and players.</p>
-              </div>
-            </div>
-            <div className="step-connector" />
-            <div className="step-item">
-              <div className="step-number">02</div>
-              <div className="step-content">
-                <h3>EXPLORE & ANALYZE</h3>
-                <p>Dig into live box scores, multi-season player stats, and XGBoost projections for next season.</p>
-              </div>
-            </div>
-            <div className="step-connector" />
-            <div className="step-item">
-              <div className="step-number">03</div>
-              <div className="step-content">
-                <h3>STAY AHEAD</h3>
-                <p>Receive daily value recommendations, automated injury adjustments, and real-time game probabilities.</p>
-              </div>
-            </div>
-          </div>
+          <SectionHead
+            id="home-steps-title"
+            eyebrow="WORKFLOW"
+            title="HOW IT"
+            accent="WORKS"
+            lead="Unlock the full power of AI-driven basketball predictive intelligence in three steps"
+          />
+          <ol className="steps-container">
+            {STEPS.map((step, index) => (
+              <React.Fragment key={step.number}>
+                {index > 0 && <li className="step-connector" aria-hidden="true" data-reveal="fade" style={revealDelay(index * 2 - 1)} />}
+                <li className="step-item" data-reveal style={revealDelay(index * 2)}>
+                  <div className="step-number" aria-hidden="true">{step.number}</div>
+                  <div className="step-content">
+                    <h3>{step.title}</h3>
+                    <p>{step.text}</p>
+                  </div>
+                </li>
+              </React.Fragment>
+            ))}
+          </ol>
         </div>
       </section>
 
-      <section className="ai-section scroll-reveal">
+      <section className="home-section ai-section" aria-labelledby="home-leaders-title">
         <div className="ai-content">
-          <div className="cv-section-badge-wrapper">
-            <span className="cv-section-badge">XGBOOST FORECASTING</span>
+          <SectionHead
+            id="home-leaders-title"
+            eyebrow="XGBOOST FORECASTING"
+            title="PROJECTED"
+            accent="LEADERS"
+            lead="XGBoost models trained on past seasons project next season's top scorers, playmakers, rebounders and breakout players"
+          />
+          <div data-reveal style={revealDelay(1)}>
+            <AIPredictions onPlayerClick={handlePlayerClick} onContentChange={setLeadersContent} />
           </div>
-          <h2 className="section-title">PROJECTED <span className="text-ember">LEADERS</span></h2>
-          <p className="section-description">XGBoost models trained on past seasons project next season's top scorers, playmakers, rebounders and breakout players</p>
-          <AIPredictions onPlayerClick={handlePlayerClick} />
         </div>
       </section>
 
-      {!isLoggedIn && (
-      <section className="cta-section">
-        <div className="cta-container scroll-reveal">
-          <div className="cv-section-badge-wrapper"><span className="cv-section-badge">GET STARTED</span></div>
-          <h2 className="cta-title">ELEVATE YOUR <span className="text-ember">COURT VISION</span></h2>
-          <p className="cta-description">Join thousands of analysts, bettors, and basketball fanatics leveraging AI to discover winning insights.</p>
-          <div className="cta-buttons">
-            <Link to="/stats" className="cta-button primary large">START ANALYZING</Link>
+      {/* One closing CTA for everyone; only the account link depends on login state. */}
+      <section className="home-section home-cta" aria-labelledby="home-cta-title">
+        <SectionHead
+          id="home-cta-title"
+          eyebrow="GET STARTED"
+          title="ELEVATE YOUR"
+          accent="COURT VISION"
+          lead="Live box scores, multi-season player stats and XGBoost projections for next season, all in one place."
+        />
+        <div className="home-cta-actions" data-reveal style={revealDelay(1)}>
+          <Link to="/stats" className="cta-button primary large">START ANALYZING</Link>
+          {!isLoggedIn && (
             <Link to="/create-account" className="cta-button secondary large">CREATE FREE ACCOUNT</Link>
-          </div>
+          )}
         </div>
       </section>
-      )}
-      {isLoggedIn && (
-      <section className="cta-section">
-        <div className="cta-container">
-          <div className="cv-section-badge-wrapper">
-            <span className="cv-section-badge">GET STARTED</span>
-          </div>
-          <h2 className="cta-title">ELEVATE YOUR <span className="text-ember">COURT VISION</span></h2>
-          <p className="cta-description">Join thousands of analysts, bettors, and basketball fanatics leveraging AI to discover winning insights.</p>
-          <div className="cta-buttons">
-            <Link to="/stats" className="cta-button primary large">START ANALYZING</Link>
-          </div>
-        </div>
-      </section>
-      )}
 
+      <ScrollReveal scanKey={`${trendingSettled}:${leadersContent}`} />
       <PlayerStatsModal player={selectedPlayer} loading={loadingPlayer} onClose={() => setSelectedPlayer(null)} />
     </div>
   );

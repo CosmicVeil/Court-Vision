@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { API_ENDPOINTS } from "../config/api";
+import PlayerCard from "./PlayerCard";
+import { getLeaderCardStats } from "../utils/playerCard";
 import "./AIPredictions.css";
 
 const EMPTY_PREDICTIONS = {
@@ -11,7 +13,16 @@ const EMPTY_PREDICTIONS = {
   breakout_players: []
 };
 
-const AIPredictions = ({ onPlayerClick, lazy = true }) => {
+const toCardPlayer = (player) => ({
+  name: player.PLAYER_NAME,
+  team: player.TEAM,
+  position: player.POSITION,
+  age: Number.isFinite(player.AGE) ? Math.round(player.AGE) : null,
+});
+
+// onContentChange reports what is on screen (tab + load state), so the page can rescan for the
+// cards' data-reveal targets whenever a new set mounts.
+const AIPredictions = ({ onPlayerClick, onContentChange, lazy = true }) => {
   const containerRef = useRef(null);
   const [shouldLoad, setShouldLoad] = useState(!lazy);
   const [predictions, setPredictions] = useState(EMPTY_PREDICTIONS);
@@ -96,142 +107,24 @@ const AIPredictions = ({ onPlayerClick, lazy = true }) => {
   }, [shouldLoad]);
 
 
-  const formatStat = (value) => {
-    if (typeof value === 'number') {
-      return value.toFixed(1);
-    }
-    return value || '0.0';
-  };
-
-  const renderPlayerCard = (player, index, statType) => {
-    const getStatDisplay = () => {
-      switch (statType) {
-        case 'scorers':
-          return {
-            past: formatStat(player.PPG_LAST || 0),
-            current: formatStat(player.PREDICTED_PPG),
-            label: 'PPG'
-          };
-        case 'assists':
-          return {
-            past: formatStat(player.APG_LAST || 0),
-            current: formatStat(player.PREDICTED_APG),
-            label: 'APG'
-          };
-        case 'rebounders':
-          return {
-            past: formatStat(player.RPG_LAST || 0),
-            current: formatStat(player.PREDICTED_RPG),
-            label: 'RPG'
-          };
-        case 'steals':
-          return {
-            past: formatStat(player.SPG_LAST || 0),
-            current: formatStat(player.PREDICTED_SPG),
-            label: 'SPG'
-          };
-        case 'blocks':
-          return {
-            past: formatStat(player.BPG_LAST || 0),
-            current: formatStat(player.PREDICTED_BPG),
-            label: 'BPG'
-          };
-        case 'breakout':
-          return {
-            past: formatStat(player.PPG_LAST || 0),
-            current: formatStat(player.PREDICTED_PPG),
-            label: 'Est. PPG',
-            apg_past: formatStat(player.APG_LAST || 0),
-            apg_current: formatStat(player.PREDICTED_APG),
-            rpg_past: formatStat(player.RPG_LAST || 0),
-            rpg_current: formatStat(player.PREDICTED_RPG)
-          };
-        default:
-          return {
-            past: '0.0',
-            current: '0.0',
-            label: 'N/A'
-          };
-      }
-    };
-
-    const stat = getStatDisplay();
-    const pastNum = parseFloat(stat.past) || 0;
-    const currentNum = parseFloat(stat.current) || 0;
-    const isUp = currentNum >= pastNum;
-    const diff = (currentNum - pastNum).toFixed(1);
-
-    return (
-      <div key={index} className="player-card" onClick={() => onPlayerClick && onPlayerClick(player)} style={{ cursor: 'pointer' }}>
-        <div className="player-rank">#{index + 1}</div>
-        <div className="player-info">
-          <div className="player-name">{player.PLAYER_NAME}</div>
-          <div className="player-details">
-            {player.TEAM} • {player.POSITION} • Age {player.AGE}
-          </div>
-        </div>
-        <div className="player-stat">
-          {statType === 'breakout' ? (
-            <div className="stat-breakout">
-              <div className="breakout-stats-grid">
-                <div className="breakout-stat">
-                  <div className="stat-value-small">{stat.past}</div>
-                  <div className={`stat-arrow-small ${parseFloat(stat.current) >= parseFloat(stat.past) ? 'positive' : 'negative'}`}>
-                    {parseFloat(stat.current) >= parseFloat(stat.past) ? '↗' : '↘'}
-                  </div>
-                  <div className={`stat-value-small ${parseFloat(stat.current) >= parseFloat(stat.past) ? 'positive' : 'negative'}`}>{stat.current}</div>
-                  <div className="stat-label-small">PPG</div>
-                </div>
-                <div className="breakout-stat">
-                  <div className="stat-value-small">{stat.apg_past}</div>
-                  <div className={`stat-arrow-small ${parseFloat(stat.apg_current) >= parseFloat(stat.apg_past) ? 'positive' : 'negative'}`}>
-                    {parseFloat(stat.apg_current) >= parseFloat(stat.apg_past) ? '↗' : '↘'}
-                  </div>
-                  <div className={`stat-value-small ${parseFloat(stat.apg_current) >= parseFloat(stat.apg_past) ? 'positive' : 'negative'}`}>{stat.apg_current}</div>
-                  <div className="stat-label-small">APG</div>
-                </div>
-                <div className="breakout-stat">
-                  <div className="stat-value-small">{stat.rpg_past}</div>
-                  <div className={`stat-arrow-small ${parseFloat(stat.rpg_current) >= parseFloat(stat.rpg_past) ? 'positive' : 'negative'}`}>
-                    {parseFloat(stat.rpg_current) >= parseFloat(stat.rpg_past) ? '↗' : '↘'}
-                  </div>
-                  <div className={`stat-value-small ${parseFloat(stat.rpg_current) >= parseFloat(stat.rpg_past) ? 'positive' : 'negative'}`}>{stat.rpg_current}</div>
-                  <div className="stat-label-small">RPG</div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="stat-comparison">
-              <div className="stat-past">
-                <div className="stat-value-small">{stat.past}</div>
-                <div className="stat-label-small">PAST {stat.label}</div>
-              </div>
-              <div className={`stat-arrow-indicator ${isUp ? 'positive' : 'negative'}`}>
-                <span className="arrow-glyph">{isUp ? '↗' : '↘'}</span>
-                <span className="diff-val">{isUp ? `+${diff}` : diff}</span>
-              </div>
-              <div className="stat-current">
-                <div className={`stat-value ${isUp ? 'positive' : 'negative'}`}>{stat.current}</div>
-                <div className="stat-label">PREDICTED {stat.label}</div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
+  // `lead` is the stat each tab ranks by; its card shows that stat first.
   const tabs = [
-    { id: 'scorers', label: 'Top Scorers', data: predictions.top_scorers },
-    { id: 'assists', label: 'Top Assists', data: predictions.top_assists },
-    { id: 'rebounders', label: 'Top Rebounders', data: predictions.top_rebounders },
-    { id: 'steals', label: 'Top Steals', data: predictions.top_steals },
-    { id: 'blocks', label: 'Top Blocks', data: predictions.top_blocks },
-    { id: 'breakout', label: 'Breakout Players', data: predictions.breakout_players }
+    { id: 'scorers', label: 'Top Scorers', lead: 'ppg', data: predictions.top_scorers },
+    { id: 'assists', label: 'Top Assists', lead: 'apg', data: predictions.top_assists },
+    { id: 'rebounders', label: 'Top Rebounders', lead: 'rpg', data: predictions.top_rebounders },
+    { id: 'steals', label: 'Top Steals', lead: 'spg', data: predictions.top_steals },
+    { id: 'blocks', label: 'Top Blocks', lead: 'bpg', data: predictions.top_blocks },
+    { id: 'breakout', label: 'Breakout Players', lead: 'ppg', data: predictions.breakout_players }
   ];
 
   const activeTabData = tabs.find(tab => tab.id === activeTab);
   const waitingToLoad = lazy && !shouldLoad;
+  const shownCount = activeTabData?.data?.length ?? 0;
+  const contentKey = `${activeTab}:${waitingToLoad || loading ? 'loading' : error ? 'error' : shownCount}`;
+
+  useEffect(() => {
+    onContentChange?.(contentKey);
+  }, [contentKey, onContentChange]);
 
   return (
     <div className="ai-predictions-container" ref={containerRef}>
@@ -253,10 +146,23 @@ const AIPredictions = ({ onPlayerClick, lazy = true }) => {
         ) : error ? (
           <div className="error">{error}</div>
         ) : activeTabData && activeTabData.data && activeTabData.data.length > 0 ? (
-          <div className="players-grid">
-            {activeTabData.data.slice(0, 10).map((player, index) =>
-              renderPlayerCard(player, index, activeTab)
-            )}
+          <div className="pc-grid">
+            {activeTabData.data.slice(0, 10).map((player, index) => {
+              const { main, extra } = getLeaderCardStats(player, activeTabData.lead);
+              return (
+                <PlayerCard
+                  key={player.PLAYER_NAME}
+                  index={index}
+                  player={toCardPlayer(player)}
+                  stats={main}
+                  statsLabel="Predicted · change vs this season"
+                  extraStats={extra}
+                  extraLabel="This Season Shooting"
+                  onOpen={() => onPlayerClick && onPlayerClick(player)}
+                  ctaLabel="Full projection"
+                />
+              );
+            })}
           </div>
         ) : (
           <div className="no-data">No predictions available for {activeTabData?.label}.</div>
