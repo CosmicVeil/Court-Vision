@@ -1,0 +1,116 @@
+/* Shared filter bar (Stats, Predictions). Prefixed fb- because page CSS loads globally. */
+.fb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: calc(var(--space) * 3);
+  box-sizing: border-box;
+  max-width: 1200px;
+  margin: 0 auto calc(var(--space) * 6);
+  padding: calc(var(--space) * 5) calc(var(--space) * 6);
+  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
+  border: 1px solid rgba(255, 100, 54, 0.18);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+}
+
+/* Search takes about twice a select's share; everything wraps before it gets cramped. */
+.fb-field {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space) * 1.5);
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.fb-field--search { flex: 2 1 16rem; }
+
+.fb-label {
+  color: var(--color-stone, #8e8c94);
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.fb-control {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: calc(var(--space) * 2.5) calc(var(--space) * 4);
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 100, 54, 0.18);
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-family: var(--font-body, 'Inter', sans-serif);
+  font-size: 0.95rem;
+}
+
+.fb-control::placeholder { color: var(--color-stone, #8e8c94); }
+
+.fb-select { cursor: pointer; }
+.fb-select option { background: #101014; color: #fff; }
+
+.fb-control:focus { border-color: var(--color-ember-orange, #ff6436); }
+
+.fb-control:focus-visible {
+  outline: 2px solid var(--color-ember-orange, #ff6436);
+  outline-offset: 2px;
+}
+
+.fb-clear {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 calc(var(--space) * 5);
+  background: transparent;
+  border: 1px solid rgba(255, 100, 54, 0.3);
+  border-radius: var(--radius-md);
+  color: var(--color-ember-orange, #ff6436);
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: scale var(--duration-fast) var(--ease-brand);
+}
+
+.fb-clear:active { scale: .96; }
+
+.fb-clear:focus-visible {
+  outline: 2px solid var(--color-ember-orange, #ff6436);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .fb-control:hover { border-color: rgba(255, 100, 54, 0.4); }
+
+  .fb-clear:hover {
+    background: rgba(255, 100, 54, 0.12);
+    border-color: var(--color-ember-orange, #ff6436);
+  }
+}
+
+/* Phones: search on its own row, then two controls per row. With an odd number of selects
+   Clear sits beside the last one; with an even number it takes the whole last row. */
+@media (max-width: 640px) {
+  .fb {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: calc(var(--space) * 4);
+  }
+
+  .fb-field--search,
+  .fb-clear:nth-child(even) { grid-column: 1 / -1; }
+
+  .fb-clear { padding: 0 calc(var(--space) * 3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fb-clear:active { scale: none; }
+}

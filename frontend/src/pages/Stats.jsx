@@ -5,7 +5,9 @@ import { isAuthenticated } from '../utils/auth';
 import { buildApiUrl } from '../config/api';
 import { scrollToIfAbove } from '../utils/scroll';
 import { samePlayerName } from '../utils/playerNames';
+import FilterBar from '../components/FilterBar';
 import PageHero from '../components/PageHero';
+import Pagination from '../components/Pagination';
 import PlayerCard from '../components/PlayerCard';
 import PlayerStatsModal from '../components/PlayerStatsModal';
 import useFlip from '../hooks/useFlip';
@@ -23,6 +25,10 @@ const LIST_ALLOWED = {
   season: ['2020', '2021', '2022', '2023', '2024', '2025', '2026'],
   view: ['table', 'cards'],
 };
+const STATS_PAGE_SIZE = 100;
+// Newest first; the label shows the NBA season each year ends.
+const SEASON_OPTIONS = ['2026', '2025', '2024', '2023', '2022', '2021', '2020']
+  .map(year => ({ value: year, label: `${year - 1}-${year.slice(2)} (${year})` }));
 
 const Stats = () => {
   const [query, updateQuery] = useListQuery(LIST_DEFAULTS, LIST_ALLOWED);
@@ -152,7 +158,7 @@ const Stats = () => {
       setLoading(true);
       const params = new URLSearchParams({
         page: currentPage.toString(),
-        limit: '100',
+        limit: String(STATS_PAGE_SIZE),
         sort_by: sortBy,
         sort_order: sortOrder,
       });
@@ -281,53 +287,15 @@ const Stats = () => {
       <ScrollReveal scanKey={viewMode === 'cards' ? players : null} />
       {hero}
 
-      {/* Filters */}
-      <div className="filters-section">
-        <div className="filter-group">
-          <input
-            type="text"
-            placeholder="Search players..."
-            value={searchDraft}
-            onChange={handleSearch}
-            className="search-input"
-          />
-        </div>
-        
-        <div className="filter-group">
-          <select value={selectedTeam} onChange={handleTeamFilter} className="filter-select">
-            <option value="">All Teams</option>
-            {teams.map(team => (
-              <option key={team} value={team}>{team}</option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="filter-group">
-          <select value={selectedPosition} onChange={handlePositionFilter} className="filter-select">
-            <option value="">All Positions</option>
-            {positions.map(position => (
-              <option key={position} value={position}>{position}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="filter-group">
-          <select value={selectedYear} onChange={handleYearFilter} className="filter-select">
-            <option value="">All Seasons</option>
-            <option value="2026">2025-26 (2026)</option>
-            <option value="2025">2024-25 (2025)</option>
-            <option value="2024">2023-24 (2024)</option>
-            <option value="2023">2022-23 (2023)</option>
-            <option value="2022">2021-22 (2022)</option>
-            <option value="2021">2020-21 (2021)</option>
-            <option value="2020">2019-20 (2020)</option>
-          </select>
-        </div>
-        
-        <button onClick={clearFilters} className="clear-filters-btn">
-          Clear Filters
-        </button>
-      </div>
+      <FilterBar
+        search={{ value: searchDraft, onChange: handleSearch }}
+        filters={[
+          { key: 'team', label: 'Team', allLabel: 'All Teams', value: selectedTeam, onChange: handleTeamFilter, options: teams },
+          { key: 'position', label: 'Position', allLabel: 'All Positions', value: selectedPosition, onChange: handlePositionFilter, options: positions },
+          { key: 'season', label: 'Season', allLabel: 'All Seasons', value: selectedYear, onChange: handleYearFilter, options: SEASON_OPTIONS },
+        ]}
+        onClear={clearFilters}
+      />
 
       {/* View Mode and Sorting */}
       <div className="controls-section" ref={resultsRef}>
@@ -540,38 +508,13 @@ const Stats = () => {
         </div>
       )}
 
-      {/* Pagination */}
-      <div className="pagination">
-        <div className="pagination-controls">
-          <button 
-            onClick={() => goToPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-            className="pagination-btn"
-          >
-            ← Previous
-          </button>
-          
-          <div className="pagination-info">
-            <div className="page-info-main">
-              <span className="page-label">Page</span>
-              <span className="page-current">{currentPage}</span>
-              <span className="page-separator">of</span>
-              <span className="page-total">{totalPages}</span>
-            </div>
-            <div className="page-count-info">
-              Showing {sortedPlayers.length > 0 ? (currentPage - 1) * 100 + 1 : 0} - {Math.min(currentPage * 100, (currentPage - 1) * 100 + sortedPlayers.length)} of {totalPlayers} players
-            </div>
-          </div>
-          
-          <button 
-            onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage === totalPages}
-            className="pagination-btn"
-          >
-            Next →
-          </button>
-        </div>
-      </div>
+      <Pagination
+        page={currentPage}
+        totalPages={totalPages}
+        totalItems={totalPlayers}
+        pageSize={STATS_PAGE_SIZE}
+        onPageChange={goToPage}
+      />
 
       <PlayerStatsModal player={selectedPlayer} loading={loadingPlayer} onClose={() => setSelectedPlayer(null)} />
 

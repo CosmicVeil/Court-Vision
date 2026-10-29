@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import FilterBar from '../components/FilterBar';
 import PageHero from '../components/PageHero';
+import Pagination from '../components/Pagination';
 import PlayerCard from '../components/PlayerCard';
 import PlayerStatsModal from '../components/PlayerStatsModal';
 import useFlip from '../hooks/useFlip';
@@ -44,6 +46,7 @@ const LIST_ALLOWED = {
   sort: ['name', ...PREDICTION_STATS.map((stat) => stat.predictedField)],
   order: ['asc', 'desc'],
 };
+const PREDICTIONS_PAGE_SIZE = 12;
 
 const Predictions = () => {
   const [query, updateQuery] = useListQuery(LIST_DEFAULTS, LIST_ALLOWED);
@@ -157,7 +160,7 @@ const Predictions = () => {
       setLoading(true);
       const params = new URLSearchParams({
         page: currentPage.toString(),
-        limit: '12',
+        limit: String(PREDICTIONS_PAGE_SIZE),
         sort_by: sortBy,
         sort_order: sortOrder,
       });
@@ -255,39 +258,14 @@ const Predictions = () => {
         })}
       />
 
-      <div className="filters-section">
-        <div className="filter-group">
-          <input
-            type="text"
-            placeholder="Search players..."
-            value={searchDraft}
-            onChange={handleSearch}
-            className="search-input"
-          />
-        </div>
-
-        <div className="filter-group">
-          <select value={selectedTeam} onChange={handleTeamFilter} className="filter-select">
-            <option value="">All Teams</option>
-            {teams.map(team => (
-              <option key={team} value={team}>{team}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="filter-group">
-          <select value={selectedPosition} onChange={handlePositionFilter} className="filter-select">
-            <option value="">All Positions</option>
-            {positions.map(position => (
-              <option key={position} value={position}>{position}</option>
-            ))}
-          </select>
-        </div>
-
-        <button onClick={clearFilters} className="clear-filters-btn">
-          Clear Filters
-        </button>
-      </div>
+      <FilterBar
+        search={{ value: searchDraft, onChange: handleSearch }}
+        filters={[
+          { key: 'team', label: 'Team', allLabel: 'All Teams', value: selectedTeam, onChange: handleTeamFilter, options: teams },
+          { key: 'position', label: 'Position', allLabel: 'All Positions', value: selectedPosition, onChange: handlePositionFilter, options: positions },
+        ]}
+        onClear={clearFilters}
+      />
 
       <div className="sorting-section" ref={resultsRef}>
         <div className="sort-control-group">
@@ -357,37 +335,13 @@ const Predictions = () => {
             })}
           </div>
 
-          <div className="pagination">
-            <div className="pagination-controls">
-              <button 
-                onClick={() => goToPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="pagination-btn"
-              >
-                Previous Page
-              </button>
-              
-              <div className="pagination-info">
-                <div className="page-info-main">
-                  <span className="page-label">Page</span>
-                  <span className="page-current">{currentPage}</span>
-                  <span className="page-separator">of</span>
-                  <span className="page-total">{totalPages}</span>
-                </div>
-                <div className="page-count-info">
-                  Showing {(currentPage - 1) * 12 + 1} - {Math.min(currentPage * 12, totalPlayers)} of {totalPlayers} players
-                </div>
-              </div>
-              
-              <button 
-                onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-                className="pagination-btn"
-              >
-                Next Page
-              </button>
-            </div>
-          </div>
+          <Pagination
+            page={currentPage}
+            totalPages={totalPages}
+            totalItems={totalPlayers}
+            pageSize={PREDICTIONS_PAGE_SIZE}
+            onPageChange={goToPage}
+          />
         </>
       )}
 

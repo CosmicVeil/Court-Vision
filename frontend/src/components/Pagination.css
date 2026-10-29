@@ -1,0 +1,117 @@
+/* Shared pagination bar (Stats, Predictions). Prefixed pager- because page CSS loads globally. */
+.pager {
+  display: flex;
+  justify-content: center;
+  box-sizing: border-box;
+  max-width: 1200px;
+  width: 100%;
+  margin: calc(var(--space) * 10) auto calc(var(--space) * 5);
+}
+
+/* max-width keeps the bar inside the page on any screen; it can no longer push the page wider. */
+.pager-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--space) * 5);
+  box-sizing: border-box;
+  max-width: 100%;
+  padding: calc(var(--space) * 4) calc(var(--space) * 7);
+  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
+  border: 1px solid rgba(255, 100, 54, 0.18);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+}
+
+.pager-btn {
+  min-height: 44px;
+  padding: 0 calc(var(--space) * 6);
+  background: transparent;
+  border: 1px solid rgba(255, 100, 54, 0.3);
+  border-radius: var(--radius-full, 9999px);
+  color: var(--color-ember-orange, #ff6436);
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: scale var(--duration-fast) var(--ease-brand), opacity var(--duration-base) var(--ease-brand);
+}
+
+.pager-btn:not(:disabled):active { scale: .96; }
+
+.pager-btn:disabled {
+  opacity: .3;
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--color-stone, #8e8c94);
+}
+
+.pager-btn:focus-visible {
+  outline: 2px solid var(--color-ember-orange, #ff6436);
+  outline-offset: 3px;
+}
+
+/* A reserved width and single lines keep the buttons still when the numbers change. */
+.pager-info {
+  width: 32ch;
+  max-width: 100%;
+  min-width: 0;
+  text-align: center;
+  font-family: var(--font-mono, monospace);
+}
+
+.pager-page,
+.pager-range {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pager-page {
+  margin-bottom: var(--space);
+  color: var(--color-stone, #8e8c94);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.pager-current { color: var(--color-ember-orange, #ff6436); }
+.pager-total { color: #fff; }
+
+.pager-range {
+  color: var(--color-stone, #8e8c94);
+  font-size: 11px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pager-btn:hover:not(:disabled) {
+    background: rgba(255, 100, 54, 0.12);
+    border-color: var(--color-ember-orange, #ff6436);
+  }
+}
+
+/* Phones: the page info gets the top row, Previous and Next share the row below. */
+@media (max-width: 640px) {
+  .pager-bar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas: "info info" "prev next";
+    gap: calc(var(--space) * 3);
+    width: 100%;
+    padding: calc(var(--space) * 4);
+  }
+
+  .pager-info { grid-area: info; width: auto; }
+  .pager-btn--prev { grid-area: prev; }
+  .pager-btn--next { grid-area: next; }
+  .pager-btn { padding: 0 calc(var(--space) * 3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pager-btn:not(:disabled):active { scale: none; }
+}
