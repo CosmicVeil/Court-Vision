@@ -5,8 +5,9 @@ const toInteger = (value, fallback) => {
 
 // Everything the shared Pagination bar shows, from the page in the URL and the server's totals.
 // The page is not clamped for display: a stale URL (page 99 of 6) says so, while Previous steps
-// back into the real range and Next stays disabled.
-export const getPaginationView = ({ page, totalPages, totalItems, pageSize, itemLabel = 'players' }) => {
+// back into the real range and Next stays disabled. While loading, both buttons are disabled so a
+// double click can't skip a page before the first one arrives.
+export const getPaginationView = ({ page, totalPages, totalItems, pageSize, itemLabel = 'players', loading = false }) => {
   const safeTotalPages = Math.max(1, toInteger(totalPages, 1));
   const safePage = Math.max(1, toInteger(page, 1));
   const safeTotal = Math.max(0, toInteger(totalItems, 0));
@@ -19,8 +20,8 @@ export const getPaginationView = ({ page, totalPages, totalItems, pageSize, item
   return {
     page: safePage,
     totalPages: safeTotalPages,
-    previousDisabled: safePage <= 1,
-    nextDisabled: safePage >= safeTotalPages,
+    previousDisabled: Boolean(loading) || safePage <= 1,
+    nextDisabled: Boolean(loading) || safePage >= safeTotalPages,
     previousPage: Math.max(1, Math.min(safePage - 1, safeTotalPages)),
     nextPage: Math.min(safePage + 1, safeTotalPages),
     rangeLabel: `Showing ${start} - ${end} of ${safeTotal} ${itemLabel}`,

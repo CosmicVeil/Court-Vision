@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom';
 import { buildApiUrl } from '../config/api';
 import { GameMatchup } from '../components/GameBoxScore';
 import { LIVE_GAMES_REFRESH_MS, STATUS_LIVE, getGameDetailPath } from '../utils/liveGames';
-import { buildUpcomingGamesEndpoint, getUpcomingPaginationView, normalizeUpcomingGamesPage } from '../utils/upcomingGamesPagination';
+import { buildUpcomingGamesEndpoint, normalizeUpcomingGamesPage, UPCOMING_GAMES_PAGE_SIZE } from '../utils/upcomingGamesPagination';
 import HeroOrbit from '../components/HeroOrbit';
 import LiveTicker from '../components/LiveTicker';
+import Pagination from '../components/Pagination';
 import PillNav from '../components/PillNav';
 import ScrollReveal from '../components/ScrollReveal';
 import SyncDock from '../components/SyncDock';
@@ -92,7 +93,6 @@ export default function LiveGames() {
   const displayToday = [...todayGames].sort(
     (a, b) => (GAME_STATUS_ORDER[a.status] ?? 3) - (GAME_STATUS_ORDER[b.status] ?? 3),
   );
-  const pagination = getUpcomingPaginationView({ page: upcomingPage, totalPages: upcomingTotalPages, totalGames: upcomingTotalGames, loading: upcomingLoading });
   const games = tab === 'today' ? displayToday : upcomingGames;
   const stats = getLiveGamesStats({ todayGames, upcomingTotalGames, lastUpdated, loading });
   const revealKey = `${tab}:${upcomingPage}:${loading}:${games.map(g => g.gameId).join(',')}`;
@@ -150,13 +150,15 @@ export default function LiveGames() {
         <>
           <div className="games-grid">{games.map((game, index) => <GameCard key={game.gameId} game={game} index={index} scoreChanges={scoreChanges[game.gameId]} />)}</div>
           {tab === 'upcoming' && (
-            <nav className="lg-pagination" aria-label="Upcoming games pages">
-              <div className="lg-pagination-controls">
-                <button className="lg-pagination-btn" disabled={pagination.previousDisabled} onClick={() => setUpcomingPage(page => Math.max(1, page - 1))}>Previous Page</button>
-                <div className="lg-pagination-info"><div data-numeric className="lg-page-label">{pagination.pageLabel}</div><div data-numeric className="lg-page-count">{pagination.countLabel}</div></div>
-                <button className="lg-pagination-btn" disabled={pagination.nextDisabled} onClick={() => setUpcomingPage(page => Math.min(upcomingTotalPages, page + 1))}>Next Page</button>
-              </div>
-            </nav>
+            <Pagination
+              page={upcomingPage}
+              totalPages={upcomingTotalPages}
+              totalItems={upcomingTotalGames}
+              pageSize={UPCOMING_GAMES_PAGE_SIZE}
+              itemLabel="games"
+              loading={upcomingLoading}
+              onPageChange={setUpcomingPage}
+            />
           )}
         </>
       )}

@@ -1,4 +1,4 @@
-/* Shared pagination bar (Stats, Predictions). Prefixed pager- because page CSS loads globally. */
+/* Shared pagination bar (Stats, Predictions, Upcoming Games). Prefixed pager- because page CSS loads globally. */
 .pager {
   display: flex;
   justify-content: center;

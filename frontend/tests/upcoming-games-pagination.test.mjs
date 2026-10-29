@@ -4,9 +4,10 @@ import test from "node:test";
 
 import {
   buildUpcomingGamesEndpoint,
-  getUpcomingPaginationView,
   normalizeUpcomingGamesPage,
+  UPCOMING_GAMES_PAGE_SIZE,
 } from "../src/utils/upcomingGamesPagination.js";
+import { getPaginationView } from "../src/utils/pagination.js";
 
 const liveGamesSource = readFileSync(
   new URL("../src/pages/LiveGames.jsx", import.meta.url),
@@ -36,40 +37,48 @@ test("upcoming games response metadata is normalized for the UI", () => {
   });
 });
 
-test("pagination view reports boundaries and the ten-game range", () => {
-  assert.deepEqual(getUpcomingPaginationView({
+test("shared pagination view reports the twenty-game range and disables both buttons while loading", () => {
+  const upcomingView = (overrides) => getPaginationView({
     page: 2,
     totalPages: 3,
-    totalGames: 23,
-    loading: false,
-  }), {
-    previousDisabled: false,
-    nextDisabled: false,
-    pageLabel: "Page 2 of 3",
-    countLabel: "Showing 21 - 23 of 23 games",
+    totalItems: 45,
+    pageSize: UPCOMING_GAMES_PAGE_SIZE,
+    itemLabel: "games",
+    ...overrides,
   });
 
-  assert.equal(getUpcomingPaginationView({
-    page: 3,
-    totalPages: 3,
-    totalGames: 23,
-    loading: true,
-  }).nextDisabled, true);
+  assert.equal(UPCOMING_GAMES_PAGE_SIZE, 20);
+  assert.equal(upcomingView().rangeLabel, "Showing 21 - 40 of 45 games");
+  assert.equal(upcomingView().previousDisabled, false);
+  assert.equal(upcomingView().nextDisabled, false);
+  assert.equal(upcomingView({ page: 1 }).previousDisabled, true);
+  assert.equal(upcomingView({ page: 3 }).nextDisabled, true);
+  assert.equal(upcomingView({ loading: true }).previousDisabled, true);
+  assert.equal(upcomingView({ loading: true }).nextDisabled, true);
 });
 
 test("Upcoming Games consumes pagination metadata and renders matching controls", () => {
   assert.match(liveGamesSource, /buildUpcomingGamesEndpoint/);
   assert.match(liveGamesSource, /normalizeUpcomingGamesPage/);
-  assert.match(liveGamesSource, /getUpcomingPaginationView/);
-  assert.match(liveGamesSource, /className="lg-pagination"/);
   assert.match(liveGamesSource, /count-badge">\{upcomingTotalGames\}/);
-  assert.match(liveGamesSource, />\s*Previous Page\s*</);
-  assert.match(liveGamesSource, />\s*Next Page\s*</);
+  assert.match(liveGamesSource, /<Pagination\b[^>]*pageSize=\{UPCOMING_GAMES_PAGE_SIZE\}[^>]*itemLabel="games"[^>]*loading=\{upcomingLoading\}/);
+  assert.doesNotMatch(liveGamesSource, /lg-pagination|getUpcomingPaginationView/);
 });
 
-test("Live Games styles pagination and the roster button with site controls", () => {
-  assert.match(liveGamesCss, /\.lg-pagination-btn\s*\{/);
-  assert.match(liveGamesCss, /\.lg-pagination-btn:focus-visible\s*\{/);
+test("Upcoming Games marks itself loading for each fetch so the pager disables until the page arrives", () => {
+  const fetchGames = liveGamesSource.slice(
+    liveGamesSource.indexOf("const fetchGames = useCallback"),
+    liveGamesSource.indexOf("}, [upcomingPage]);"),
+  );
+  // A page change creates a new fetchGames (it depends on upcomingPage), whose effect runs it at once.
+  assert.match(fetchGames, /^const fetchGames = useCallback\(async \(\) => \{\s*setUpcomingLoading\(true\);/);
+  assert.match(fetchGames, /await Promise\.all\(\[fetchToday\(\), fetchUpcoming\(\)\]\);[\s\S]*setUpcomingLoading\(false\);/);
+  assert.match(liveGamesSource, /useEffect\(\(\) => \{ fetchGames\(\);[^\n]*\}, \[fetchGames\]\);/);
+  assert.match(liveGamesSource, /loading=\{upcomingLoading\}/);
+});
+
+test("Live Games leaves pagination to the shared pager and styles the roster button with site controls", () => {
+  assert.doesNotMatch(liveGamesCss, /^\s*\.lg-(pagination|page-)[a-z-]*/m);
   assert.match(liveGamesCss, /\.expand-btn\s*\{[^}]*border-radius:\s*var\(--radius-full/s);
   assert.match(liveGamesCss, /\.expand-btn:hover\s*\{/);
   assert.match(liveGamesCss, /\.expand-btn:focus-visible\s*\{/);

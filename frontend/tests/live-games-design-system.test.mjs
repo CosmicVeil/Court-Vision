@@ -54,8 +54,7 @@ test('Live Games adopts anatomy, numeric chrome, stable card identity and rescan
     /className="games-grid">/, /data-reveal data-defer/,
     /getRevealDelay\(index\)/, /key=\{game.gameId\}/, /index=\{index\}/,
     /<ScrollReveal scanKey=\{revealKey\}/, /\$\{tab\}:\$\{upcomingPage\}:\$\{loading\}/,
-    /games.map\(g => g.gameId\).join\(','\)/, /data-numeric className="lg-page-label"/,
-    /data-numeric className="lg-page-count"/, /games\/today/, /LIVE_GAMES_REFRESH_MS/, /GAME_STATUS_ORDER/,
+    /games.map\(g => g.gameId\).join\(','\)/, /<Pagination\b/, /games\/today/, /LIVE_GAMES_REFRESH_MS/, /GAME_STATUS_ORDER/,
   ]) assert.match(page, pattern);
   // Cards reveal individually; a reveal on the whole grid can be too tall to ever reach the threshold.
   assert.doesNotMatch(page, /className="games-grid"[^>]*data-reveal/);
@@ -66,17 +65,18 @@ test('Live Games adopts anatomy, numeric chrome, stable card identity and rescan
 
 test('Live Games chrome reserves single-line space and card motion stays scoped to the list', () => {
   const css = read('src/pages/LiveGames.css');
-  for (const selector of ['.refresh-btn', '.lg-pagination-btn', '.lg-tab', '.lg-live-page .game-card']) {
+  for (const selector of ['.refresh-btn', '.lg-tab', '.lg-live-page .game-card']) {
     const rule = block(css, selector);
     assert.ok(rule.startsWith(selector), `Missing ${selector}`);
     assert.doesNotMatch(rule, /transition:\s*all/);
   }
   assert.match(block(css, '.lg-live-page .game-card'), /transition: transform/);
   assert.match(block(css, '.lg-meta-row'), /min-height:/);
-  for (const selector of ['.lg-meta-text', '.lg-page-label', '.lg-page-count']) {
-    const rule = block(css, selector);
-    for (const pattern of [/min-height:/, /white-space: nowrap/, /text-overflow: ellipsis/]) assert.match(rule, pattern);
-  }
+  const rule = block(css, '.lg-meta-text');
+  for (const pattern of [/min-height:/, /white-space: nowrap/, /text-overflow: ellipsis/]) assert.match(rule, pattern);
+  // The page and range lines now come from the shared pager, which keeps them on one line too.
+  const pagerLines = block(read('src/components/Pagination.css'), '.pager-page,\n.pager-range');
+  for (const pattern of [/white-space: nowrap/, /text-overflow: ellipsis/]) assert.match(pagerLines, pattern);
   assert.match(css, /@media \(hover: hover\) and \(pointer: fine\)\s*\{\s*\.lg-tab:hover/);
   assert.match(css, /grid-template-columns: repeat\(auto-fill, minmax\(360px, 1fr\)\)/);
   assert.match(css, /\.game-card:hover\s*\{\s*transform: translateY\(-6px\)/);
@@ -86,8 +86,9 @@ test('Live Games chrome reserves single-line space and card motion stays scoped 
 
 test('chrome constrains shrinking pagination and reserves badge space', () => {
   const css = read('src/pages/LiveGames.css');
-  assert.match(block(css, '.lg-pagination-controls'), /max-width: 100%/);
-  assert.match(block(css, '.lg-pagination-info'), /min-width: 0/);
+  const pagerCss = read('src/components/Pagination.css');
+  assert.match(block(pagerCss, '.pager-bar'), /max-width: 100%/);
+  assert.match(block(pagerCss, '.pager-info'), /min-width: 0/);
   assert.match(block(css, '.live-badge'), /min-width: calc\(7ch \+ var\(--space\) \* 6\)/);
   assert.match(block(css, '.count-badge'), /min-width: calc\(3ch \+ var\(--space\) \* 4\)/);
 
@@ -101,11 +102,15 @@ test('localized sync times stay within the stat strip at narrow widths', () => {
 });
 
 test('pagination reserves enough monospace width for four-digit season totals', () => {
-  const rule = block(read('src/pages/LiveGames.css'), '.lg-pagination-info');
+  const css = read('src/components/Pagination.css');
+  const rule = block(css, '.pager-info');
   assert.match(rule, /font-family: var\(--font-mono, monospace\)/);
-  assert.match(rule, /font-size: 11px/);
-  const reservedCharacters = Number(rule.match(/width: (\d+)ch/)?.[1]);
-  for (const label of ['Showing 101 - 110 of 1215 games', 'Showing 1201 - 1210 of 1215 games', 'Showing 1211 - 1215 of 1215 games', 'Showing 0 - 0 of 0 games']) {
+  // .pager-info sets no font-size, so its ch unit is measured at the inherited 16px default,
+  // while the range line is drawn at 11px: each reserved ch holds 16/11 range characters.
+  assert.doesNotMatch(rule, /font-size/);
+  assert.match(css, /\n\.pager-range \{[^}]*font-size: 11px/);
+  const reservedCharacters = Number(rule.match(/width: (\d+)ch/)?.[1]) * (16 / 11);
+  for (const label of ['Showing 101 - 120 of 1215 games', 'Showing 1201 - 1215 of 1215 games', 'Showing 0 - 0 of 0 games']) {
     assert.ok(reservedCharacters >= label.length, `Reserved width fits ${label}`);
   }
   assert.match(rule, /max-width: 100%/);
