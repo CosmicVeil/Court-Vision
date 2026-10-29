@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./SignUp.css";
+import { enterDelay } from "../utils/scrollReveal";
 import { signup } from "../utils/auth";
 
 const SignUp = () => {
@@ -94,13 +95,13 @@ const SignUp = () => {
   return (
     <div className="signup-wrapper">
       <div className="signup-container">
-        <div className="stats-nav-top" style={{ marginBottom: '1.5rem', justifyContent: 'center' }}>
+        <div className="stats-nav-top" data-enter style={{ marginBottom: '1.5rem', justifyContent: 'center' }}>
           <span className="cv-section-badge">JOIN THE PLATFORM</span>
         </div>
-        <div className="signup-header">
+        <div className="signup-header" data-enter style={enterDelay(1)}>
           <h1 className="signup-title">CREATE <span className="text-ember">ACCOUNT</span></h1>
         </div>
-        <form className="signup-form" onSubmit={handleSubmit}>
+        <form className="signup-form" data-enter style={enterDelay(2)} onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="firstName">FIRST NAME</label>
             <input
@@ -185,7 +186,7 @@ const SignUp = () => {
             {loading ? "CREATING ACCOUNT..." : "CREATE ACCOUNT"}
           </button>
         </form>
-        <div className="signup-footer">
+        <div className="signup-footer" data-enter style={enterDelay(3)}>
           <p>
             Already have an account?{" "}
             <Link to="/login" className="signup-link">

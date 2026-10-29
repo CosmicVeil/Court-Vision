@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import PlayerStatsModal from '../components/PlayerStatsModal';
 import { buildApiUrl } from '../config/api';
 import { samePlayerName } from '../utils/playerNames';
+import { enterDelay } from '../utils/scrollReveal';
 import './Recommendations.css';
 
 const FALLBACK_PLAYERS = {
@@ -168,7 +169,7 @@ const Recommendations = () => {
 
   return (
     <div className="recommendations-wrapper">
-      <header className="recommendations-header">
+      <header className="recommendations-header" data-enter>
         <div className="stats-nav-top">
           <span className="cv-section-badge">INTELLIGENCE RADAR</span>
         </div>
@@ -194,13 +195,13 @@ const Recommendations = () => {
               </div>
             ) : (
               <div className="spotlight-grid">
-                {['PPG', 'APG', 'RPG'].map((s) => {
+                {['PPG', 'APG', 'RPG'].map((s, index) => {
                   const player = topPerformers[s] || FALLBACK_PLAYERS[s];
                   const improvement = player[`${s}_IMPROVEMENT`] || 0;
                   const label = s === 'PPG' ? 'Scoring Outbreak' : s === 'APG' ? 'Playmaking Visionary' : 'Glass Dominator';
                   
                   return (
-                    <div key={s} className="spotlight-card">
+                    <div key={s} className="spotlight-card" data-enter style={enterDelay(index + 1)}>
                       <div className="spotlight-badge-row">
                         <span className="spotlight-stat-tag">{s} Spotlight</span>
                         <span className="spotlight-role-tag">{label}</span>
@@ -249,13 +250,13 @@ const Recommendations = () => {
             )}
           </div>
 
-          <h2 className="section-heading">Basketball Insights & Trends</h2>
-          <p className="section-description">
+          <h2 className="section-heading" data-enter style={enterDelay(4)}>Basketball Insights & Trends</h2>
+          <p className="section-description" data-enter style={enterDelay(4)}>
             Discover key insights, trends, and analysis powered by AI to help you understand the game better
           </p>
           <div className="recommendations-grid">
             {insights.map((insight) => (
-              <div key={insight.id} className="recommendation-card insight-card">
+              <div key={insight.id} className="recommendation-card insight-card" data-enter style={enterDelay(insight.id + 4)}>
                 <div className="card-header">
                   <div className="insight-icon">{insight.icon}</div>
                   <div className="category-badge">{insight.category}</div>

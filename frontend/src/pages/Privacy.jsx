@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import "./Privacy.css";
+import { enterDelay } from "../utils/scrollReveal";
 
 function Privacy() {
   return (
@@ -8,13 +9,13 @@ function Privacy() {
       <div className="privacy-ambient privacy-ambient-two" aria-hidden="true" />
 
       <div className="privacy-shell">
-        <header className="privacy-header">
+        <header className="privacy-header" data-enter>
           <div className="stats-nav-top">
             <span className="cv-section-badge">PRIVACY &amp; COOKIES</span>
           </div>
         </header>
 
-        <section className="privacy-hero" aria-labelledby="privacy-title">
+        <section className="privacy-hero" aria-labelledby="privacy-title" data-enter style={enterDelay(1)}>
           <h1 id="privacy-title">PRIVACY &amp; <span className="text-ember">COOKIES</span></h1>
           <p className="privacy-intro">
             A plain-English summary of what Court Vision stores and why.
@@ -22,7 +23,7 @@ function Privacy() {
           <p className="privacy-updated">Last updated: October 18, 2026</p>
         </section>
 
-        <aside className="privacy-disclaimer" role="note">
+        <aside className="privacy-disclaimer" role="note" data-enter style={enterDelay(2)}>
           <p className="privacy-label">DISCLAIMER</p>
           <p>
             This page was written by the developers and has <strong>not been reviewed by a lawyer</strong>.
@@ -31,7 +32,7 @@ function Privacy() {
         </aside>
 
         <div className="privacy-sections">
-          <section className="privacy-card" aria-labelledby="privacy-cookies-title">
+          <section className="privacy-card" aria-labelledby="privacy-cookies-title" data-enter style={enterDelay(3)}>
             <p className="privacy-eyebrow">01</p>
             <h2 id="privacy-cookies-title">Cookies</h2>
             <p>
@@ -39,7 +40,7 @@ function Privacy() {
             </p>
           </section>
 
-          <section className="privacy-card" aria-labelledby="privacy-browser-title">
+          <section className="privacy-card" aria-labelledby="privacy-browser-title" data-enter style={enterDelay(4)}>
             <p className="privacy-eyebrow">02</p>
             <h2 id="privacy-browser-title">What your browser stores (localStorage)</h2>
             <p>These are not cookies, but localStorage serves a similar purpose by storing information in your browser:</p>
@@ -54,7 +55,7 @@ function Privacy() {
             </p>
           </section>
 
-          <section className="privacy-card" aria-labelledby="privacy-account-title">
+          <section className="privacy-card" aria-labelledby="privacy-account-title" data-enter style={enterDelay(5)}>
             <p className="privacy-eyebrow">03</p>
             <h2 id="privacy-account-title">If you create an account</h2>
             <p>
@@ -66,7 +67,7 @@ function Privacy() {
             </p>
           </section>
 
-          <section className="privacy-card" aria-labelledby="privacy-third-parties-title">
+          <section className="privacy-card" aria-labelledby="privacy-third-parties-title" data-enter style={enterDelay(6)}>
             <p className="privacy-eyebrow">04</p>
             <h2 id="privacy-third-parties-title">Third parties</h2>
             <p>
@@ -81,13 +82,13 @@ function Privacy() {
             <p>Links to LinkedIn on the Contact page go to LinkedIn's own site and policies.</p>
           </section>
 
-          <section className="privacy-card" aria-labelledby="privacy-data-use-title">
+          <section className="privacy-card" aria-labelledby="privacy-data-use-title" data-enter style={enterDelay(7)}>
             <p className="privacy-eyebrow">05</p>
             <h2 id="privacy-data-use-title">We don't</h2>
             <p>We do not sell or share your data, or use it for advertising.</p>
           </section>
 
-          <section className="privacy-card" aria-labelledby="privacy-choices-title">
+          <section className="privacy-card" aria-labelledby="privacy-choices-title" data-enter style={enterDelay(8)}>
             <p className="privacy-eyebrow">06</p>
             <h2 id="privacy-choices-title">Your choices</h2>
             <p>
@@ -95,14 +96,14 @@ function Privacy() {
             </p>
           </section>
 
-          <section className="privacy-card" aria-labelledby="privacy-changes-title">
+          <section className="privacy-card" aria-labelledby="privacy-changes-title" data-enter style={enterDelay(9)}>
             <p className="privacy-eyebrow">07</p>
             <h2 id="privacy-changes-title">Changes</h2>
             <p>We'll update this page and the "Last updated" date if anything changes.</p>
           </section>
         </div>
 
-        <footer className="privacy-footer">
+        <footer className="privacy-footer" data-enter style={enterDelay(10)}>
           <span>COURT VISION</span>
           <Link to="/contact">CONTACT</Link>
         </footer>

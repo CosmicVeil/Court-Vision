@@ -18,7 +18,7 @@ test("Privacy page is registered before the catch-all without replacing NotFound
 
 test("Privacy page prominently disclaims legal review before its sections", () => {
   const page = readPrivacy();
-  const disclaimer = page.match(/<aside className="privacy-disclaimer" role="note">([\s\S]*?)<\/aside>/)?.[1];
+  const disclaimer = page.match(/<aside className="privacy-disclaimer" role="note"[^>]*>([\s\S]*?)<\/aside>/)?.[1];
   assert.ok(disclaimer, "A visible disclaimer callout is required");
   assert.match(disclaimer, /written by the developers/i);
   assert.match(disclaimer, /not been reviewed by a lawyer/i);
@@ -84,7 +84,7 @@ test("Privacy page uses the Contact theme with readable prose and narrow-screen 
   assert.match(page, /Last updated: October 18, 2026/);
   assert.match(page, /privacy-ambient-one/);
   assert.match(page, /privacy-ambient-two/);
-  assert.match(page, /<footer className="privacy-footer">[\s\S]*?<Link to="\/contact">CONTACT<\/Link>/);
+  assert.match(page, /<footer className="privacy-footer"[^>]*>[\s\S]*?<Link to="\/contact">CONTACT<\/Link>/);
   assert.match(css, /--color-ember-orange/);
   assert.match(css, /line-height: 1\.7/);
   assert.match(css, /max-width: 760px/);
@@ -101,7 +101,7 @@ test("Privacy page uses the Contact theme with readable prose and narrow-screen 
 test("Privacy is linked next to Contact in the site nav and from the Contact footer", () => {
   const siteNav = readFrontend("src/utils/siteNav.js");
   assert.match(siteNav, /\{ to: '\/contact', label: 'CONTACT' \},\s*\{ to: '\/privacy', label: 'PRIVACY' \}/);
-  const footer = readSource("Contact.jsx").match(/<footer className="contact-footer">([\s\S]*?)<\/footer>/)?.[1];
+  const footer = readSource("Contact.jsx").match(/<footer className="contact-footer"[^>]*>([\s\S]*?)<\/footer>/)?.[1];
   assert.ok(footer);
   assert.match(footer, /<Link to="\/privacy">Privacy &amp; Cookies<\/Link>/);
 });

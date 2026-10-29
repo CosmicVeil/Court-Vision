@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import "./Contact.css";
+import { enterDelay } from "../utils/scrollReveal";
 
 const LinkedInIcon = () => (
   <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
@@ -14,25 +15,25 @@ function Contact() {
       <div className="contact-ambient contact-ambient-two" />
 
       <div className="contact-shell">
-      <header className="contact-header">
+      <header className="contact-header" data-enter>
         <div className="stats-nav-top">
           <span className="cv-section-badge">DEVELOPMENT INTEL</span>
         </div>
       </header>
 
-      <section className="contact-hero" aria-labelledby="contact-title">
+      <section className="contact-hero" aria-labelledby="contact-title" data-enter style={enterDelay(1)}>
         <h1 id="contact-title">THE ARCHITECTS BEHIND <span className="text-ember">COURT VISION</span></h1>
         <p className="contact-intro">
           Turning NBA box-score data into XGBoost forecasts and live game insights. Meet the engineers building the platform.
         </p>
       </section>
 
-      <article className="contact-project-card">
+      <article className="contact-project-card" data-enter style={enterDelay(2)}>
         <div><p className="contact-label">LIVE PROJECT</p><h2>Court Vision Analytics</h2><p>Explore the public NBA intelligence platform.</p></div>
         <a className="contact-domain" href="https://courtvision.works" target="_blank" rel="noreferrer"><span>courtvision.works</span><small>VISIT PLATFORM ↗</small></a>
       </article>
 
-      <section className="contact-team" aria-labelledby="team-title">
+      <section className="contact-team" aria-labelledby="team-title" data-enter style={enterDelay(3)}>
         <div className="contact-section-heading">
           <p className="contact-eyebrow">OUR TEAM</p>
           <h2 id="team-title">The people behind the platform.</h2>
@@ -100,7 +101,7 @@ function Contact() {
         </div>
       </section>
 
-      <footer className="contact-footer">
+      <footer className="contact-footer" data-enter style={enterDelay(4)}>
         <span>COURT VISION</span>
         <span>NBA analytics, made clear.</span>
         <Link to="/privacy">Privacy &amp; Cookies</Link>
