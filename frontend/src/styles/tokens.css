@@ -175,6 +175,13 @@ html[data-motion-ready] [data-reveal] {
 @keyframes ripple { from { opacity: .6; scale: .7; } to { opacity: 0; scale: 2.4; } }
 @keyframes spin-once { to { rotate: 360deg; } }
 
+/* Page entry: blocks tagged data-enter rise in once when their page mounts (each route change
+   mounts a fresh page), staggered by --reveal-delay. CSS-only, so content never waits on JS.
+   `backwards` (not `both`) hands translate back to the element once the animation ends. */
+[data-enter] {
+  animation: rise var(--duration-reveal) var(--ease-brand) var(--reveal-delay, 0s) backwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 
@@ -192,6 +199,8 @@ html[data-motion-ready] [data-reveal] {
   [data-defer] *::after {
     animation: none !important;
   }
+
+  [data-enter] { animation: none; }
 
   [data-slot="pill-nav"] [data-slot="pill-indicator"] { transition-duration: 0s; }
   [data-slot="pill-nav"] [role="tab"]:active { scale: none; }

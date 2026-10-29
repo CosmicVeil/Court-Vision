@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./Login.css";
+import { enterDelay } from "../utils/scrollReveal";
 import { isAuthenticated, login } from "../utils/auth";
 
 const Login = () => {
@@ -41,13 +42,13 @@ const Login = () => {
   return (
     <div className="login-wrapper">
       <div className="login-container">
-        <div className="stats-nav-top" style={{ marginBottom: '1.5rem', justifyContent: 'center' }}>
+        <div className="stats-nav-top" data-enter style={{ marginBottom: '1.5rem', justifyContent: 'center' }}>
           <span className="cv-section-badge">ACCESS PORTAL</span>
         </div>
-        <div className="login-header">
+        <div className="login-header" data-enter style={enterDelay(1)}>
           <h1 className="login-title">AUTHENTICATE <span className="text-ember">ACCOUNT</span></h1>
         </div>
-        <form className="login-form" onSubmit={handleSubmit}>
+        <form className="login-form" data-enter style={enterDelay(2)} onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="email">EMAIL</label>
             <input
@@ -83,7 +84,7 @@ const Login = () => {
             {loading ? "LOGGING IN..." : "LOGIN"}
           </button>
         </form>
-        <div className="login-footer">
+        <div className="login-footer" data-enter style={enterDelay(3)}>
           {!isAuthenticated() && <p>
             Don't have an account?{" "}
             <Link to="/create-account" className="login-link">

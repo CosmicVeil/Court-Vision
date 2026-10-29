@@ -6,6 +6,7 @@ import { buildApiUrl } from '../config/api';
 import PlayerStatsModal from '../components/PlayerStatsModal';
 import { samePlayerName } from '../utils/playerNames';
 import './Favourites.css';
+import { enterDelay } from '../utils/scrollReveal';
 
 const Favourites = () => {
   const [favorites, setFavorites] = useState([]);
@@ -84,14 +85,14 @@ const Favourites = () => {
   if (!isAuthenticated()) {
     return (
       <div className="favourites-wrapper">
-        <header className="favourites-header">
+        <header className="favourites-header" data-enter>
           <div className="stats-nav-top">
             <span className="cv-section-badge">PLAYER ROSTER</span>
           </div>
           <h1 className="favourites-title">SAVED <span className="text-ember">FAVOURITES</span></h1>
           <p className="favourites-subtitle">Track and manage your personalized player watchlist</p>
         </header>
-        <div className="empty-state" style={{ maxWidth: '520px', margin: '0 auto' }}>
+        <div className="empty-state" data-enter style={{ maxWidth: '520px', margin: '0 auto', ...enterDelay(1) }}>
           <div className="empty-icon-wrapper" style={{ margin: '0 auto 1.5rem', width: 64, height: 64, borderRadius: '50%', background: 'rgba(255, 100, 54, 0.12)', border: '1px solid rgba(255, 100, 54, 0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-ember-orange, #ff6436)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
@@ -121,7 +122,7 @@ const Favourites = () => {
 
   return (
     <div className="favourites-wrapper">
-      <header className="favourites-header">
+      <header className="favourites-header" data-enter>
         <div className="stats-nav-top">
           <span className="cv-section-badge">PLAYER ROSTER</span>
         </div>
@@ -134,7 +135,7 @@ const Favourites = () => {
       </header>
 
       {favorites.length === 0 ? (
-        <div className="empty-state">
+        <div className="empty-state" data-enter style={enterDelay(1)}>
           <h2 className="empty-title">No favorites yet</h2>
           <p className="empty-description">
             Add players from Stats or AI Predictions to start tracking your favorites!
@@ -145,19 +146,20 @@ const Favourites = () => {
         </div>
       ) : (
         <div className="favourites-content">
-          <div className="favourites-info">
+          <div className="favourites-info" data-enter style={enterDelay(1)}>
             <p className="info-text">
               Click the FAVORITED button to remove a player from favorites
             </p>
           </div>
 
           <div className="favourites-grid">
-            {favorites.map(player => (
+            {favorites.map((player, index) => (
               <div 
                 key={player.id} 
                 className="favourite-card favourite-card-clickable"
                 onClick={() => handlePlayerClick(player)}
-                style={{ cursor: 'pointer' }}
+                data-enter
+                style={{ cursor: 'pointer', ...enterDelay(index + 2) }}
               >
                 <div className="card-header-fav">
                   <div className="player-header-info">

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import PlayerStatsModal from '../components/PlayerStatsModal';
 import { samePlayerName } from '../utils/playerNames';
+import { enterDelay } from '../utils/scrollReveal';
 import './Recommendations.css';
 
 const RecommendationChart = () => {
@@ -133,7 +134,7 @@ const RecommendationChart = () => {
 
     return (
         <div className="recommendations-wrapper">
-            <header className="recommendations-header">
+            <header className="recommendations-header" data-enter>
                 <div className="stats-nav-top">
                     <Link to="/recommendations" className="back-to-home">← RADAR</Link>
                     <span className="cv-section-badge">AI SPOTLIGHT</span>
@@ -165,6 +166,8 @@ const RecommendationChart = () => {
                             <div
                                 key={player.PLAYER_NAME ?? index}
                                 className="recommendation-card analytic-card"
+                                data-enter
+                                style={enterDelay(index + 1)}
                             >
                                 <div className="card-header">
                                     <span className="rank-badge">#{index + 1}</span>
