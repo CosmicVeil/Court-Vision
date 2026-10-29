@@ -55,3 +55,21 @@ export function getPredictionsHeroStats({ ready, total, sort, order, page, total
     ['page', 'Page', pageValue(page, totalPages)],
   ]);
 }
+
+const finite = value => (value === null || value === undefined || value === '' || !Number.isFinite(Number(value)) ? null : Number(value));
+
+// Favourites are read from localStorage, so `ready` is only false for the first render.
+export function getFavouritesHeroStats({ ready, favorites = [] } = {}) {
+  const scorers = favorites
+    .map(player => ({ name: player.name, ppg: finite(player.stats?.ppg_last) }))
+    .filter(player => player.ppg !== null);
+  const top = scorers.reduce((best, player) => (!best || player.ppg > best.ppg ? player : best), null);
+  const teams = new Set(favorites.map(player => player.team).filter(team => team && team !== 'UNK'));
+  return build(ready, [
+    ['saved', 'Saved', countValue(favorites.length)],
+    ['teams', 'Teams', countValue(teams.size)],
+    ['ppg', 'Avg PPG', scorers.length
+      ? (scorers.reduce((sum, player) => sum + player.ppg, 0) / scorers.length).toFixed(1) : PLACEHOLDER],
+    ['top', 'Top scorer', top ? top.name : PLACEHOLDER],
+  ]);
+}
