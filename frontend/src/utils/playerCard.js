@@ -59,6 +59,16 @@ export function getSeasonCardStats(player) {
   };
 }
 
+// A saved favourite keeps whatever its source page had: one saved from Predictions has no games
+// played, for example. Leave out stats with no saved value rather than showing them as 0.
+const SEASON_SOURCE = { games: 'games_played' };
+
+export function getFavouriteCardStats(player) {
+  const { main, extra } = getSeasonCardStats(player);
+  const saved = stat => toFinite(player?.stats?.[SEASON_SOURCE[stat.key] ?? `${stat.key}_last`]) !== null;
+  return { main, extra: extra.filter(saved) };
+}
+
 export const toStatValues = stats => Object.fromEntries((stats || []).map(stat => [stat.key, stat.value]));
 
 // Keys whose value differs from the previous render, so only those tick in.

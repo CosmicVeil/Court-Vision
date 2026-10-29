@@ -13,39 +13,9 @@
   font-family: var(--font-body, 'Inter', sans-serif);
 }
 
-/* ---------- Header ---------- */
-.favourites-header {
-  text-align: center;
-  margin-bottom: 40px;
-  position: relative;
-  z-index: 10;
-}
-
-.favourites-title {
-  font-size: clamp(2.5rem, 5vw, 4.2rem);
-  margin-bottom: 12px;
-  font-family: var(--font-heading, 'Inter', sans-serif);
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: -0.5px;
-  color: #ffffff;
-  line-height: 1.08;
-}
-
-.favourites-subtitle {
-  font-size: clamp(15px, 1.8vw, 17px);
-  color: var(--color-stone, #8e8c94);
-  max-width: 650px;
-  margin: 0 auto;
-  line-height: 1.6;
-}
-
-.favourites-info {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
 .info-text {
+  margin: 0 0 24px;
+  text-align: center;
   font-family: var(--font-mono, monospace);
   font-size: 11px;
   color: var(--color-stone, #8e8c94);
@@ -53,131 +23,17 @@
   text-transform: uppercase;
 }
 
-/* ---------- Grid ---------- */
-.favourites-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
-  align-items: stretch;
-  gap: 24px;
-  max-width: 1200px;
-  margin: 0 auto 40px;
-}
-
-.favourite-card {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
-  border: 1px solid rgba(255, 100, 54, 0.18);
-  border-radius: var(--radius-xl, 20px);
-  padding: 24px;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
-}
-
-.favourite-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, var(--color-ember-orange, #ff6436), transparent);
-  opacity: 0.6;
-}
-
-.favourite-card:hover {
-  transform: translateY(-6px);
-  border-color: rgba(255, 100, 54, 0.5);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 24px rgba(255, 100, 54, 0.2);
-}
-
-.card-header-fav {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 12px;
-  gap: 12px;
-}
-
-.player-header-info { min-width: 0; flex: 1; }
-
-.player-name-fav {
-  font-family: var(--font-heading, 'Inter', sans-serif);
-  font-size: 1.35rem;
-  font-weight: 900;
-  color: #fff;
-  margin: 0 0 6px;
-  text-transform: uppercase;
-  overflow-wrap: anywhere;
-}
-
-.player-meta-fav {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.team-badge-fav, .position-badge-fav {
-  padding: 4px 12px;
-  border-radius: 6px;
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-}
-
-.team-badge-fav {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #fff;
-}
-
-.position-badge-fav {
-  background: rgba(255, 100, 54, 0.12);
-  border: 1px solid rgba(255, 100, 54, 0.3);
-  color: var(--color-ember-orange, #ff6436);
-}
-
-.favorite-btn-fav {
-  flex-shrink: 0;
-  background: rgba(255, 206, 109, 0.15);
-  color: #ffce6d;
-  border: 1px solid rgba(255, 206, 109, 0.4);
-  box-shadow: 0 0 12px rgba(255, 206, 109, 0.2);
-  border-radius: 6px;
-  padding: 6px 14px;
-  font-family: var(--font-mono, monospace);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.favorite-btn-fav:hover {
-  background: rgba(255, 59, 48, 0.15);
-  color: #ff3b30;
-  border-color: rgba(255, 59, 48, 0.4);
-}
-
+/* ---------- Card extras ----------
+   Cards are the shared PlayerCard (PlayerCard.css); these style what Favourites passes in as
+   children: the height/weight line and the trend tiles. */
 .player-details-fav {
   display: flex;
+  margin: 0;
   flex-wrap: wrap;
   gap: 8px 16px;
   font-family: var(--font-mono, monospace);
   font-size: 11px;
   color: var(--color-stone, #8e8c94);
-  margin-bottom: 16px;
 }
 
 .player-detail-item-fav + .player-detail-item-fav::before {
@@ -186,21 +42,20 @@
   color: var(--color-ember-orange, #ff6436);
 }
 
-.player-stats-fav, .player-trends-fav { margin-top: 14px; }
-.player-trends-fav { margin-top: auto; padding-top: 16px; }
-.stats-title, .trends-title {
+.player-trends-fav { margin-top: auto; }
+.trends-title {
   margin: 0 0 10px;
   color: #fff;
   font: 700 11px var(--font-mono, monospace);
   letter-spacing: 1px;
   text-transform: uppercase;
 }
-.stats-grid-fav, .trends-grid-fav {
+.trends-grid-fav {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
   gap: 8px;
 }
-.stat-item-fav, .trend-item-fav {
+.trend-item-fav {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -212,21 +67,18 @@
   background: rgba(255, 255, 255, 0.035);
   text-align: center;
 }
-.stat-label-fav, .trend-label-fav {
+.trend-label-fav {
   color: var(--color-stone, #8e8c94);
   font: 700 10px var(--font-mono, monospace);
   letter-spacing: .8px;
   text-transform: uppercase;
 }
-.stat-value-fav, .trend-value-fav { color: #fff; font-size: 1.25rem; font-weight: 800; }
+.trend-value-fav { color: #fff; font-size: 1.25rem; font-weight: 800; overflow-wrap: anywhere; }
 .trend-value-fav.positive { color: #4caf50; }
 .trend-value-fav.negative { color: #f87171; }
 
 @media (max-width: 480px) {
   .favourites-wrapper { padding: 96px 14px 50px; }
-  .favourite-card { padding: 18px; }
-  .stats-grid-fav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .card-header-fav { flex-wrap: wrap; }
 }
 
 /* ---------- Empty State ---------- */
@@ -255,4 +107,40 @@
   color: var(--color-stone, #8e8c94);
   font-size: 14px;
   margin-bottom: 24px;
+}
+
+/* Signed-out prompt: a narrower card with a lock icon and two actions. */
+.empty-state.is-locked { max-width: 520px; }
+
+.empty-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1.5rem;
+  border: 1px solid rgba(255, 100, 54, 0.35);
+  border-radius: 50%;
+  background: rgba(255, 100, 54, 0.12);
+}
+
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 2rem;
+}
+
+/* Base .empty-cta comes from Predictions.css (page CSS is global). */
+.empty-cta.is-secondary {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 100, 54, 0.25);
+  color: #fff;
+  box-shadow: none;
+}
+
+.empty-cta:focus-visible {
+  outline: 2px solid var(--color-ember-orange);
+  outline-offset: 3px;
 }

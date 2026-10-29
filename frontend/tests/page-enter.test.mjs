@@ -21,11 +21,12 @@ test("enterDelay reuses the reveal stagger and its cap", () => {
 });
 
 // Pages whose content is on screen at mount; Live Games, Predictions and Stats load in through
-// PageHero and data-reveal instead, and Home has its own scroll reveal.
+// PageHero and data-reveal instead, and Home has its own scroll reveal. Favourites tags its
+// empty states and note; its cards are PlayerCards, which reveal themselves.
 const pages = {
   "Recommendations.jsx": 4,
   "RecommendationChart.jsx": 2,
-  "Favourites.jsx": 5,
+  "Favourites.jsx": 3,
   "Contact.jsx": 5,
   "Privacy.jsx": 6,
   "NotFound.jsx": 5,
@@ -46,5 +47,4 @@ test("every static page tags its blocks for page entry, in a stagger", () => {
 test("listed cards stagger by their position", () => {
   assert.match(readSource("RecommendationChart.jsx"), /data-enter\s+style=\{enterDelay\(index \+ 1\)\}/);
   assert.match(readSource("Recommendations.jsx"), /className="spotlight-card" data-enter style=\{enterDelay\(index \+ 1\)\}/);
-  assert.match(readSource("Favourites.jsx"), /data-enter\s+style=\{\{ cursor: 'pointer', \.\.\.enterDelay\(index \+ 2\) \}\}/);
 });
