@@ -24,8 +24,13 @@ Command-line tools in `scripts/`. Run them from `backend/`:
 ## Game archive
 
 Finished games are stored in PostgreSQL for training a per-game model (`app/services/game_archive.py`).
-The running backend archives each game in the background once `/api/games/today` sees it go final;
-`scripts/archive_games.py` catches up on anything missed and backfills past seasons.
+The running backend archives each game in the background once `/api/games/today` sees it go final,
+and catches up on games from the last 3 days at startup, every 24 hours, and at most hourly from that feed.
+`scripts/archive_games.py` catches up on anything older and backfills past seasons.
+
+To backfill a deployed server without running the script, set `ARCHIVE_BACKFILL_START=YYYY-MM-DD`
+(e.g. `2026-10-01`) and restart: the startup catch-up then reaches back to that date. Stored games are
+skipped, so it is safe to leave set, but each restart re-checks every day since then.
 
 | Table / view | One row per |
 |---|---|

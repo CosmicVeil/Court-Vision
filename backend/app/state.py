@@ -3,6 +3,7 @@ import json
 import os
 import pickle
 import unicodedata
+from datetime import date
 
 from app import config, db
 from app.services import game_archive
@@ -241,6 +242,18 @@ def load_current_season(conn=None):
             conn.close()
 
 
+def backfill_start():
+    """ARCHIVE_BACKFILL_START=YYYY-MM-DD widens the startup catch-up back to that date."""
+    value = os.environ.get('ARCHIVE_BACKFILL_START', '').strip()
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        print(f"Ignoring ARCHIVE_BACKFILL_START={value!r}; expected YYYY-MM-DD.")
+        return None
+
+
 def initialize():
     """Load everything the routes need. Runs once per process (including under Gunicorn)."""
     print("Loading NBA data...")
@@ -253,7 +266,7 @@ def initialize():
     load_current_season()
     game_archive.auto_archive_enabled = bool(os.environ.get('DATABASE_URL'))
     if game_archive.auto_archive_enabled:
-        game_archive.schedule_catch_up(force=True)
+        game_archive.schedule_catch_up(force=True, start=backfill_start())
         game_archive.start_daily_catch_up()
 
     if ai_available and not is_render:
