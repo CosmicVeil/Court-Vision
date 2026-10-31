@@ -147,6 +147,15 @@ class CatchUpTests(unittest.TestCase):
             game_archive.catch_up_recent_games(conn, days=1, today=date(2026, 10, 29))
             archive.assert_called_once_with(conn, date(2026, 10, 28), date(2026, 10, 29))
 
+    def test_backfill_start_widens_the_window_but_never_narrows_it(self):
+        conn = MagicMock()
+        with patch.object(game_archive, 'archive_dates') as archive:
+            game_archive.catch_up_recent_games(conn, today=date(2026, 10, 29), start=date(2026, 10, 1))
+            archive.assert_called_once_with(conn, date(2026, 10, 1), date(2026, 10, 29))
+            archive.reset_mock()
+            game_archive.catch_up_recent_games(conn, today=date(2026, 10, 29), start=date(2026, 10, 28))
+            archive.assert_called_once_with(conn, date(2026, 10, 26), date(2026, 10, 29))
+
     def test_default_today_is_eastern_even_before_utc_midnight_rollover(self):
         self.assertTrue(callable(getattr(game_archive, 'catch_up_recent_games', None)))
         instant = datetime(2026, 10, 30, 2, tzinfo=timezone.utc)
@@ -183,12 +192,18 @@ class CatchUpTests(unittest.TestCase):
                  patch.object(game_archive, 'catch_up_recent_games', return_value={'archived': archived}) as catch_up, \
                  patch.object(state, 'load_current_season', create=True) as refresh:
                 game_archive._catch_up_in_background()
-                catch_up.assert_called_once_with(connect.return_value)
+                catch_up.assert_called_once_with(connect.return_value, start=None)
                 if archived:
                     refresh.assert_called_once_with(connect.return_value)
                 else:
                     refresh.assert_not_called()
                 connect.return_value.close.assert_called_once_with()
+
+    def test_background_passes_the_backfill_start(self):
+        with patch.object(db, 'get_db') as connect, \
+             patch.object(game_archive, 'catch_up_recent_games', return_value={'archived': 0}) as catch_up:
+            game_archive._catch_up_in_background(date(2026, 10, 1))
+            catch_up.assert_called_once_with(connect.return_value, start=date(2026, 10, 1))
 
     def test_background_failure_logs_and_closes(self):
         self.assertTrue(callable(getattr(game_archive, '_catch_up_in_background', None)))
@@ -216,7 +231,7 @@ class CatchUpThrottleTests(unittest.TestCase):
     def test_hourly_throttle_from_live_feed(self):
         game_archive.archive_finished_games([])
         self.assertEqual(self.submit.call_count, 1)
-        self.submit.assert_called_once_with(game_archive._catch_up_in_background)
+        self.submit.assert_called_once_with(game_archive._catch_up_in_background, None)
         self.clock.return_value = 4200
         game_archive.archive_finished_games([])
         self.assertEqual(self.submit.call_count, 1)
@@ -233,8 +248,8 @@ class CatchUpThrottleTests(unittest.TestCase):
         self.assertTrue(callable(getattr(game_archive, 'schedule_catch_up', None)))
         self.clock.return_value = 10
         self.assertFalse(game_archive.schedule_catch_up())
-        self.assertTrue(game_archive.schedule_catch_up(force=True))
-        self.submit.assert_called_once_with(game_archive._catch_up_in_background)
+        self.assertTrue(game_archive.schedule_catch_up(force=True, start=date(2026, 10, 1)))
+        self.submit.assert_called_once_with(game_archive._catch_up_in_background, date(2026, 10, 1))
         self.clock.return_value = 3609
         self.assertFalse(game_archive.schedule_catch_up())
         self.clock.return_value = 3610
@@ -348,7 +363,7 @@ class CurrentSeasonStateTests(unittest.TestCase):
         self.assertLess(events.index('assign_player_ids'), events.index('load_current_season'))
         self.assertLess(events.index('init_db'), events.index('load_current_season'))
         self.assertLess(events.index('apply_archive_teams'), events.index('load_current_season'))
-        schedule.assert_called_once_with(force=True)
+        schedule.assert_called_once_with(force=True, start=None)
         daily.assert_called_once_with()
         self.assertTrue(game_archive.auto_archive_enabled)
         os.environ.pop('DATABASE_URL')
@@ -372,6 +387,33 @@ def season_player(**changes):
         'FG_PCT_LAST': 0.5, 'FG3_PCT_LAST': 0.3, 'FT_PCT_LAST': 0.8, 'GAMES_PLAYED_LAST': 70,
         **changes,
     }
+
+
+class BackfillStartTests(unittest.TestCase):
+    def test_reads_an_iso_date_and_ignores_blank_or_invalid_values(self):
+        for value, expected in (('2026-10-01', date(2026, 10, 1)), (' 2026-10-01 ', date(2026, 10, 1)),
+                                ('', None), ('next week', None), ('10/01/2026', None)):
+            with self.subTest(value=value), patch.dict(os.environ, {'ARCHIVE_BACKFILL_START': value}), \
+                 patch('builtins.print') as log:
+                self.assertEqual(state.backfill_start(), expected)
+                self.assertEqual(log.called, expected is None and bool(value.strip()))
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertIsNone(state.backfill_start())
+
+    def test_initialize_hands_the_backfill_start_to_the_startup_catch_up(self):
+        events = []
+        for name in ('load_nba_data', 'load_multi_season_data', 'assign_player_ids', 'load_ai',
+                     'apply_archive_teams', 'load_current_season'):
+            self.enterContext(patch.object(state, name))
+        self.enterContext(patch.object(db, 'init_db'))
+        self.enterContext(patch.object(state, 'ai_available', False))
+        self.enterContext(patch.object(game_archive, 'auto_archive_enabled', False))
+        self.enterContext(patch.object(game_archive, 'start_daily_catch_up'))
+        schedule = self.enterContext(patch.object(game_archive, 'schedule_catch_up'))
+        self.enterContext(patch.dict(os.environ, {'DATABASE_URL': 'postgresql://test.invalid/test',
+                                                  'ARCHIVE_BACKFILL_START': '2026-10-01'}))
+        state.initialize()
+        schedule.assert_called_once_with(force=True, start=date(2026, 10, 1))
 
 
 class SeasonRouteTestCase(unittest.TestCase):

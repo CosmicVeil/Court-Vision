@@ -984,10 +984,15 @@ def archive_dates(conn, start: date, end: date, refresh: bool = False, pause: fl
     return counts
 
 
-def catch_up_recent_games(conn, days: int = 3, today: Optional[date] = None) -> Dict[str, int]:
-    """Catch missed completed games through today, using US Eastern dates."""
+def catch_up_recent_games(conn, days: int = 3, today: Optional[date] = None,
+                          start: Optional[date] = None) -> Dict[str, int]:
+    """Catch missed completed games through today, using US Eastern dates.
+
+    `start` widens the window back to that date (a one-off backfill); it never narrows it.
+    """
     today = today or datetime.now(_ET).date()
-    return archive_dates(conn, today - timedelta(days=days), today)
+    first = today - timedelta(days=days)
+    return archive_dates(conn, min(first, start) if start else first, today)
 
 
 # ---------------------------------------------------------------------------
@@ -1003,7 +1008,7 @@ _catch_up_lock = threading.Lock()
 _last_catch_up = _clock()
 
 
-def schedule_catch_up(force: bool = False) -> bool:
+def schedule_catch_up(force: bool = False, start: Optional[date] = None) -> bool:
     """Queue catch-up at most hourly per process; startup can force the first run."""
     global _last_catch_up
     with _catch_up_lock:
@@ -1011,7 +1016,7 @@ def schedule_catch_up(force: bool = False) -> bool:
         if not force and now - _last_catch_up < CATCH_UP_INTERVAL:
             return False
         _last_catch_up = now
-        _executor.submit(_catch_up_in_background)
+        _executor.submit(_catch_up_in_background, start)
     return True
 
 
@@ -1040,11 +1045,11 @@ def _daily_catch_up_loop(stop: threading.Event, interval: float) -> None:
             print(f"[game_archive] daily catch-up could not be queued: {exc}")
 
 
-def _catch_up_in_background() -> None:
+def _catch_up_in_background(start: Optional[date] = None) -> None:
     conn = None
     try:
         conn = db.get_db()
-        counts = catch_up_recent_games(conn)
+        counts = catch_up_recent_games(conn, start=start)
         if counts['archived'] > 0:
             from app import state
             state.load_current_season(conn)
