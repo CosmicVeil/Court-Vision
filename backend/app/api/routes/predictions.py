@@ -3,13 +3,31 @@ import traceback
 from flask import Blueprint, jsonify, request
 
 from app import state
-from app.api.helpers import sanitize_string, validate_pagination
+from app.api.helpers import SO_FAR_KEYS, sanitize_string, so_far_stats, validate_pagination
 from app.services.recommendations import get_top_performers
 from app.utils.player_ids import player_id_for
+from app.utils.player_names import normalize_player_name
 
 bp = Blueprint('predictions', __name__, url_prefix='/api')
 
 AI_UNAVAILABLE = {'error': 'AI predictions not available', 'ai_available': False}
+
+
+def _so_far_lookup():
+    players = state.current_season_data
+    return (
+        {p['PLAYER_ID']: p for p in players},
+        {normalize_player_name(p['PLAYER_NAME']): p for p in players},
+    )
+
+
+def _with_so_far(row, lookup):
+    by_id, by_name = lookup
+    player = by_id.get(row.get('id') or row.get('PLAYER_ID'))
+    if player is None:
+        player = by_name.get(normalize_player_name(row.get('name') or row.get('PLAYER_NAME')))
+    stats = so_far_stats(player) if player else {}
+    return {**row, **{f'so_far_{key}': stats.get(key) for key in SO_FAR_KEYS}}
 
 
 @bp.route('/ai-predictions', methods=['GET'])
@@ -24,6 +42,9 @@ def get_ai_predictions():
             state.ai.initialize_nba_ai()
             predictions = state.ai.get_ai_predictions_bundle(10)
 
+        lookup = _so_far_lookup()
+        predictions = {key: [_with_so_far(row, lookup) for row in rows]
+                       for key, rows in predictions.items()}
         return jsonify({
             'predictions': predictions,
             'ai_available': True
@@ -119,6 +140,8 @@ def get_all_predictions_paginated():
         start_idx = (page - 1) * limit
         end_idx = start_idx + limit
         page_results = filtered[start_idx:end_idx]
+        lookup = _so_far_lookup()
+        page_results = [_with_so_far(row, lookup) for row in page_results]
 
         return jsonify({
             'predictions': page_results,
@@ -189,6 +212,8 @@ def recommendations(stat):
             data = cached_data
         else:
             data = get_top_performers(stat_clean)
+        lookup = _so_far_lookup()
+        data = [_with_so_far(row, lookup) for row in data]
         return jsonify(data), 200
     except Exception as e:
         print(f"Error in recommendations: {e}")

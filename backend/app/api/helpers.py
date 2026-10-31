@@ -20,6 +20,21 @@ SORT_KEY_MAP = {
 }
 
 
+# Current-season archive fields in the prediction stats' keys; shooting is stored as a 0-1 ratio.
+SO_FAR_FIELDS = (('ppg', 'PPG_LAST'), ('apg', 'APG_LAST'), ('rpg', 'RPG_LAST'), ('spg', 'SPG_LAST'),
+                 ('bpg', 'BPG_LAST'), ('tov', 'TOV_LAST'), ('mpg', 'MIN_LAST'))
+SO_FAR_PCT_FIELDS = (('fg_pct', 'FG_PCT_LAST'), ('fg3_pct', 'FG3_PCT_LAST'), ('ft_pct', 'FT_PCT_LAST'))
+SO_FAR_KEYS = tuple(key for key, _ in SO_FAR_FIELDS + SO_FAR_PCT_FIELDS) + ('gp',)
+
+
+def so_far_stats(season_player):
+    """A current-season archive row in the same keys and units as the model's predicted_stats."""
+    stats = {key: round(season_player.get(field) or 0, 1) for key, field in SO_FAR_FIELDS}
+    stats.update({key: round((season_player.get(field) or 0) * 100, 1) for key, field in SO_FAR_PCT_FIELDS})
+    stats['gp'] = int(season_player.get('GAMES_PLAYED_LAST') or 0)
+    return stats
+
+
 def sanitize_string(value: str, max_length: int = 100) -> str:
     if not isinstance(value, str):
         return ""

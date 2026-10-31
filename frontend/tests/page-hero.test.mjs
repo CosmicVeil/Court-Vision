@@ -24,13 +24,13 @@ test('a season year is shown as the NBA season it ends, and no year means the cu
   assert.equal(typeof formatSeason, 'function');
   assert.equal(formatSeason('2026'), '2025-26');
   assert.equal(formatSeason('2020'), '2019-20');
-  assert.equal(formatSeason(''), '2025-26');
+  assert.equal(formatSeason(''), '2026-27');
 });
 
 test('Stats hero shows the matching players, season, sort and page', () => {
   assert.equal(typeof getStatsHeroStats, 'function');
   assert.deepEqual(values(getStatsHeroStats({ ready: true, total: 583, year: '', sort: 'ppg', order: 'desc', page: 2, totalPages: 6 })),
-    [['Players', '583'], ['Season', '2025-26'], ['Sorted by', 'PPG ↓'], ['Page', '2 / 6']]);
+    [['Players', '583'], ['Season', '2026-27'], ['Sorted by', 'PPG ↓'], ['Page', '2 / 6']]);
   assert.deepEqual(values(getStatsHeroStats({ ready: true, total: 1234, year: '2023', sort: 'name', order: 'asc', page: 1, totalPages: 13 })),
     [['Players', '1,234'], ['Season', '2022-23'], ['Sorted by', 'Name ↑'], ['Page', '1 / 13']]);
 });
@@ -83,11 +83,11 @@ test('box-score sort buttons are scoped, so they do not restyle the Stats sort b
   assert.match(css, /\.boxscore \.sort-btn \{/);
 });
 
-test('Predictions copy describes the model it actually uses (XGBoost, next-season averages)', () => {
+test('Predictions copy describes the model it actually uses (XGBoost, this season\'s averages)', () => {
   const page = readSource('Predictions.jsx');
   assert.doesNotMatch(page, /neural/i, 'the model is gradient-boosted trees, not a neural network');
   assert.match(page, /XGBoost/);
-  assert.match(page, /next season/i);
+  assert.match(page, /this season/i);
 });
 
 test('Home, Contact and Recommendations describe the XGBoost model, not neural networks or inputs it does not use', () => {

@@ -11,8 +11,10 @@ Each completed game is fetched once from ESPN's summary endpoint and written to:
 The view player_game_features adds leakage-free context for training (rest days,
 back-to-backs, rolling averages over *previous* games only).
 
-Games are archived two ways:
+Games are archived three ways:
   - automatically, in the background, when /api/games/today sees a game go final
+  - by a recent-days catch-up at startup, every 24 hours while the server runs, and at most
+    hourly from the live-games feed
   - via scripts/archive_games.py (daily catch-up and historical backfill)
 """
 
@@ -431,6 +433,54 @@ def archived_game_ids(conn, game_ids: Iterable[str]) -> set:
 # ---------------------------------------------------------------------------
 # Reads for the player popup
 # ---------------------------------------------------------------------------
+
+def season_player_averages(conn, season_year: int) -> List[Dict]:
+    """Regular-season archive totals in the shape consumed by season-stat routes."""
+    from app import state
+
+    rows = conn.execute("""
+        SELECT p.nba_player_id, COUNT(*) AS games,
+            (array_agg(p.team ORDER BY p.game_date DESC, g.tipoff DESC NULLS LAST))[1] AS team,
+            (array_agg(p.player_name ORDER BY p.game_date DESC, g.tipoff DESC NULLS LAST))[1] AS player_name,
+            (array_agg(p.position ORDER BY p.game_date DESC, g.tipoff DESC NULLS LAST)
+                FILTER (WHERE p.position IS NOT NULL))[1] AS position,
+            SUM(p.minutes) AS minutes, SUM(p.pts) AS pts, SUM(p.reb) AS reb,
+            SUM(p.ast) AS ast, SUM(p.stl) AS stl, SUM(p.blk) AS blk, SUM(p.tov) AS tov,
+            SUM(p.fgm) AS fgm, SUM(p.fga) AS fga, SUM(p.fg3m) AS fg3m,
+            SUM(p.fg3a) AS fg3a, SUM(p.ftm) AS ftm, SUM(p.fta) AS fta
+        FROM player_game_stats p JOIN games g USING (game_id)
+        WHERE p.season = %s AND p.season_type = 2 AND NOT p.did_not_play
+            AND p.nba_player_id IS NOT NULL
+        GROUP BY p.nba_player_id
+    """, (season_year,)).fetchall()
+    players = {p['PLAYER_ID']: p for p in state.nba_data or [] if p.get('PLAYER_ID')}
+    averages = []
+    for row in rows:
+        if row['nba_player_id'] is None:
+            continue
+        player_id = int(row['nba_player_id'])
+        player = players.get(player_id)
+        games = int(row['games'])
+        result = {
+            'PLAYER_ID': player_id,
+            'PLAYER_NAME': player['PLAYER_NAME'] if player else row['player_name'],
+            'TEAM': row['team'],
+            'POSITION': player.get('POSITION', 'UNK') if player else row['position'] or 'UNK',
+            'AGE': (player.get('AGE', 0) or 0) + 1 if player else 0,
+            'GAMES_PLAYED_LAST': games,
+        }
+        if player:
+            for key in ('HEIGHT', 'WEIGHT'):
+                if key in player:
+                    result[key] = player[key]
+        for key, column in (('PPG', 'pts'), ('RPG', 'reb'), ('APG', 'ast'),
+                            ('SPG', 'stl'), ('BPG', 'blk'), ('TOV', 'tov'), ('MIN', 'minutes')):
+            result[f'{key}_LAST'] = float(row[column] or 0) / games
+        for key, made, attempted in (('FG', 'fgm', 'fga'), ('FG3', 'fg3m', 'fg3a'), ('FT', 'ftm', 'fta')):
+            result[f'{key}_PCT_LAST'] = float(row[made] or 0) / float(row[attempted]) if row[attempted] else 0
+        averages.append(result)
+    return averages
+
 
 def latest_player_teams(conn) -> Dict[int, str]:
     """Return each player's team from their latest archived game with an NBA team."""
@@ -934,6 +984,12 @@ def archive_dates(conn, start: date, end: date, refresh: bool = False, pause: fl
     return counts
 
 
+def catch_up_recent_games(conn, days: int = 3, today: Optional[date] = None) -> Dict[str, int]:
+    """Catch missed completed games through today, using US Eastern dates."""
+    today = today or datetime.now(_ET).date()
+    return archive_dates(conn, today - timedelta(days=days), today)
+
+
 # ---------------------------------------------------------------------------
 # Automatic archiving from the live-games feed
 # ---------------------------------------------------------------------------
@@ -941,13 +997,73 @@ def archive_dates(conn, start: date, end: date, refresh: bool = False, pause: fl
 _executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="game-archive")
 _seen_lock = threading.Lock()
 _seen: set = set()  # game ids queued or stored by this process
+CATCH_UP_INTERVAL = 3600
+_clock = time.monotonic
+_catch_up_lock = threading.Lock()
+_last_catch_up = _clock()
+
+
+def schedule_catch_up(force: bool = False) -> bool:
+    """Queue catch-up at most hourly per process; startup can force the first run."""
+    global _last_catch_up
+    with _catch_up_lock:
+        now = _clock()
+        if not force and now - _last_catch_up < CATCH_UP_INTERVAL:
+            return False
+        _last_catch_up = now
+        _executor.submit(_catch_up_in_background)
+    return True
+
+
+DAILY_CATCH_UP_INTERVAL = 24 * 3600
+_daily_stop = threading.Event()
+_daily_thread: Optional[threading.Thread] = None
+
+
+def start_daily_catch_up() -> bool:
+    """Queue a catch-up every 24 hours for as long as this process runs, even with no traffic."""
+    global _daily_thread
+    if _daily_thread is not None and _daily_thread.is_alive():
+        return False
+    # A daemon thread never holds the process open, so restarts and deploys aren't delayed.
+    _daily_thread = threading.Thread(target=_daily_catch_up_loop, args=(_daily_stop, DAILY_CATCH_UP_INTERVAL),
+                                     name="game-archive-daily", daemon=True)
+    _daily_thread.start()
+    return True
+
+
+def _daily_catch_up_loop(stop: threading.Event, interval: float) -> None:
+    while not stop.wait(interval):  # wait() returns True only once stop is set
+        try:
+            schedule_catch_up(force=True)
+        except Exception as exc:
+            print(f"[game_archive] daily catch-up could not be queued: {exc}")
+
+
+def _catch_up_in_background() -> None:
+    conn = None
+    try:
+        conn = db.get_db()
+        counts = catch_up_recent_games(conn)
+        if counts['archived'] > 0:
+            from app import state
+            state.load_current_season(conn)
+    except Exception as exc:
+        print(f"[game_archive] background catch-up failed: {exc}")
+    finally:
+        if conn:
+            conn.close()
 
 
 def _archive_in_background(game_id: str) -> None:
     conn = None
     try:
         conn = db.get_db()
-        if archived_game_ids(conn, [game_id]) or archive_game(conn, game_id):
+        if archived_game_ids(conn, [game_id]):
+            return
+        if archive_game(conn, game_id):
+            from app import state
+            state.load_current_season(conn)
             return
     except Exception as exc:
         print(f"[game_archive] background archive failed ({game_id}): {exc}")
@@ -971,3 +1087,4 @@ def archive_finished_games(games: List[Dict]) -> None:
                 continue
             _seen.add(game_id)
         _executor.submit(_archive_in_background, game_id)
+    schedule_catch_up()

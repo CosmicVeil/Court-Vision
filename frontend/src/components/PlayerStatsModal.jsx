@@ -99,7 +99,10 @@ export default function PlayerStatsModal({ player, loading, onClose }) {
               )}
               {tab === 'games' && <PlayerGameLog playerId={player.id} />}
               {tab === 'predictions' && (player.ml_stats ? (
-                <PlayerPredictionGrid currentStats={player.current_stats} predictionStats={player.ml_stats.predicted_stats} improvements={player.ml_stats.improvements} />
+                <>
+                  <h3 className="secondary-stats-title">Predicted · change vs this season</h3>
+                  <PlayerPredictionGrid currentStats={player.ml_stats.so_far_stats} predictionStats={player.ml_stats.predicted_stats} />
+                </>
               ) : <div className="no-data">AI Prediction model is currently loading or unavailable for this player.</div>)}
               {tab === 'history' && (
                 <div className="stats-history-table-container">
@@ -108,7 +111,7 @@ export default function PlayerStatsModal({ player, loading, onClose }) {
                       <thead><tr><th>Season</th><th>GP</th><th>MIN</th><th>PPG</th><th>RPG</th><th>APG</th><th>SPG</th><th>BPG</th><th>FG%</th><th>3P%</th><th>FT%</th></tr></thead>
                       <tbody>
                         {Object.entries(player.history || {}).reverse().map(([year, season]) => (
-                          <tr key={year}><td><strong>{year}</strong></td><td>{season.games_played}</td><td>{season.minutes}</td><td>{season.ppg}</td><td>{season.rpg}</td><td>{season.apg}</td><td>{season.spg}</td><td>{season.bpg}</td><td>{season.fg_pct}%</td><td>{season.fg3_pct}%</td><td>{season.ft_pct}%</td></tr>
+                          <tr key={year}><td><strong>{year}</strong> {season.in_progress && <span className="game-log-tag">In progress</span>}</td><td>{season.games_played}</td><td>{season.minutes}</td><td>{season.ppg}</td><td>{season.rpg}</td><td>{season.apg}</td><td>{season.spg}</td><td>{season.bpg}</td><td>{season.fg_pct}%</td><td>{season.fg3_pct}%</td><td>{season.ft_pct}%</td></tr>
                         ))}
                       </tbody>
                     </table>

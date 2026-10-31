@@ -4,6 +4,7 @@ import PlayerStatsModal from '../components/PlayerStatsModal';
 import { buildApiUrl } from '../config/api';
 import { samePlayerName } from '../utils/playerNames';
 import { enterDelay } from '../utils/scrollReveal';
+import { formatSoFarLine } from '../utils/seasonSoFar';
 import './Recommendations.css';
 
 const FALLBACK_PLAYERS = {
@@ -242,6 +243,10 @@ const Recommendations = () => {
                             </div>
                           );
                         })}
+                        <div className="spotlight-stat-row">
+                          <span className="stat-label">2026-27 SO FAR</span>
+                          <span className="spotlight-stat-val" data-numeric>{formatSoFarLine(player)}</span>
+                        </div>
                       </div>
                     </div>
                   );

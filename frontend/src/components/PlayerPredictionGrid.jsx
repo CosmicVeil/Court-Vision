@@ -13,6 +13,8 @@ const PlayerPredictionGrid = ({ currentStats = {}, predictionStats = {}, improve
         </div>
         <div className="player-prediction-grid">
           {group.stats.map((stat) => {
+            // No games this season yet: show the prediction alone, with nothing to compare against.
+            const hasCurrent = currentStats?.[stat.key] != null;
             const current = Number(currentStats?.[stat.key]) || 0;
             const predicted = Number(predictionStats?.[stat.key]) || 0;
             const suppliedChange = improvements?.[stat.key];
@@ -26,7 +28,7 @@ const PlayerPredictionGrid = ({ currentStats = {}, predictionStats = {}, improve
                 
                 <div className="player-pred-comparison">
                   <div className="player-pred-val-box past">
-                    <span className="player-pred-val">{formatValue(current)}</span>
+                    <span className="player-pred-val">{hasCurrent ? formatValue(current) : '—'}</span>
                     <span className="player-pred-unit">{stat.unit}</span>
                   </div>
                   
@@ -38,12 +40,14 @@ const PlayerPredictionGrid = ({ currentStats = {}, predictionStats = {}, improve
                   </div>
                 </div>
 
-                <div className="player-pred-footer">
-                  <span className={`player-pred-badge ${isPositive ? 'positive' : 'negative'}`}>
-                    <span className="badge-arrow">{isPositive ? '↗' : '↘'}</span>
-                    <span>{isPositive ? '+' : ''}{formatValue(change)}{changeSuffix}</span>
-                  </span>
-                </div>
+                {hasCurrent && (
+                  <div className="player-pred-footer">
+                    <span className={`player-pred-badge ${isPositive ? 'positive' : 'negative'}`}>
+                      <span className="badge-arrow">{isPositive ? '↗' : '↘'}</span>
+                      <span>{isPositive ? '+' : ''}{formatValue(change)}{changeSuffix}</span>
+                    </span>
+                  </div>
+                )}
               </article>
             );
           })}
