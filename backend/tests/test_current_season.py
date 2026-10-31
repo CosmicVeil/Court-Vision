@@ -135,6 +135,145 @@ class SingleGameRefreshTests(unittest.TestCase):
                 connect.return_value.close.assert_called_once_with()
 
 
+class CatchUpTests(unittest.TestCase):
+    def test_eastern_date_window_and_custom_days(self):
+        self.assertTrue(callable(getattr(game_archive, 'catch_up_recent_games', None)))
+        conn = MagicMock()
+        counts = {'archived': 2, 'skipped': 1, 'failed': 0}
+        with patch.object(game_archive, 'archive_dates', return_value=counts) as archive:
+            self.assertEqual(game_archive.catch_up_recent_games(conn, today=date(2026, 10, 29)), counts)
+            archive.assert_called_once_with(conn, date(2026, 10, 26), date(2026, 10, 29))
+            archive.reset_mock()
+            game_archive.catch_up_recent_games(conn, days=1, today=date(2026, 10, 29))
+            archive.assert_called_once_with(conn, date(2026, 10, 28), date(2026, 10, 29))
+
+    def test_default_today_is_eastern_even_before_utc_midnight_rollover(self):
+        self.assertTrue(callable(getattr(game_archive, 'catch_up_recent_games', None)))
+        instant = datetime(2026, 10, 30, 2, tzinfo=timezone.utc)
+        with patch.object(game_archive, 'datetime') as clock, \
+             patch.object(game_archive, 'archive_dates') as archive:
+            clock.now.side_effect = lambda tz: instant.astimezone(tz)
+            conn = MagicMock()
+            game_archive.catch_up_recent_games(conn)
+            clock.now.assert_called_once_with(game_archive._ET)
+            archive.assert_called_once_with(conn, date(2026, 10, 26), date(2026, 10, 29))
+
+    def test_repeated_catch_up_skips_stored_games(self):
+        self.assertTrue(callable(getattr(game_archive, 'catch_up_recent_games', None)))
+        conn = MagicMock()
+        stored = set()
+        def store_game(connection, game_id):
+            stored.add(game_id)
+            return True
+        with patch.object(game_archive, 'completed_game_ids_on', return_value=['missed']), \
+             patch.object(game_archive, 'archived_game_ids', side_effect=lambda c, ids: stored & set(ids)), \
+             patch.object(game_archive, 'archive_game', side_effect=store_game) as archive, \
+             patch.object(game_archive.time, 'sleep'):
+            first = game_archive.catch_up_recent_games(conn, days=0, today=date(2026, 10, 29))
+            second = game_archive.catch_up_recent_games(conn, days=0, today=date(2026, 10, 29))
+        self.assertEqual(first, {'archived': 1, 'skipped': 0, 'failed': 0})
+        self.assertEqual(second, {'archived': 0, 'skipped': 1, 'failed': 0})
+        archive.assert_called_once_with(conn, 'missed')
+
+    def test_background_refreshes_only_new_games_and_closes(self):
+        self.assertTrue(callable(getattr(game_archive, '_catch_up_in_background', None)))
+        for archived in (0, 2):
+            with self.subTest(archived=archived), \
+                 patch.object(db, 'get_db') as connect, \
+                 patch.object(game_archive, 'catch_up_recent_games', return_value={'archived': archived}) as catch_up, \
+                 patch.object(state, 'load_current_season', create=True) as refresh:
+                game_archive._catch_up_in_background()
+                catch_up.assert_called_once_with(connect.return_value)
+                if archived:
+                    refresh.assert_called_once_with(connect.return_value)
+                else:
+                    refresh.assert_not_called()
+                connect.return_value.close.assert_called_once_with()
+
+    def test_background_failure_logs_and_closes(self):
+        self.assertTrue(callable(getattr(game_archive, '_catch_up_in_background', None)))
+        with patch.object(db, 'get_db') as connect, \
+             patch.object(game_archive, 'catch_up_recent_games', side_effect=RuntimeError('catch-up failed')), \
+             patch.object(state, 'load_current_season', create=True) as refresh, patch('builtins.print') as log:
+            game_archive._catch_up_in_background()
+            connect.return_value.close.assert_called_once_with()
+            refresh.assert_not_called()
+            self.assertIn('catch-up failed', log.call_args.args[0])
+
+    def test_connection_failure_is_logged(self):
+        self.assertTrue(callable(getattr(game_archive, '_catch_up_in_background', None)))
+        with patch.object(db, 'get_db', side_effect=RuntimeError('offline')), patch('builtins.print') as log:
+            game_archive._catch_up_in_background()
+            self.assertIn('offline', log.call_args.args[0])
+
+class CatchUpThrottleTests(unittest.TestCase):
+    def setUp(self):
+        self.enterContext(patch.object(game_archive, 'auto_archive_enabled', True))
+        self.enterContext(patch.object(game_archive, '_last_catch_up', 0, create=True))
+        self.clock = self.enterContext(patch.object(game_archive, '_clock', return_value=3600, create=True))
+        self.submit = self.enterContext(patch.object(game_archive._executor, 'submit'))
+
+    def test_hourly_throttle_from_live_feed(self):
+        game_archive.archive_finished_games([])
+        self.assertEqual(self.submit.call_count, 1)
+        self.submit.assert_called_once_with(game_archive._catch_up_in_background)
+        self.clock.return_value = 4200
+        game_archive.archive_finished_games([])
+        self.assertEqual(self.submit.call_count, 1)
+        self.clock.return_value = 7201
+        game_archive.archive_finished_games([])
+        self.assertEqual(self.submit.call_count, 2)
+
+    def test_disabled_feed_does_not_schedule(self):
+        game_archive.auto_archive_enabled = False
+        game_archive.archive_finished_games([])
+        self.submit.assert_not_called()
+
+    def test_forced_startup_counts_toward_throttle(self):
+        self.assertTrue(callable(getattr(game_archive, 'schedule_catch_up', None)))
+        self.clock.return_value = 10
+        self.assertFalse(game_archive.schedule_catch_up())
+        self.assertTrue(game_archive.schedule_catch_up(force=True))
+        self.submit.assert_called_once_with(game_archive._catch_up_in_background)
+        self.clock.return_value = 3609
+        self.assertFalse(game_archive.schedule_catch_up())
+        self.clock.return_value = 3610
+        self.assertTrue(game_archive.schedule_catch_up())
+
+
+class DailyCatchUpTests(unittest.TestCase):
+    def setUp(self):
+        self.schedule = self.enterContext(patch.object(game_archive, 'schedule_catch_up'))
+
+    def test_loop_queues_a_forced_catch_up_after_each_interval_until_stopped(self):
+        stop = MagicMock()
+        stop.wait.side_effect = [False, False, True]  # two intervals pass, then the stop flag is set
+        game_archive._daily_catch_up_loop(stop, 86400)
+        self.assertEqual(stop.wait.call_args_list, [unittest.mock.call(86400)] * 3)
+        self.assertEqual(self.schedule.call_args_list, [unittest.mock.call(force=True)] * 2)
+
+    def test_loop_survives_a_failed_schedule(self):
+        stop = MagicMock()
+        stop.wait.side_effect = [False, False, True]
+        self.schedule.side_effect = [RuntimeError('executor shut down'), True]
+        game_archive._daily_catch_up_loop(stop, 10)
+        self.assertEqual(self.schedule.call_count, 2)
+
+    def test_daily_interval_is_24_hours(self):
+        self.assertEqual(game_archive.DAILY_CATCH_UP_INTERVAL, 24 * 3600)
+
+    def test_start_runs_one_daemon_thread_per_process(self):
+        self.enterContext(patch.object(game_archive, '_daily_thread', None))
+        with patch.object(game_archive.threading, 'Thread') as thread_class:
+            thread_class.return_value.is_alive.return_value = True
+            self.assertTrue(game_archive.start_daily_catch_up())
+            self.assertFalse(game_archive.start_daily_catch_up(), 'a running timer is not started twice')
+        thread_class.assert_called_once()
+        self.assertTrue(thread_class.call_args.kwargs['daemon'])
+        self.assertEqual(thread_class.call_args.kwargs['args'][1], game_archive.DAILY_CATCH_UP_INTERVAL)
+        thread_class.return_value.start.assert_called_once_with()
+
+
 class CurrentSeasonStateTests(unittest.TestCase):
     def setUp(self):
         self.old = [{'PLAYER_ID': 1}]
@@ -194,7 +333,7 @@ class CurrentSeasonStateTests(unittest.TestCase):
         self.assertEqual(self.load(), 0)
         self.assertIs(state.current_season_data, self.old)
 
-    def test_initialize_loads_after_ids_and_teams(self):
+    def test_initialize_loads_after_ids_and_teams_then_schedules_only_with_db(self):
         self.assertTrue(callable(getattr(state, 'load_current_season', None)))
         self.enterContext(patch.object(state, 'ai_available', False))
         self.enterContext(patch.object(game_archive, 'auto_archive_enabled', False))
@@ -203,13 +342,21 @@ class CurrentSeasonStateTests(unittest.TestCase):
                      'apply_archive_teams', 'load_current_season'):
             self.enterContext(patch.object(state, name, side_effect=lambda n=name: events.append(n)))
         self.enterContext(patch.object(db, 'init_db', side_effect=lambda: events.append('init_db')))
+        schedule = self.enterContext(patch.object(game_archive, 'schedule_catch_up'))
+        daily = self.enterContext(patch.object(game_archive, 'start_daily_catch_up', create=True))
         state.initialize()
         self.assertLess(events.index('assign_player_ids'), events.index('load_current_season'))
         self.assertLess(events.index('init_db'), events.index('load_current_season'))
         self.assertLess(events.index('apply_archive_teams'), events.index('load_current_season'))
+        schedule.assert_called_once_with(force=True)
+        daily.assert_called_once_with()
         self.assertTrue(game_archive.auto_archive_enabled)
         os.environ.pop('DATABASE_URL')
+        schedule.reset_mock()
+        daily.reset_mock()
         state.initialize()
+        schedule.assert_not_called()
+        daily.assert_not_called()
         self.assertFalse(game_archive.auto_archive_enabled)
 
 

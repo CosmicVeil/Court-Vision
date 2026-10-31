@@ -11,8 +11,10 @@ Each completed game is fetched once from ESPN's summary endpoint and written to:
 The view player_game_features adds leakage-free context for training (rest days,
 back-to-backs, rolling averages over *previous* games only).
 
-Games are archived two ways:
+Games are archived three ways:
   - automatically, in the background, when /api/games/today sees a game go final
+  - by a recent-days catch-up at startup, every 24 hours while the server runs, and at most
+    hourly from the live-games feed
   - via scripts/archive_games.py (daily catch-up and historical backfill)
 """
 
@@ -982,6 +984,12 @@ def archive_dates(conn, start: date, end: date, refresh: bool = False, pause: fl
     return counts
 
 
+def catch_up_recent_games(conn, days: int = 3, today: Optional[date] = None) -> Dict[str, int]:
+    """Catch missed completed games through today, using US Eastern dates."""
+    today = today or datetime.now(_ET).date()
+    return archive_dates(conn, today - timedelta(days=days), today)
+
+
 # ---------------------------------------------------------------------------
 # Automatic archiving from the live-games feed
 # ---------------------------------------------------------------------------
@@ -989,6 +997,62 @@ def archive_dates(conn, start: date, end: date, refresh: bool = False, pause: fl
 _executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="game-archive")
 _seen_lock = threading.Lock()
 _seen: set = set()  # game ids queued or stored by this process
+CATCH_UP_INTERVAL = 3600
+_clock = time.monotonic
+_catch_up_lock = threading.Lock()
+_last_catch_up = _clock()
+
+
+def schedule_catch_up(force: bool = False) -> bool:
+    """Queue catch-up at most hourly per process; startup can force the first run."""
+    global _last_catch_up
+    with _catch_up_lock:
+        now = _clock()
+        if not force and now - _last_catch_up < CATCH_UP_INTERVAL:
+            return False
+        _last_catch_up = now
+        _executor.submit(_catch_up_in_background)
+    return True
+
+
+DAILY_CATCH_UP_INTERVAL = 24 * 3600
+_daily_stop = threading.Event()
+_daily_thread: Optional[threading.Thread] = None
+
+
+def start_daily_catch_up() -> bool:
+    """Queue a catch-up every 24 hours for as long as this process runs, even with no traffic."""
+    global _daily_thread
+    if _daily_thread is not None and _daily_thread.is_alive():
+        return False
+    # A daemon thread never holds the process open, so restarts and deploys aren't delayed.
+    _daily_thread = threading.Thread(target=_daily_catch_up_loop, args=(_daily_stop, DAILY_CATCH_UP_INTERVAL),
+                                     name="game-archive-daily", daemon=True)
+    _daily_thread.start()
+    return True
+
+
+def _daily_catch_up_loop(stop: threading.Event, interval: float) -> None:
+    while not stop.wait(interval):  # wait() returns True only once stop is set
+        try:
+            schedule_catch_up(force=True)
+        except Exception as exc:
+            print(f"[game_archive] daily catch-up could not be queued: {exc}")
+
+
+def _catch_up_in_background() -> None:
+    conn = None
+    try:
+        conn = db.get_db()
+        counts = catch_up_recent_games(conn)
+        if counts['archived'] > 0:
+            from app import state
+            state.load_current_season(conn)
+    except Exception as exc:
+        print(f"[game_archive] background catch-up failed: {exc}")
+    finally:
+        if conn:
+            conn.close()
 
 
 def _archive_in_background(game_id: str) -> None:
@@ -1023,3 +1087,4 @@ def archive_finished_games(games: List[Dict]) -> None:
                 continue
             _seen.add(game_id)
         _executor.submit(_archive_in_background, game_id)
+    schedule_catch_up()

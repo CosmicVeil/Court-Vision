@@ -252,6 +252,9 @@ def initialize():
     apply_archive_teams()
     load_current_season()
     game_archive.auto_archive_enabled = bool(os.environ.get('DATABASE_URL'))
+    if game_archive.auto_archive_enabled:
+        game_archive.schedule_catch_up(force=True)
+        game_archive.start_daily_catch_up()
 
     if ai_available and not is_render:
         try:

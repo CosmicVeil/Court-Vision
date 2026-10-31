@@ -148,6 +148,7 @@ class StartupArchiveTeamsTests(PlayerTeamsTestCase):
         self.enterContext(patch.object(state, "ai_available", False))
         for name in ("load_nba_data", "load_multi_season_data", "assign_player_ids", "load_ai", "load_current_season"):
             self.enterContext(patch.object(state, name))
+        self.enterContext(patch.object(game_archive, "schedule_catch_up"))
         init_db = self.enterContext(patch.object(db, "init_db"))
 
         def connect_after_init():
