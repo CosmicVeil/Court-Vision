@@ -58,3 +58,12 @@ test("home AI panel exposes steals and blocks tabs", () => {
   assert.match(source, /id: 'steals', label: 'Top Steals', lead: 'spg'/);
   assert.match(source, /id: 'blocks', label: 'Top Blocks', lead: 'bpg'/);
 });
+
+test("popup predictions compare against this season so far and work out the change themselves", () => {
+  const modal = readSource("PlayerStatsModal.jsx");
+  assert.match(modal, /Predicted · change vs this season/);
+  assert.match(modal, /currentStats=\{player\.ml_stats\.so_far_stats\}/);
+  assert.doesNotMatch(modal, /improvements=/, "the model's improvements are measured against last season");
+  const grid = readFileSync(gridPath, "utf8");
+  assert.match(grid, /hasCurrent/, "a player with no games this season shows no change");
+});

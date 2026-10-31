@@ -31,6 +31,13 @@ const SHOOTING = [
 ];
 const percent = { suffix: '%' };
 
+// Predictions are for this season, so they compare against this season so far (so_far_*, from the
+// game archive). A player with no games yet has nothing to compare against.
+const soFarShooting = player => SHOOTING.map(({ key, label }) => {
+  const value = toFinite(player?.[`so_far_${key}`]);
+  return { key, label, value: value === null ? '—' : formatStat(value, percent) };
+});
+
 export function getPredictionCardStats(player) {
   const main = PREDICTION_MAIN.map(key => {
     const stat = PREDICTION_STATS.find(item => item.key === key);
@@ -38,15 +45,14 @@ export function getPredictionCardStats(player) {
       key,
       label: stat.unit,
       value: formatStat(player?.[stat.predictedField]),
-      delta: getStatDelta(player?.[stat.currentField], player?.[stat.predictedField]),
+      delta: getStatDelta(player?.[`so_far_${key}`], player?.[stat.predictedField]),
     };
   });
-  const extra = SHOOTING.map(({ key, label }) => ({ key, label, value: formatStat(player?.[`${key}_last`], percent) }));
-  return { main, extra };
+  return { main, extra: soFarShooting(player) };
 }
 
-// The home "Projected leaders" panel gets the model's raw rows (PREDICTED_PPG, PPG_LAST, …,
-// shooting as fractions). Cards lead with the tab's own stat, then fill up with PPG/APG/RPG.
+// The home "Projected leaders" panel gets the model's raw rows (PREDICTED_PPG, …) plus the API's
+// so_far_* fields. Cards lead with the tab's own stat, then fill up with PPG/APG/RPG.
 export function getLeaderCardStats(player, lead = 'ppg') {
   const keys = [lead, ...PREDICTION_MAIN.filter(key => key !== lead)].slice(0, PREDICTION_MAIN.length);
   const main = keys.map(key => {
@@ -55,14 +61,10 @@ export function getLeaderCardStats(player, lead = 'ppg') {
       key,
       label: PREDICTION_STATS.find(item => item.key === key).unit,
       value: formatStat(player?.[`PREDICTED_${field}`]),
-      delta: getStatDelta(player?.[`${field}_LAST`], player?.[`PREDICTED_${field}`]),
+      delta: getStatDelta(player?.[`so_far_${key}`], player?.[`PREDICTED_${field}`]),
     };
   });
-  const extra = SHOOTING.map(({ key, label }) => {
-    const fraction = toFinite(player?.[`${key.toUpperCase()}_LAST`]);
-    return { key, label, value: formatStat(fraction === null ? null : fraction * 100, percent) };
-  });
-  return { main, extra };
+  return { main, extra: soFarShooting(player) };
 }
 
 export function getSeasonCardStats(player) {

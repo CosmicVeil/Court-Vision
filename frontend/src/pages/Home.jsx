@@ -177,7 +177,7 @@ function TrendingSection({ onPlayerClick, onSettled }) {
 
 const STEPS = [
   { number: "01", title: "CREATE YOUR ACCOUNT", text: "Sign up in seconds and personalize your analytics feed with your favorite NBA franchises and players." },
-  { number: "02", title: "EXPLORE & ANALYZE", text: "Dig into live box scores, multi-season player stats, and XGBoost projections for next season." },
+  { number: "02", title: "EXPLORE & ANALYZE", text: "Dig into live box scores, multi-season player stats, and XGBoost projections for this season." },
   { number: "03", title: "STAY AHEAD", text: "Receive daily value recommendations, automated injury adjustments, and real-time game probabilities." },
 ];
 
@@ -780,7 +780,7 @@ const Home = () => {
             eyebrow="XGBOOST FORECASTING"
             title="PROJECTED"
             accent="LEADERS"
-            lead="XGBoost models trained on past seasons project next season's top scorers, playmakers, rebounders and breakout players"
+            lead="XGBoost models trained on past seasons project this season's top scorers, playmakers, rebounders and breakout players"
           />
           <div data-reveal style={revealDelay(1)}>
             <AIPredictions onPlayerClick={handlePlayerClick} onContentChange={setLeadersContent} />
@@ -795,7 +795,7 @@ const Home = () => {
           eyebrow="GET STARTED"
           title="ELEVATE YOUR"
           accent="COURT VISION"
-          lead="Live box scores, multi-season player stats and XGBoost projections for next season, all in one place."
+          lead="Live box scores, multi-season player stats and XGBoost projections for this season, all in one place."
         />
         <div className="home-cta-actions" data-reveal style={revealDelay(1)}>
           <Link to="/stats" className="cta-button primary large">START ANALYZING</Link>

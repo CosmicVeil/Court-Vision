@@ -22,12 +22,12 @@ const LIST_DEFAULTS = { q: '', team: '', position: '', season: '', sort: 'name',
 const LIST_ALLOWED = {
   sort: ['name', 'team', 'position', 'ppg', 'apg', 'rpg', 'spg', 'bpg', 'fg_pct', 'fg3_pct', 'ft_pct', 'games'],
   order: ['asc', 'desc'],
-  season: ['2020', '2021', '2022', '2023', '2024', '2025', '2026'],
+  season: ['2020', '2021', '2022', '2023', '2024', '2025', '2026', '2027'],
   view: ['table', 'cards'],
 };
 const STATS_PAGE_SIZE = 100;
 // Newest first; the label shows the NBA season each year ends.
-const SEASON_OPTIONS = ['2026', '2025', '2024', '2023', '2022', '2021', '2020']
+const SEASON_OPTIONS = ['2027', '2026', '2025', '2024', '2023', '2022', '2021', '2020']
   .map(year => ({ value: year, label: `${year - 1}-${year.slice(2)} (${year})` }));
 
 const Stats = () => {

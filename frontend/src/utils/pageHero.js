@@ -1,7 +1,7 @@
 import { PREDICTION_STATS } from '../config/predictionStats.js';
 
-// The season the backend serves when no year is chosen (nba_2025_26_data.pkl).
-export const CURRENT_SEASON_YEAR = 2026;
+// The season the backend serves when no year is chosen (2026-27, built from the game archive).
+export const CURRENT_SEASON_YEAR = 2027;
 
 const PLACEHOLDER = '—';
 const ARROWS = { asc: '↑', desc: '↓' };

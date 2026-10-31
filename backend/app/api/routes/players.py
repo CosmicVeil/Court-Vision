@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 
 from app import db, state
-from app.api.helpers import SORT_KEY_MAP, get_player_stats_summary, sanitize_string, validate_pagination
+from app.api.helpers import SORT_KEY_MAP, get_player_stats_summary, sanitize_string, so_far_stats, validate_pagination
 from app.services import game_archive
 from app.utils.player_ids import player_id_for
 from app.utils.player_names import normalize_player_name
@@ -28,10 +28,14 @@ def get_all_players():
     year_param = request.args.get('year', '')
 
     filtered_players = list(state.nba_data)
-    if year_param and state.multi_season_data:
+    if not year_param and state.current_season_data:
+        filtered_players = list(state.current_season_data)
+    if year_param:
         try:
             year_val = int(year_param)
-            if year_val in state.multi_season_data:
+            if year_val == state.current_season_year and state.current_season_data:
+                filtered_players = list(state.current_season_data)
+            elif state.multi_season_data and year_val in state.multi_season_data:
                 filtered_players = list(state.multi_season_data[year_val])
         except ValueError:
             pass
@@ -155,6 +159,7 @@ def search_players_all():
 
     matching_names = sorted(list(matching_names))[:15]
 
+    current_season = {p['PLAYER_ID']: p for p in state.current_season_data}
     results = []
     for name in matching_names:
         name_key = normalize_player_name(name)
@@ -176,6 +181,10 @@ def search_players_all():
                 if season_player:
                     history[str(season)] = _season_line(season_player)
 
+        archive_player = current_season.get(curr_player.get('PLAYER_ID'))
+        if archive_player:
+            history[str(state.current_season_year)] = {**_season_line(archive_player), 'in_progress': True}
+
         ml_stats = None
         if state.ai_available:
             try:
@@ -185,13 +194,16 @@ def search_players_all():
                     pred = state.ai.get_player_prediction(name)
                 if pred:
                     ml_stats = {
+                        # This season so far, to compare the predictions against (None before any games).
+                        'so_far_stats': so_far_stats(archive_player) if archive_player else None,
                         'predicted_stats': pred.get('predicted_stats'),
                         'improvements': pred.get('improvements')
                     }
             except Exception as e:
                 print(f"Error getting AI prediction for {name}: {e}")
 
-        current = _season_line(curr_player)
+        stats_player = archive_player or curr_player
+        current = _season_line(stats_player)
         results.append({
             'id': curr_player.get('PLAYER_ID') or player_id_for(name),
             'name': name,
@@ -204,8 +216,8 @@ def search_players_all():
                 'rpg': current['rpg'],
                 'spg': current['spg'],
                 'bpg': current['bpg'],
-                'tov': round(curr_player.get('TOV_LAST', 0), 1),
-                'mpg': round(curr_player.get('MIN_LAST', 0), 1),
+                'tov': round(stats_player.get('TOV_LAST', 0), 1),
+                'mpg': round(stats_player.get('MIN_LAST', 0), 1),
                 'fg_pct': current['fg_pct'],
                 'fg3_pct': current['fg3_pct'],
                 'ft_pct': current['ft_pct'],

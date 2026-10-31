@@ -16,6 +16,7 @@ import { scrollToIfAbove } from '../utils/scroll';
 import { samePlayerName } from '../utils/playerNames';
 import { getPredictionsHeroStats } from '../utils/pageHero';
 import { getPredictionCardStats } from '../utils/playerCard';
+import { getSoFarStats } from '../utils/seasonSoFar';
 import './Predictions.css';
 
 const toNumber = (value) => Number(value) || 0;
@@ -251,7 +252,7 @@ const Predictions = () => {
         eyebrow="XGBOOST FORECASTING"
         title="NEXT SEASON"
         accent="PREDICTIONS"
-        lead="Gradient-boosted (XGBoost) models trained on past seasons project every player's per-game stats for next season"
+        lead="Gradient-boosted (XGBoost) models trained on past seasons project every player's per-game stats for this season"
         stats={getPredictionsHeroStats({
           ready: !error && (!loading || predictions.length > 0),
           total: totalPlayers, sort: sortBy, order: sortOrder, page: currentPage, totalPages,
@@ -317,6 +318,7 @@ const Predictions = () => {
           <div className="pc-grid" ref={gridRef} data-results aria-busy={loading}>
             {predictions.map((player, idx) => {
               const { main, extra } = getPredictionCardStats(player);
+              const soFar = getSoFarStats(player);
               return (
                 <PlayerCard
                   key={player.id || idx}
@@ -330,7 +332,19 @@ const Predictions = () => {
                   onToggleFavorite={(event) => handleFavoriteToggle(event, player)}
                   onOpen={() => handlePlayerClick(player)}
                   ctaLabel="Full projection"
-                />
+                >
+                  <div className="pc-extra">
+                    <p className="pc-section-label">{soFar.label}</p>
+                    <dl className="pc-stat-list">
+                      {soFar.stats.map(stat => (
+                        <div key={stat.key} className="pc-stat">
+                          <dt>{stat.label}</dt>
+                          <dd className="pc-stat-value" data-numeric>{stat.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                </PlayerCard>
               );
             })}
           </div>

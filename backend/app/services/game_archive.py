@@ -432,6 +432,54 @@ def archived_game_ids(conn, game_ids: Iterable[str]) -> set:
 # Reads for the player popup
 # ---------------------------------------------------------------------------
 
+def season_player_averages(conn, season_year: int) -> List[Dict]:
+    """Regular-season archive totals in the shape consumed by season-stat routes."""
+    from app import state
+
+    rows = conn.execute("""
+        SELECT p.nba_player_id, COUNT(*) AS games,
+            (array_agg(p.team ORDER BY p.game_date DESC, g.tipoff DESC NULLS LAST))[1] AS team,
+            (array_agg(p.player_name ORDER BY p.game_date DESC, g.tipoff DESC NULLS LAST))[1] AS player_name,
+            (array_agg(p.position ORDER BY p.game_date DESC, g.tipoff DESC NULLS LAST)
+                FILTER (WHERE p.position IS NOT NULL))[1] AS position,
+            SUM(p.minutes) AS minutes, SUM(p.pts) AS pts, SUM(p.reb) AS reb,
+            SUM(p.ast) AS ast, SUM(p.stl) AS stl, SUM(p.blk) AS blk, SUM(p.tov) AS tov,
+            SUM(p.fgm) AS fgm, SUM(p.fga) AS fga, SUM(p.fg3m) AS fg3m,
+            SUM(p.fg3a) AS fg3a, SUM(p.ftm) AS ftm, SUM(p.fta) AS fta
+        FROM player_game_stats p JOIN games g USING (game_id)
+        WHERE p.season = %s AND p.season_type = 2 AND NOT p.did_not_play
+            AND p.nba_player_id IS NOT NULL
+        GROUP BY p.nba_player_id
+    """, (season_year,)).fetchall()
+    players = {p['PLAYER_ID']: p for p in state.nba_data or [] if p.get('PLAYER_ID')}
+    averages = []
+    for row in rows:
+        if row['nba_player_id'] is None:
+            continue
+        player_id = int(row['nba_player_id'])
+        player = players.get(player_id)
+        games = int(row['games'])
+        result = {
+            'PLAYER_ID': player_id,
+            'PLAYER_NAME': player['PLAYER_NAME'] if player else row['player_name'],
+            'TEAM': row['team'],
+            'POSITION': player.get('POSITION', 'UNK') if player else row['position'] or 'UNK',
+            'AGE': (player.get('AGE', 0) or 0) + 1 if player else 0,
+            'GAMES_PLAYED_LAST': games,
+        }
+        if player:
+            for key in ('HEIGHT', 'WEIGHT'):
+                if key in player:
+                    result[key] = player[key]
+        for key, column in (('PPG', 'pts'), ('RPG', 'reb'), ('APG', 'ast'),
+                            ('SPG', 'stl'), ('BPG', 'blk'), ('TOV', 'tov'), ('MIN', 'minutes')):
+            result[f'{key}_LAST'] = float(row[column] or 0) / games
+        for key, made, attempted in (('FG', 'fgm', 'fga'), ('FG3', 'fg3m', 'fg3a'), ('FT', 'ftm', 'fta')):
+            result[f'{key}_PCT_LAST'] = float(row[made] or 0) / float(row[attempted]) if row[attempted] else 0
+        averages.append(result)
+    return averages
+
+
 def latest_player_teams(conn) -> Dict[int, str]:
     """Return each player's team from their latest archived game with an NBA team."""
     rows = conn.execute("""
@@ -947,7 +995,11 @@ def _archive_in_background(game_id: str) -> None:
     conn = None
     try:
         conn = db.get_db()
-        if archived_game_ids(conn, [game_id]) or archive_game(conn, game_id):
+        if archived_game_ids(conn, [game_id]):
+            return
+        if archive_game(conn, game_id):
+            from app import state
+            state.load_current_season(conn)
             return
     except Exception as exc:
         print(f"[game_archive] background archive failed ({game_id}): {exc}")

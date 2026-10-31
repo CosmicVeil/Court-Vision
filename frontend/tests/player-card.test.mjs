@@ -31,13 +31,13 @@ test('a delta is the signed change from now to the prediction, flat inside half 
   assert.equal(getStatDelta(22.3, undefined), null);
 });
 
-test('prediction cards lead with predicted PPG/APG/RPG and their change, then current shooting', () => {
+test('prediction cards lead with predicted PPG/APG/RPG and their change vs this season so far, then its shooting', () => {
   assert.equal(typeof getPredictionCardStats, 'function');
   const { main, extra } = getPredictionCardStats({
-    predicted_ppg: 24.1, ppg_last: 22.3,
-    predicted_apg: 5, apg_last: 5.02,
-    predicted_rpg: 7.2, rpg_last: 8,
-    fg_pct_last: 48.12, fg3_pct_last: 36.6, ft_pct_last: null,
+    predicted_ppg: 24.1, ppg_last: 10, so_far_ppg: 22.3,
+    predicted_apg: 5, apg_last: 10, so_far_apg: 5.02,
+    predicted_rpg: 7.2, rpg_last: 10, so_far_rpg: 8,
+    fg_pct_last: 40, so_far_fg_pct: 48.12, so_far_fg3_pct: 36.6, so_far_ft_pct: null,
   });
   assert.deepEqual(main, [
     { key: 'ppg', label: 'PPG', value: '24.1', delta: { text: '+1.8', direction: 'up' } },
@@ -47,16 +47,23 @@ test('prediction cards lead with predicted PPG/APG/RPG and their change, then cu
   assert.deepEqual(extra, [
     { key: 'fg_pct', label: 'FG%', value: '48.1%' },
     { key: 'fg3_pct', label: '3P%', value: '36.6%' },
-    { key: 'ft_pct', label: 'FT%', value: '0.0%' },
+    { key: 'ft_pct', label: 'FT%', value: '—' },
   ]);
+});
+
+test('prediction cards for a player with no games this season show no change and no shooting', () => {
+  const { main, extra } = getPredictionCardStats({ predicted_ppg: 24.1, ppg_last: 22.3, fg_pct_last: 48 });
+  assert.equal(main[0].value, '24.1');
+  assert.ok(main.every(stat => stat.delta === null), 'last season is not a baseline');
+  assert.deepEqual(extra.map(stat => stat.value), ['—', '—', '—']);
 });
 
 test('home leader cards lead with the tab\'s stat, map the raw model fields, and show shooting as percent', () => {
   assert.equal(typeof getLeaderCardStats, 'function');
   const row = {
-    PREDICTED_PPG: 29.81, PPG_LAST: 33.5, PREDICTED_APG: 7.95, APG_LAST: 8.3,
-    PREDICTED_RPG: 8.2, RPG_LAST: 8.2, PREDICTED_SPG: 1.62, SPG_LAST: 1.4,
-    FG_PCT_LAST: 0.476, FG3_PCT_LAST: 0.366, FT_PCT_LAST: null,
+    PREDICTED_PPG: 29.81, PPG_LAST: 1, so_far_ppg: 33.5, PREDICTED_APG: 7.95, APG_LAST: 1, so_far_apg: 8.3,
+    PREDICTED_RPG: 8.2, RPG_LAST: 1, so_far_rpg: 8.2, PREDICTED_SPG: 1.62, SPG_LAST: 1, so_far_spg: 1.4,
+    FG_PCT_LAST: 0.1, so_far_fg_pct: 47.6, so_far_fg3_pct: 36.6, so_far_ft_pct: null,
   };
   const { main, extra } = getLeaderCardStats(row, 'spg');
   assert.deepEqual(main, [
@@ -64,7 +71,7 @@ test('home leader cards lead with the tab\'s stat, map the raw model fields, and
     { key: 'ppg', label: 'PPG', value: '29.8', delta: { text: '−3.7', direction: 'down' } },
     { key: 'apg', label: 'APG', value: '8.0', delta: { text: '−0.4', direction: 'down' } },
   ]);
-  assert.deepEqual(extra.map(stat => stat.value), ['47.6%', '36.6%', '0.0%']);
+  assert.deepEqual(extra.map(stat => stat.value), ['47.6%', '36.6%', '—']);
   assert.deepEqual(getLeaderCardStats(row).main.map(stat => stat.key), ['ppg', 'apg', 'rpg'], 'defaults to PPG first');
   assert.deepEqual(getLeaderCardStats(row, 'rpg').main.map(stat => stat.key), ['rpg', 'ppg', 'apg']);
 });

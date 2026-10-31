@@ -15,6 +15,8 @@ ai = None  # app.ml.nba_ai_system, loaded only outside low-memory mode
 predictions_cache = None
 
 nba_data = None
+current_season_data = []
+current_season_year = game_archive.current_season_year()
 multi_season_data = None
 nba_name_index = {}
 multi_season_name_indexes = {}
@@ -216,6 +218,29 @@ def apply_archive_teams():
     return changed
 
 
+def load_current_season(conn=None):
+    """Build a complete archive snapshot before publishing it to request threads."""
+    global current_season_data, current_season_year
+    if not os.environ.get('DATABASE_URL'):
+        return 0
+
+    owns_connection = conn is None
+    try:
+        if owns_connection:
+            conn = db.get_db()
+        year = game_archive.current_season_year()
+        players = game_archive.season_player_averages(conn, year)
+        current_season_year = year
+        current_season_data = players
+        return len(players)
+    except Exception as e:
+        print(f"Could not load current season from game archive ({e}); keeping previous data.")
+        return 0
+    finally:
+        if owns_connection and conn:
+            conn.close()
+
+
 def initialize():
     """Load everything the routes need. Runs once per process (including under Gunicorn)."""
     print("Loading NBA data...")
@@ -225,6 +250,7 @@ def initialize():
     load_ai()  # after the season data: the predictions cache is re-keyed by player ID
     db.init_db()
     apply_archive_teams()
+    load_current_season()
     game_archive.auto_archive_enabled = bool(os.environ.get('DATABASE_URL'))
 
     if ai_available and not is_render:
