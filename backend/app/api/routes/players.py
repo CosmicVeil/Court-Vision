@@ -157,9 +157,20 @@ def search_players_all():
                 if query in name.lower() or (normalized_query and normalized_query in normalize_player_name(name)):
                     matching_names.add(p.get('PLAYER_NAME'))
 
+    for player in state.current_season_data:
+        name = player.get('PLAYER_NAME', '')
+        name_key = normalize_player_name(name)
+        if name_key in state.nba_name_index or any(
+            name_key in index for index in state.multi_season_name_indexes.values()
+        ):
+            continue
+        if query in name.lower() or (normalized_query and normalized_query in name_key):
+            matching_names.add(name)
+
     matching_names = sorted(list(matching_names))[:15]
 
     current_season = {p['PLAYER_ID']: p for p in state.current_season_data}
+    archive_by_name = {normalize_player_name(p.get('PLAYER_NAME')): p for p in state.current_season_data}
     results = []
     for name in matching_names:
         name_key = normalize_player_name(name)
@@ -171,6 +182,10 @@ def search_players_all():
                 if curr_player:
                     break
 
+        archive_only = False
+        if not curr_player:
+            curr_player = archive_by_name.get(name_key)
+            archive_only = True
         if not curr_player:
             continue
 
@@ -188,7 +203,7 @@ def search_players_all():
         ml_stats = None
         if state.ai_available:
             try:
-                if state.is_render or state.predictions_cache:
+                if state.is_render or state.predictions_cache or archive_only:
                     pred = state.get_cached_player_prediction(name)
                 else:
                     pred = state.ai.get_player_prediction(name)
