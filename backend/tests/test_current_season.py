@@ -205,6 +205,60 @@ class CatchUpTests(unittest.TestCase):
             game_archive._catch_up_in_background(date(2026, 10, 1))
             catch_up.assert_called_once_with(connect.return_value, start=date(2026, 10, 1))
 
+    def test_background_relinks_after_catch_up(self):
+        order = []
+        with patch.object(db, 'get_db') as connect, \
+             patch.object(game_archive, 'catch_up_recent_games',
+                          side_effect=lambda conn, start=None: order.append('catch_up') or {'archived': 2}) as catch_up, \
+             patch.object(game_archive, 'relink_player_ids',
+                          side_effect=lambda conn: order.append('relink') or 0) as relink, \
+             patch.object(state, 'load_current_season', create=True) as refresh:
+            game_archive._catch_up_in_background()
+            self.assertEqual(order, ['catch_up', 'relink'])
+            catch_up.assert_called_once_with(connect.return_value, start=None)
+            relink.assert_called_once_with(connect.return_value)
+            refresh.assert_called_once_with(connect.return_value)
+            connect.return_value.close.assert_called_once_with()
+
+    def test_background_reloads_when_only_relink_linked_players(self):
+        with patch.object(db, 'get_db') as connect, \
+             patch.object(game_archive, 'catch_up_recent_games', return_value={'archived': 0}), \
+             patch.object(game_archive, 'relink_player_ids', return_value=3) as relink, \
+             patch.object(state, 'load_current_season', create=True) as refresh, patch('builtins.print') as log:
+            game_archive._catch_up_in_background()
+            refresh.assert_called_once_with(connect.return_value)
+            relink.assert_called_once_with(connect.return_value)
+            log.assert_any_call('[game_archive] relinked 3 players')
+            connect.return_value.close.assert_called_once_with()
+
+    def test_background_skips_reload_when_nothing_new(self):
+        with patch.object(db, 'get_db') as connect, \
+             patch.object(game_archive, 'catch_up_recent_games', return_value={'archived': 0}), \
+             patch.object(game_archive, 'relink_player_ids', return_value=0) as relink, \
+             patch.object(state, 'load_current_season', create=True) as refresh, patch('builtins.print') as log:
+            game_archive._catch_up_in_background()
+            relink.assert_called_once_with(connect.return_value)
+            refresh.assert_not_called()
+            self.assertFalse(any('relinked' in str(call) for call in log.call_args_list))
+            connect.return_value.close.assert_called_once_with()
+
+    def test_background_reloads_new_games_when_relink_fails(self):
+        with patch.object(db, 'get_db') as connect, \
+             patch.object(game_archive, 'catch_up_recent_games', return_value={'archived': 2}), \
+             patch.object(game_archive, 'relink_player_ids', side_effect=RuntimeError('relink failed')) as relink, \
+             patch.object(state, 'load_current_season', create=True) as refresh, patch('builtins.print') as log:
+            order = MagicMock()
+            order.attach_mock(relink, 'relink')
+            order.attach_mock(connect.return_value.rollback, 'rollback')
+            order.attach_mock(refresh, 'refresh')
+            game_archive._catch_up_in_background()
+            self.assertEqual([call[0] for call in order.mock_calls], ['relink', 'rollback', 'refresh'])
+            relink.assert_called_once_with(connect.return_value)
+            connect.return_value.rollback.assert_called_once_with()
+            refresh.assert_called_once_with(connect.return_value)
+            self.assertIn('relink failed', log.call_args.args[0])
+            connect.return_value.close.assert_called_once_with()
+
     def test_background_failure_logs_and_closes(self):
         self.assertTrue(callable(getattr(game_archive, '_catch_up_in_background', None)))
         with patch.object(db, 'get_db') as connect, \

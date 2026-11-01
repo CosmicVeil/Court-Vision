@@ -1050,7 +1050,15 @@ def _catch_up_in_background(start: Optional[date] = None) -> None:
     try:
         conn = db.get_db()
         counts = catch_up_recent_games(conn, start=start)
-        if counts['archived'] > 0:
+        linked = 0
+        try:
+            linked = relink_player_ids(conn)
+        except Exception as exc:
+            conn.rollback()  # Clear a failed transaction so the reload can still query.
+            print(f"[game_archive] player relink failed: {exc}")
+        if linked > 0:
+            print(f"[game_archive] relinked {linked} players")
+        if counts['archived'] > 0 or linked > 0:
             from app import state
             state.load_current_season(conn)
     except Exception as exc:
