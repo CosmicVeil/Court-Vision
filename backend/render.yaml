@@ -22,4 +22,8 @@ services:
         fromDatabase:
           name: court-vision-db
           property: connectionString
-    healthCheckPath: /api/health
+      # Backup self-ping to keep the free service warm (see README keepalive section).
+      # RENDER_EXTERNAL_URL is injected automatically; set KEEPALIVE_ENABLED=false to disable.
+      - key: KEEPALIVE_ENABLED
+        value: "true"
+    healthCheckPath: /healthz

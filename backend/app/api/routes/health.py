@@ -28,6 +28,17 @@ def root():
     })
 
 
+@bp.route('/healthz', methods=['GET'])
+@bp.route('/api/healthz', methods=['GET'])
+def healthz():
+    """Lightweight keepalive endpoint for uptime monitors (e.g. UptimeRobot).
+
+    Intentionally does no DB/model work so it stays cheap to hit every few
+    minutes. Returning 200 is enough to keep Render's free tier from sleeping.
+    """
+    return jsonify({'status': 'ok'}), 200
+
+
 @bp.route('/api/health', methods=['GET'])
 def health_check():
     db_connected = False

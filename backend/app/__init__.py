@@ -34,4 +34,8 @@ def create_app(load_data: bool = True) -> Flask:
 
     if load_data:
         state.initialize()
+
+        from app.services.keepalive import start_keepalive
+        start_keepalive()
+
     return app
