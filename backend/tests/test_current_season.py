@@ -521,6 +521,105 @@ class SearchAllTests(SeasonRouteTestCase):
         self.assertIsNone(player['ml_stats']['so_far_stats'])
 
 
+class ArchiveOnlySearchTests(SeasonRouteTestCase):
+    def setUp(self):
+        super().setUp()
+        self.rookie = season_player(
+            PLAYER_ID=1642000, PLAYER_NAME='AJ Dybantsa', TEAM='WAS', POSITION='F', AGE=0,
+            PPG_LAST=18.26, TOV_LAST=2.44, MIN_LAST=31.0, GAMES_PLAYED_LAST=3,
+        )
+        state.current_season_data = [self.current, self.rookie]
+
+    def test_archive_only_rookie_returned_with_current_stats_and_in_progress_history(self):
+        players = self.get_json('/api/players/search-all?query=Dybantsa')['players']
+        self.assertEqual(len(players), 1)
+        player = players[0]
+        self.assertEqual(player['id'], 1642000)
+        self.assertEqual(player['name'], 'AJ Dybantsa')
+        self.assertEqual(player['team'], 'WAS')
+        self.assertEqual(player['position'], 'F')
+        self.assertEqual(player['age'], 0)
+        self.assertEqual(player['current_stats'], {
+            'ppg': 18.3, 'apg': 6.0, 'rpg': 5.0, 'spg': 1.0, 'bpg': 0.5,
+            'tov': 2.4, 'mpg': 31.0, 'fg_pct': 50.0, 'fg3_pct': 30.0,
+            'ft_pct': 80.0, 'games_played': 3, 'minutes': 31.0,
+        })
+        self.assertEqual(player['history'], {
+            '2027': {**_season_line(self.rookie), 'in_progress': True},
+        })
+        self.assertIsNone(player['ml_stats'])
+
+    def test_pkl_player_result_unchanged(self):
+        players = self.get_json('/api/players/search-all?query=Test')['players']
+        self.assertEqual(len(players), 1)
+        original = players[0]
+        self.assertEqual(original['team'], 'LAL')
+        self.assertEqual(original['history'], {
+            '2026': _season_line(self.pickle),
+            '2027': {**_season_line(self.current), 'in_progress': True},
+        })
+        self.rookie['PLAYER_NAME'] = 'Test Rookie'
+        for archive_name in ('Test Player', 'Tést Player Jr.'):
+            with self.subTest(archive_name=archive_name):
+                self.current['PLAYER_NAME'] = archive_name
+                players = self.get_json('/api/players/search-all?query=Test')['players']
+                self.assertEqual([p['name'] for p in players], ['Test Player', 'Test Rookie'])
+                self.assertEqual(players[0], original)
+
+    def test_normalized_name_matching_for_archive_only_player(self):
+        self.rookie['PLAYER_NAME'] = 'Égor Dëmin-Jr.'
+        for query in ('egor demin', 'Demin'):
+            with self.subTest(query=query):
+                response = self.client.get('/api/players/search-all', query_string={'query': query})
+                self.assertEqual(response.status_code, 200)
+                players = response.get_json()['players']
+                self.assertEqual(len(players), 1)
+                self.assertEqual(players[0]['id'], 1642000)
+                self.assertEqual(players[0]['name'], 'Égor Dëmin-Jr.')
+        for query in ('No Match', ''):
+            self.assertEqual(self.get_json('/api/players/search-all?query=' + query)['players'], [])
+
+    def test_archive_only_ml_stats_only_from_cache(self):
+        prediction = {
+            'predicted_stats': {'ppg': 22.0, 'apg': 5.5},
+            'improvements': {'ppg': 10.0, 'apg': 10.0},
+        }
+        state.ai_available = True
+        for cache in ({'players': {'aj dybantsa': prediction}}, None, {'players': {}}):
+            with self.subTest(cache=cache), patch.object(state, 'ai') as ai:
+                state.predictions_cache = cache
+                players = self.get_json('/api/players/search-all?query=Dybantsa')['players']
+                self.assertEqual(len(players), 1)
+                ml_stats = players[0]['ml_stats']
+                if cache and cache['players']:
+                    self.assertEqual(ml_stats['predicted_stats'], prediction['predicted_stats'])
+                    self.assertEqual(ml_stats['improvements'], prediction['improvements'])
+                    self.assertEqual(ml_stats['so_far_stats']['ppg'], 18.3)
+                else:
+                    self.assertIsNone(ml_stats)
+                ai.get_player_prediction.assert_not_called()
+        with patch.object(state, 'get_cached_player_prediction', side_effect=RuntimeError('cache failed')):
+            players = self.get_json('/api/players/search-all?query=Dybantsa')['players']
+            self.assertEqual(len(players), 1)
+            player = players[0]
+            self.assertIsNone(player['ml_stats'])
+            self.assertEqual(player['current_stats']['ppg'], 18.3)
+
+    def test_result_cap_applies_to_archive_matches(self):
+        self.pickle['PLAYER_NAME'] = 'Rookie 05 Veteran'
+        state.nba_name_index = {'rookie 05 veteran': self.pickle}
+        state.multi_season_name_indexes = {2026: state.nba_name_index}
+        state.current_season_data = [
+            season_player(PLAYER_ID=1642000 + i, PLAYER_NAME=f'Rookie {i:02d}')
+            for i in reversed(range(20))
+        ]
+        players = self.get_json('/api/players/search-all?query=Rookie')['players']
+        self.assertEqual(len(players), 15)
+        expected = [f'Rookie {i:02d}' for i in range(14)]
+        expected.insert(6, 'Rookie 05 Veteran')
+        self.assertEqual([p['name'] for p in players], expected)
+
+
 class PredictionsSoFarTests(SeasonRouteTestCase):
     def setUp(self):
         super().setUp()

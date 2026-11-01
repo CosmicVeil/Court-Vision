@@ -16,7 +16,7 @@ numpy>=1.24.0,<2.0.0
 
 
 # NBA API
-nba-api>=1.10.0
+nba-api>=1.12.0
 requests>=2.31.0
 
 # AI/ML Dependencies (PyTorch CPU for fast lightweight builds)
