@@ -76,3 +76,8 @@ test('Recommendations adds the so-far row and preserves improvement calculations
   assert.match(source, /const improvement = player\[`\$\{s\}_IMPROVEMENT`\] \|\| 0/);
   assert.match(source, /const impVal = player\[`\$\{statName\}_IMPROVEMENT`\] \|\| 0/);
 });
+
+test('missing age shows a dash in the modal and is hidden in search results', () => {
+  assert.match(readSource('PlayerStatsModal.jsx'), /<strong>Age:<\/strong> \{player\.age \?\? '—'\}/);
+  assert.match(readSource('Home.jsx'), /\{player\.age != null && ` · Age \$\{player\.age\}`\}/);
+});

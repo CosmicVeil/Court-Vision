@@ -132,6 +132,16 @@ CREATE TABLE IF NOT EXISTS game_raw_summaries (
     fetched_at  TIMESTAMPTZ DEFAULT now()
 );
 
+-- Birth date, height and weight for players missing from the season .pkl (rookies),
+-- from ESPN's athlete API. Birth date rather than age, so it never goes stale.
+CREATE TABLE IF NOT EXISTS player_bios (
+    espn_player_id  BIGINT PRIMARY KEY,
+    birth_date      DATE,
+    height_in       REAL,
+    weight_lb       REAL,
+    fetched_at      TIMESTAMPTZ DEFAULT now()
+);
+
 -- One row per player-game that was actually played, with context known *before* tip-off.
 -- Rolling windows end at the previous game, so they never include the game being predicted.
 DROP VIEW IF EXISTS player_game_features;
@@ -187,6 +197,29 @@ def _int(value) -> Optional[int]:
         return int(float(str(value).replace("+", "")))
     except (TypeError, ValueError):
         return None
+
+
+def _float(value) -> Optional[float]:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def parse_player_bio(payload: Dict) -> Dict:
+    """Birth date, height (in) and weight (lb) from an ESPN core athlete payload; missing -> None."""
+    try:
+        birth_date = date.fromisoformat(str(payload["dateOfBirth"])[:10])
+    except (KeyError, TypeError, ValueError):
+        birth_date = None
+    return {"birth_date": birth_date, "height_in": _float(payload.get("height")),
+            "weight_lb": _float(payload.get("weight"))}
+
+
+def _age_on(birth_date: Optional[date], today: date) -> Optional[int]:
+    if birth_date is None:
+        return None
+    return today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
 
 
 def _made_att(value):
@@ -422,6 +455,37 @@ def relink_player_ids(conn) -> int:
     return linked
 
 
+def fill_missing_bios(conn, limit: int = 50, pause: float = 0.3) -> int:
+    """Fetch bios for players season_player_averages shows that are missing from the .pkl; at most `limit` per run."""
+    from app import state
+
+    rows = conn.execute("""
+        SELECT DISTINCT p.espn_player_id, p.nba_player_id
+        FROM player_game_stats p
+        LEFT JOIN player_bios b ON b.espn_player_id = p.espn_player_id
+        WHERE p.season = (SELECT max(season) FROM player_game_stats)
+            AND p.season_type = 2 AND NOT p.did_not_play
+            AND p.nba_player_id IS NOT NULL AND b.espn_player_id IS NULL
+    """).fetchall()
+    known = {p.get('PLAYER_ID') for p in state.nba_data or []}
+    missing = [r["espn_player_id"] for r in rows if r["nba_player_id"] not in known][:limit]
+    fetched = 0
+    for espn_id in missing:
+        try:
+            bio = _fetch_player_bio(espn_id)
+        except Exception as exc:
+            print(f"[game_archive] player bio fetch failed ({espn_id}): {exc}")
+            continue
+        # Stored even when every field is null, so the player isn't refetched each run.
+        _upsert(conn, "player_bios",
+                {"espn_player_id": espn_id, **bio, "fetched_at": datetime.now().astimezone()},
+                ["espn_player_id"])
+        fetched += 1
+        time.sleep(pause)
+    conn.commit()
+    return fetched
+
+
 def archived_game_ids(conn, game_ids: Iterable[str]) -> set:
     ids = [str(g) for g in game_ids]
     if not ids:
@@ -447,13 +511,18 @@ def season_player_averages(conn, season_year: int) -> List[Dict]:
             SUM(p.minutes) AS minutes, SUM(p.pts) AS pts, SUM(p.reb) AS reb,
             SUM(p.ast) AS ast, SUM(p.stl) AS stl, SUM(p.blk) AS blk, SUM(p.tov) AS tov,
             SUM(p.fgm) AS fgm, SUM(p.fga) AS fga, SUM(p.fg3m) AS fg3m,
-            SUM(p.fg3a) AS fg3a, SUM(p.ftm) AS ftm, SUM(p.fta) AS fta
+            SUM(p.fg3a) AS fg3a, SUM(p.ftm) AS ftm, SUM(p.fta) AS fta,
+            (array_agg(b.birth_date) FILTER (WHERE b.espn_player_id IS NOT NULL))[1] AS birth_date,
+            (array_agg(b.height_in) FILTER (WHERE b.espn_player_id IS NOT NULL))[1] AS height_in,
+            (array_agg(b.weight_lb) FILTER (WHERE b.espn_player_id IS NOT NULL))[1] AS weight_lb
         FROM player_game_stats p JOIN games g USING (game_id)
+        LEFT JOIN player_bios b ON b.espn_player_id = p.espn_player_id
         WHERE p.season = %s AND p.season_type = 2 AND NOT p.did_not_play
             AND p.nba_player_id IS NOT NULL
         GROUP BY p.nba_player_id
     """, (season_year,)).fetchall()
     players = {p['PLAYER_ID']: p for p in state.nba_data or [] if p.get('PLAYER_ID')}
+    today = datetime.now(_ET).date()
     averages = []
     for row in rows:
         if row['nba_player_id'] is None:
@@ -466,13 +535,17 @@ def season_player_averages(conn, season_year: int) -> List[Dict]:
             'PLAYER_NAME': player['PLAYER_NAME'] if player else row['player_name'],
             'TEAM': row['team'],
             'POSITION': player.get('POSITION', 'UNK') if player else row['position'] or 'UNK',
-            'AGE': (player.get('AGE', 0) or 0) + 1 if player else 0,
+            'AGE': (player.get('AGE', 0) or 0) + 1 if player else _age_on(row.get('birth_date'), today),
             'GAMES_PLAYED_LAST': games,
         }
         if player:
             for key in ('HEIGHT', 'WEIGHT'):
                 if key in player:
                     result[key] = player[key]
+        else:
+            for key, column in (('HEIGHT', 'height_in'), ('WEIGHT', 'weight_lb')):
+                if row.get(column) is not None:
+                    result[key] = row[column]
         for key, column in (('PPG', 'pts'), ('RPG', 'reb'), ('APG', 'ast'),
                             ('SPG', 'stl'), ('BPG', 'blk'), ('TOV', 'tov'), ('MIN', 'minutes')):
             result[f'{key}_LAST'] = float(row[column] or 0) / games
@@ -557,6 +630,12 @@ def _format_dnp_reason(reason: Optional[str]) -> Optional[str]:
         return None
     return " ".join(word.upper() if word.upper() in _REASON_ACRONYMS else word
                     for word in reason.lower().capitalize().split())
+
+
+def _fetch_player_bio(espn_id: int) -> Dict:
+    response = requests.get(f"{_ESPN_CORE}/athletes/{espn_id}", timeout=6)
+    response.raise_for_status()
+    return parse_player_bio(response.json())
 
 
 def _espn_team_tricode(espn_team_id: str) -> Optional[str]:
@@ -1058,7 +1137,15 @@ def _catch_up_in_background(start: Optional[date] = None) -> None:
             print(f"[game_archive] player relink failed: {exc}")
         if linked > 0:
             print(f"[game_archive] relinked {linked} players")
-        if counts['archived'] > 0 or linked > 0:
+        bios = 0
+        try:
+            bios = fill_missing_bios(conn)
+        except Exception as exc:
+            conn.rollback()
+            print(f"[game_archive] player bio fetch failed: {exc}")
+        if bios > 0:
+            print(f"[game_archive] fetched {bios} player bios")
+        if counts['archived'] > 0 or linked > 0 or bios > 0:
             from app import state
             state.load_current_season(conn)
     except Exception as exc:

@@ -90,11 +90,43 @@ class SeasonPlayerAveragesTests(unittest.TestCase):
                 row = rows[0]
                 self.assertEqual(row['PLAYER_NAME'], 'Archive Name')
                 self.assertEqual(row['POSITION'], expected)
-                self.assertEqual(row['AGE'], 0)
+                self.assertIsNone(row['AGE'])
                 self.assertNotIn('HEIGHT', row)
                 self.assertNotIn('WEIGHT', row)
                 for key in ('FG_PCT_LAST', 'FG3_PCT_LAST', 'FT_PCT_LAST'):
                     self.assertEqual(row[key], 0)
+
+    def query_on(self, today, rows):
+        now = datetime(today.year, today.month, today.day, 12, tzinfo=timezone.utc)
+        with patch.object(game_archive, 'datetime', wraps=datetime) as clock:
+            clock.now.return_value = now
+            return self.query(rows)[0]
+
+    def test_archive_only_player_with_bio_gets_age_height_weight(self):
+        bio = {'birth_date': date(2006, 10, 2), 'height_in': 81.0, 'weight_lb': 220.0}
+        for today, age in ((date(2026, 11, 1), 20), (date(2026, 10, 2), 20), (date(2026, 10, 1), 19)):
+            with self.subTest(today=today):
+                row = self.query_on(today, [grouped_row(nba_player_id=99, **bio)])[0]
+                self.assertEqual((row['AGE'], row['HEIGHT'], row['WEIGHT']), (age, 81.0, 220.0))
+
+    def test_archive_only_bio_with_null_fields(self):
+        row = self.query_on(date(2026, 11, 1), [grouped_row(
+            nba_player_id=99, birth_date=None, height_in=None, weight_lb=210.0)])[0]
+        self.assertIsNone(row['AGE'])
+        self.assertNotIn('HEIGHT', row)
+        self.assertEqual(row['WEIGHT'], 210.0)
+
+    def test_pkl_player_ignores_bio(self):
+        row = self.query_on(date(2026, 11, 1), [grouped_row(
+            birth_date=date(2000, 1, 1), height_in=70.0, weight_lb=150.0)])[0]
+        self.assertEqual((row['AGE'], row['HEIGHT'], row['WEIGHT']), (28, 190, 90))
+
+    def test_query_joins_player_bios(self):
+        _, conn = self.query([])
+        self.assertEqual(len(conn.calls), 1)
+        sql = ' '.join(conn.calls[0][0].split())
+        self.assertIn('LEFT JOIN player_bios b ON b.espn_player_id = p.espn_player_id', sql)
+        self.assertEqual(conn.calls[0][1], (2027,))
 
     def test_query_errors_propagate_to_refresh_owner(self):
         self.assertTrue(callable(getattr(game_archive, 'season_player_averages', None)))
@@ -257,6 +289,46 @@ class CatchUpTests(unittest.TestCase):
             connect.return_value.rollback.assert_called_once_with()
             refresh.assert_called_once_with(connect.return_value)
             self.assertIn('relink failed', log.call_args.args[0])
+            connect.return_value.close.assert_called_once_with()
+
+    def test_background_fills_bios_after_relink(self):
+        order = []
+        with patch.object(db, 'get_db') as connect, \
+             patch.object(game_archive, 'catch_up_recent_games',
+                          side_effect=lambda conn, start=None: order.append('catch_up') or {'archived': 0}), \
+             patch.object(game_archive, 'relink_player_ids', side_effect=lambda conn: order.append('relink') or 0), \
+             patch.object(game_archive, 'fill_missing_bios',
+                          side_effect=lambda conn: order.append('bios') or 4) as bios, \
+             patch.object(state, 'load_current_season', create=True) as refresh, patch('builtins.print') as log:
+            game_archive._catch_up_in_background()
+            self.assertEqual(order, ['catch_up', 'relink', 'bios'])
+            bios.assert_called_once_with(connect.return_value)
+            refresh.assert_called_once_with(connect.return_value)
+            log.assert_any_call('[game_archive] fetched 4 player bios')
+
+    def test_background_skips_reload_when_no_bios(self):
+        with patch.object(db, 'get_db'), \
+             patch.object(game_archive, 'catch_up_recent_games', return_value={'archived': 0}), \
+             patch.object(game_archive, 'relink_player_ids', return_value=0), \
+             patch.object(game_archive, 'fill_missing_bios', return_value=0), \
+             patch.object(state, 'load_current_season', create=True) as refresh, patch('builtins.print') as log:
+            game_archive._catch_up_in_background()
+            refresh.assert_not_called()
+            self.assertFalse(any('player bios' in str(call) for call in log.call_args_list))
+
+    def test_background_bio_failure_rolls_back_and_still_reloads(self):
+        with patch.object(db, 'get_db') as connect, \
+             patch.object(game_archive, 'catch_up_recent_games', return_value={'archived': 2}), \
+             patch.object(game_archive, 'relink_player_ids', return_value=0), \
+             patch.object(game_archive, 'fill_missing_bios', side_effect=RuntimeError('espn down')) as bios, \
+             patch.object(state, 'load_current_season', create=True) as refresh, patch('builtins.print') as log:
+            order = MagicMock()
+            order.attach_mock(bios, 'bios')
+            order.attach_mock(connect.return_value.rollback, 'rollback')
+            order.attach_mock(refresh, 'refresh')
+            game_archive._catch_up_in_background()
+            self.assertEqual([call[0] for call in order.mock_calls], ['bios', 'rollback', 'refresh'])
+            self.assertIn('espn down', log.call_args.args[0])
             connect.return_value.close.assert_called_once_with()
 
     def test_background_failure_logs_and_closes(self):
@@ -602,6 +674,16 @@ class ArchiveOnlySearchTests(SeasonRouteTestCase):
             '2027': {**_season_line(self.rookie), 'in_progress': True},
         })
         self.assertIsNone(player['ml_stats'])
+
+    def test_archive_only_rookie_without_bio_returns_null_age(self):
+        self.rookie['AGE'] = None
+        player = self.get_json('/api/players/search-all?query=Dybantsa')['players'][0]
+        self.assertIsNone(player['age'])
+
+    def test_players_list_sorted_by_age_handles_null_age(self):
+        self.rookie['AGE'] = None
+        response = self.client.get('/api/players', query_string={'sort_by': 'age'})
+        self.assertEqual(response.status_code, 200)
 
     def test_pkl_player_result_unchanged(self):
         players = self.get_json('/api/players/search-all?query=Test')['players']
