@@ -455,8 +455,12 @@ def relink_player_ids(conn) -> int:
     return linked
 
 
-def fill_missing_bios(conn, limit: int = 50, pause: float = 0.3) -> int:
-    """Fetch bios for players season_player_averages shows that are missing from the .pkl; at most `limit` per run."""
+def fill_missing_bios(conn, pause: float = 0.3) -> int:
+    """Fetch bios for players season_player_averages shows that are missing from the .pkl.
+
+    Fetches the whole backlog in one run, `pause` seconds apart: nothing schedules a follow-up run,
+    so a capped batch left the rest waiting hours for the next catch-up. Failed fetches retry next run.
+    """
     from app import state
 
     rows = conn.execute("""
@@ -468,7 +472,7 @@ def fill_missing_bios(conn, limit: int = 50, pause: float = 0.3) -> int:
             AND p.nba_player_id IS NOT NULL AND b.espn_player_id IS NULL
     """).fetchall()
     known = {p.get('PLAYER_ID') for p in state.nba_data or []}
-    missing = [r["espn_player_id"] for r in rows if r["nba_player_id"] not in known][:limit]
+    missing = [r["espn_player_id"] for r in rows if r["nba_player_id"] not in known]
     fetched = 0
     for espn_id in missing:
         try:
