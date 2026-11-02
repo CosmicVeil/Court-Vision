@@ -720,7 +720,7 @@ const Home = () => {
                   <button type="button" key={player.name} className="search-result-item" onClick={() => { setSelectedPlayer(player); setSearchResults([]); setSearchQuery(""); }}>
                     <span className="search-result-player-info">
                       <span className="search-result-player-name">{player.name}</span>
-                      <span className="search-result-player-meta">{player.position} · Age {player.age}</span>
+                      <span className="search-result-player-meta">{player.position}{player.age != null && ` · Age ${player.age}`}</span>
                     </span>
                     <span className="search-result-player-team">{player.team}</span>
                   </button>

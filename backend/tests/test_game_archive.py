@@ -496,3 +496,88 @@ class AutoArchiveTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PlayerBioTests(unittest.TestCase):
+    def test_parse_full_payload(self):
+        bio = game_archive.parse_player_bio({"dateOfBirth": "1984-12-30T08:00Z", "height": 81.0, "weight": 250.0})
+        self.assertEqual(bio, {"birth_date": date(1984, 12, 30), "height_in": 81.0, "weight_lb": 250.0})
+
+    def test_parse_missing_and_bad_fields(self):
+        empty = {"birth_date": None, "height_in": None, "weight_lb": None}
+        self.assertEqual(game_archive.parse_player_bio({}), empty)
+        self.assertEqual(game_archive.parse_player_bio({"dateOfBirth": None, "height": None, "weight": None}), empty)
+        for bad in ("not-a-date", 12345):
+            bio = game_archive.parse_player_bio({"dateOfBirth": bad, "height": "80", "weight": 200})
+            self.assertEqual(bio, {"birth_date": None, "height_in": 80.0, "weight_lb": 200.0})
+
+    def test_age_on(self):
+        born = date(2006, 10, 2)
+        self.assertEqual(game_archive._age_on(born, date(2026, 10, 1)), 19)
+        self.assertEqual(game_archive._age_on(born, date(2026, 10, 2)), 20)
+        self.assertEqual(game_archive._age_on(born, date(2027, 1, 5)), 20)
+        self.assertIsNone(game_archive._age_on(None, date(2026, 10, 2)))
+
+    def test_fetch_uses_core_athlete_url(self):
+        response = Mock()
+        response.json.return_value = {"dateOfBirth": "2006-10-02T07:00Z", "height": 81, "weight": 220}
+        with patch.object(game_archive.requests, "get", return_value=response) as get:
+            bio = game_archive._fetch_player_bio(5105565)
+        get.assert_called_once_with(f"{game_archive._ESPN_CORE}/athletes/5105565", timeout=6)
+        self.assertEqual(bio["birth_date"], date(2006, 10, 2))
+        response.raise_for_status.side_effect = RuntimeError("404")
+        with patch.object(game_archive.requests, "get", return_value=response), self.assertRaises(RuntimeError):
+            game_archive._fetch_player_bio(1)
+
+    def test_schema_includes_player_bios(self):
+        schema = " ".join(game_archive.SCHEMA.split())
+        self.assertIn("CREATE TABLE IF NOT EXISTS player_bios", schema)
+        for column in ("espn_player_id BIGINT PRIMARY KEY", "birth_date DATE", "height_in REAL", "weight_lb REAL"):
+            self.assertIn(column, schema)
+
+
+class FillMissingBiosTests(unittest.TestCase):
+    def setUp(self):
+        from app import state
+        self.enterContext(patch.object(state, "nba_data", [{"PLAYER_ID": 2544}]))
+        self.enterContext(patch.object(game_archive.time, "sleep"))
+        self.conn = MagicMock()
+
+    def fill(self, candidates, fetch, **kwargs):
+        self.conn.execute.return_value.fetchall.return_value = [
+            {"espn_player_id": espn, "nba_player_id": nba} for espn, nba in candidates]
+        with patch.object(game_archive, "_fetch_player_bio", side_effect=fetch) as fetcher, patch("builtins.print"):
+            return game_archive.fill_missing_bios(self.conn, **kwargs), fetcher
+
+    def inserts(self):
+        return [c for c in self.conn.execute.call_args_list if "INSERT INTO player_bios" in c.args[0]]
+
+    def test_query_skips_players_with_bios_and_pkl_players_are_not_fetched(self):
+        bio = {"birth_date": None, "height_in": None, "weight_lb": None}
+        count, fetcher = self.fill([(1966, 2544), (7, 1642000)], lambda espn_id: bio)
+        sql = " ".join(self.conn.execute.call_args_list[0].args[0].split())
+        for clause in ("LEFT JOIN player_bios b ON b.espn_player_id = p.espn_player_id",
+                       "b.espn_player_id IS NULL", "p.nba_player_id IS NOT NULL",
+                       "p.season_type = 2", "NOT p.did_not_play",
+                       "p.season = (SELECT max(season) FROM player_game_stats)"):
+            self.assertIn(clause, sql)
+        fetcher.assert_called_once_with(7)
+        self.assertEqual(count, 1)
+        insert = self.inserts()[0]
+        self.assertIn("ON CONFLICT (espn_player_id)", insert.args[0])
+        self.assertEqual(insert.args[1][:4], [7, None, None, None])  # all-null bio still stored
+        self.conn.commit.assert_called_once_with()
+
+    def test_respects_limit(self):
+        bio = {"birth_date": date(2006, 1, 1), "height_in": 80.0, "weight_lb": 200.0}
+        count, fetcher = self.fill([(i, 1642000 + i) for i in range(5)], lambda espn_id: bio, limit=2)
+        self.assertEqual((count, fetcher.call_count, len(self.inserts())), (2, 2, 2))
+
+    def test_one_failed_fetch_is_skipped(self):
+        def fetch(espn_id):
+            if espn_id == 1:
+                raise RuntimeError("timeout")
+            return {"birth_date": None, "height_in": None, "weight_lb": None}
+        count, fetcher = self.fill([(1, 10), (2, 20)], fetch)
+        self.assertEqual((count, fetcher.call_count), (1, 2))
+        self.assertEqual([c.args[1][0] for c in self.inserts()], [2])

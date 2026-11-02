@@ -57,7 +57,7 @@ export default function PlayerStatsModal({ player, loading, onClose }) {
                 <span className="stats-modal-player-team-badge">{player.team}</span>
               </div>
               <p className="stats-modal-player-meta">
-                <span><strong>Position:</strong> {player.position}</span><span>•</span><span><strong>Age:</strong> {player.age}</span>
+                <span><strong>Position:</strong> {player.position}</span><span>•</span><span><strong>Age:</strong> {player.age ?? '—'}</span>
               </p>
             </div>
             <div className="stats-modal-tabs">
