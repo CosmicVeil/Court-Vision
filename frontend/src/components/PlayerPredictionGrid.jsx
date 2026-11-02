@@ -1,10 +1,12 @@
 import React from 'react';
-import { PREDICTION_GROUPS, calculatePredictionChange } from '../config/predictionStats';
+import { PREDICTION_GROUPS } from '../config/predictionStats';
+import { getStatDelta } from '../utils/playerCard';
 import './PlayerPredictionGrid.css';
 
 const formatValue = (value) => (Number(value) || 0).toFixed(1);
+const BADGE_ARROWS = { up: '↗', down: '↘', flat: '→' };
 
-const PlayerPredictionGrid = ({ currentStats = {}, predictionStats = {}, improvements = {} }) => (
+const PlayerPredictionGrid = ({ currentStats = {}, predictionStats = {} }) => (
   <div className="player-prediction-groups">
     {PREDICTION_GROUPS.map((group) => (
       <section className="player-prediction-group" key={group.id}>
@@ -15,36 +17,34 @@ const PlayerPredictionGrid = ({ currentStats = {}, predictionStats = {}, improve
           {group.stats.map((stat) => {
             // No games this season yet: show the prediction alone, with nothing to compare against.
             const hasCurrent = currentStats?.[stat.key] != null;
-            const current = Number(currentStats?.[stat.key]) || 0;
-            const predicted = Number(predictionStats?.[stat.key]) || 0;
-            const suppliedChange = improvements?.[stat.key];
-            const change = suppliedChange ?? calculatePredictionChange(current, predicted, stat.changeUnit);
-            const changeSuffix = stat.changeUnit === 'pp' ? ' pp' : '%';
-            const isPositive = change >= 0;
+            const predicted = predictionStats?.[stat.key];
+            // Same delta as the prediction cards: the signed change in the stat's own units.
+            const delta = hasCurrent ? getStatDelta(currentStats[stat.key], predicted) : null;
+            const changeSuffix = stat.changeUnit === 'pp' ? ' pp' : '';
 
             return (
               <article className="player-pred-card" key={stat.key}>
                 <div className="player-pred-label">{stat.label}</div>
-                
+
                 <div className="player-pred-comparison">
                   <div className="player-pred-val-box past">
-                    <span className="player-pred-val">{hasCurrent ? formatValue(current) : '—'}</span>
+                    <span className="player-pred-val">{hasCurrent ? formatValue(currentStats[stat.key]) : '—'}</span>
                     <span className="player-pred-unit">{stat.unit}</span>
                   </div>
-                  
+
                   <div className="player-pred-arrow">→</div>
-                  
+
                   <div className="player-pred-val-box predicted">
                     <span className="player-pred-val">{formatValue(predicted)}</span>
                     <span className="player-pred-unit">{stat.unit}</span>
                   </div>
                 </div>
 
-                {hasCurrent && (
+                {delta && (
                   <div className="player-pred-footer">
-                    <span className={`player-pred-badge ${isPositive ? 'positive' : 'negative'}`}>
-                      <span className="badge-arrow">{isPositive ? '↗' : '↘'}</span>
-                      <span>{isPositive ? '+' : ''}{formatValue(change)}{changeSuffix}</span>
+                    <span className={`player-pred-badge ${delta.direction}`}>
+                      <span className="badge-arrow">{BADGE_ARROWS[delta.direction]}</span>
+                      <span>{delta.text}{changeSuffix}</span>
                     </span>
                   </div>
                 )}
