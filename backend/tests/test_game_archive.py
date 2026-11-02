@@ -1,6 +1,6 @@
 import unittest
 from datetime import date
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, call, patch
 
 import app.services.game_archive as game_archive
 from app import create_app
@@ -568,10 +568,12 @@ class FillMissingBiosTests(unittest.TestCase):
         self.assertEqual(insert.args[1][:4], [7, None, None, None])  # all-null bio still stored
         self.conn.commit.assert_called_once_with()
 
-    def test_respects_limit(self):
+    def test_fetches_whole_backlog_in_one_run_with_pause(self):
         bio = {"birth_date": date(2006, 1, 1), "height_in": 80.0, "weight_lb": 200.0}
-        count, fetcher = self.fill([(i, 1642000 + i) for i in range(5)], lambda espn_id: bio, limit=2)
-        self.assertEqual((count, fetcher.call_count, len(self.inserts())), (2, 2, 2))
+        count, fetcher = self.fill([(i, 1642000 + i) for i in range(59)], lambda espn_id: bio)
+        self.assertEqual((count, fetcher.call_count, len(self.inserts())), (59, 59, 59))
+        self.assertEqual(game_archive.time.sleep.call_args_list, [call(0.3)] * 59)
+        self.conn.commit.assert_called_once_with()
 
     def test_one_failed_fetch_is_skipped(self):
         def fetch(espn_id):
