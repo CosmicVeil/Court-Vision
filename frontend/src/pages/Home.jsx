@@ -198,6 +198,9 @@ const VISION_LETTERS = [
   { char: "N", id: 5 },
 ];
 
+// Horizontal center of the rim inside a hoop wrapper: half of .cv-net-svg's 86px width (Home.css).
+const RIM_CENTER_OFFSET = 43;
+
 const Home = () => {
   // The shared header owns login state; Home only reads it once to pick its closing CTA.
   const [isLoggedIn] = useState(() => isAuthenticated());
@@ -279,10 +282,16 @@ const Home = () => {
       // Majestic, cinematic scroll pace matching 320vh hero wrapper: animation plays gracefully over 2.0 viewport heights
       const p = Math.min(Math.max(scrollY / (vh * 2.0), 0), 1);
 
-      // Dual Rim positions relative to screen center (50vw, 50vh) - perfectly in the middle of the restricted circle!
-      const hoopDist = vw * 0.395;
-      const hoopRightX = hoopDist;
-      const hoopLeftX = -hoopDist;
+      // Dual Rim positions relative to the stage center, where the balls sit at translate(0, 0).
+      // Measured from the DOM because the hoops are placed in mixed units (4.2vw + fixed px),
+      // so any vw ratio only lines up at one screen width.
+      const stageRect = el.querySelector('.cv-hero-sticky').getBoundingClientRect();
+      const stageCenterX = stageRect.left + stageRect.width / 2;
+      const hoopRightRect = el.querySelector('.cv-hoop-front-right').getBoundingClientRect();
+      const hoopLeftRect = el.querySelector('.cv-hoop-front-left').getBoundingClientRect();
+      // Rim center = middle of the 86px net SVG at the hoop's inner edge (left one is mirrored).
+      const hoopRightX = hoopRightRect.left + RIM_CENTER_OFFSET - stageCenterX;
+      const hoopLeftX = hoopLeftRect.right - RIM_CENTER_OFFSET - stageCenterX;
       const hoopDY = 0;
 
       // ── 1. DUAL LETTER-BY-LETTER PAPER-ROLL FOLD (p: 0 → 0.40)
@@ -303,7 +312,7 @@ const Home = () => {
       let bCourtOp = 0, bCourtX = 0, bCourtY = 0, bCourtRot = 0, bCourtScale = 1;
       let bVisionOp = 0, bVisionX = 0, bVisionY = 0, bVisionRot = 0, bVisionScale = 1;
       let shadowOp = 0;
-      let netSwishX = 0, netSwishScale = 1, netSwishY = 1, rimFlex = 0;
+      let netSwishScale = 1, netSwishY = 1, rimFlex = 0;
 
       // ── 3. DUAL BALL TRAJECTORIES
       if (p <= 0.40) {
@@ -380,7 +389,6 @@ const Home = () => {
 
         // Dynamic Dual Swish Physics
         rimFlex = Math.sin(dP * Math.PI) * 3.5;
-        netSwishX = Math.sin(dP * Math.PI) * 14;
         netSwishScale = 1 + Math.sin(dP * Math.PI) * 0.38;
         netSwishY = 1 + Math.sin(dP * Math.PI) * 0.18;
       } else {
@@ -411,7 +419,6 @@ const Home = () => {
 
       el.style.setProperty('--cv-ball-shadow-op', shadowOp);
       el.style.setProperty('--cv-rim-flex', `${rimFlex}px`);
-      el.style.setProperty('--cv-net-swish-x', `${netSwishX}px`);
       el.style.setProperty('--cv-net-swish-scale', netSwishScale);
       el.style.setProperty('--cv-net-swish-y', netSwishY);
 
@@ -421,11 +428,14 @@ const Home = () => {
 
     const syncMotion = () => {
       window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
       if (reducedMotion.matches) {
         if (heroRef.current) heroRef.current.style.cssText = '';
         return;
       }
       window.addEventListener('scroll', onScroll, { passive: true });
+      // Rim positions depend on the viewport, so re-place the balls on resize/rotation too.
+      window.addEventListener('resize', onScroll);
       onScroll();
     };
 
@@ -434,6 +444,7 @@ const Home = () => {
     return () => {
       reducedMotion.removeEventListener('change', syncMotion);
       window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
     };
   }, []);
 
