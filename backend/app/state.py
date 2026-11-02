@@ -2,7 +2,6 @@
 import json
 import os
 import pickle
-import unicodedata
 from datetime import date
 
 from app import config, db
@@ -101,26 +100,17 @@ def load_ai():
 
 
 def get_cached_player_prediction(name: str):
-    """Retrieve player prediction from static cache with case and accent normalization."""
+    """Retrieve player prediction from static cache.
+
+    _repair_predictions_cache keys players by normalize_player_name, so look up with the same key:
+    "Shai Gilgeous-Alexander" is stored as "shai gilgeous alexander", "Jaren Jackson Jr." as "jaren jackson".
+    """
     if not isinstance(predictions_cache, dict):
         return None
     players = predictions_cache.get('players', {})
     if not players or not name:
         return None
-    name_clean = str(name).strip()
-    name_lower = name_clean.lower()
-    if name_lower in players:
-        return players[name_lower]
-
-    try:
-        norm_target = unicodedata.normalize('NFKD', name_clean).encode('ascii', 'ignore').decode('ascii').lower()
-        for k, v in players.items():
-            norm_k = unicodedata.normalize('NFKD', k).encode('ascii', 'ignore').decode('ascii').lower()
-            if norm_k == norm_target:
-                return v
-    except Exception:
-        pass
-    return None
+    return players.get(normalize_player_name(name))
 
 
 def load_nba_data():

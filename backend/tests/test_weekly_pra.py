@@ -201,6 +201,25 @@ class WeeklyPraEndpointTests(unittest.TestCase):
         self.assertEqual(repaired["recommendations"]["PRA"][1]["name"], "Nikola Jokić")
         self.assertEqual(repaired["recommendations"]["PRA"][0]["PRA"], 40)
 
+    def test_cached_player_prediction_finds_hyphenated_suffixed_and_accented_names(self):
+        cache = state._repair_predictions_cache({"players": {
+            "shai gilgeous-alexander": {"name": "Shai Gilgeous-Alexander", "predicted_stats": {"ppg": 28.8}},
+            "jaren jackson jr.": {"name": "Jaren Jackson Jr.", "predicted_stats": {"ppg": 22.0}},
+            "de'aaron fox": {"name": "De'Aaron Fox", "predicted_stats": {"ppg": 24.0}},
+            "nikola jokić": {"name": "Nikola Jokić", "predicted_stats": {"ppg": 29.0}},
+        }})
+        with patch.object(state, "predictions_cache", cache):
+            for name, ppg in (
+                ("Shai Gilgeous-Alexander", 28.8),
+                ("Jaren Jackson Jr.", 22.0),
+                ("De'Aaron Fox", 24.0),
+                ("Nikola Jokic", 29.0),
+                ("  NIKOLA JOKIĆ ", 29.0),
+            ):
+                self.assertEqual(state.get_cached_player_prediction(name)["predicted_stats"]["ppg"], ppg, name)
+            self.assertIsNone(state.get_cached_player_prediction("Nobody Here"))
+            self.assertIsNone(state.get_cached_player_prediction(""))
+
 
 if __name__ == "__main__":
     unittest.main()
