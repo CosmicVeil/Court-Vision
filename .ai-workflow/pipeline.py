@@ -420,10 +420,9 @@ def main():
     parser.add_argument('--doctor', action='store_true')
     parser.add_argument('--bug', action='store_true',
                         help='Bug mode: Codex reproduces and diagnoses the cause before Claude plans')
-    parser.add_argument('--from-head', action='store_true', help='Explicitly exclude uncommitted source changes')
     parser.add_argument('--resume', type=Path, help='Run folder printed by an earlier run')
-    parser.add_argument('--branch', help='Name for the new branch (default: ai/<timestamp>)')
-    parser.add_argument('--base', help='Branch or commit to start from (default: current HEAD)')
+    parser.add_argument('--branch', help='Create and switch to this branch first (default: stay on the current branch)')
+    parser.add_argument('--base', help='Branch or commit to start a new branch from (default: current HEAD)')
     parser.add_argument('--spec', type=Path, help='Design spec file every agent must follow')
     args = parser.parse_args()
     if args.doctor:
@@ -437,8 +436,8 @@ def main():
     else:
         repo = Path(capture(['git', 'rev-parse', '--show-toplevel'], args.repo)).resolve()
         dirty = capture(['git', 'status', '--porcelain'], repo)
-        if dirty and not args.from_head and not args.base:
-            raise Stop('Source has uncommitted changes. Commit them first, or use --from-head to EXCLUDE them.')
+        if dirty:
+            raise Stop('Source has uncommitted changes. The run edits this checkout in place; commit or stash them first.')
         config = json.loads(Path(args.config).read_text())
         if not 0 <= config['max_fix_rounds'] <= 2:
             raise Stop('max_fix_rounds must be between 0 and 2')
@@ -446,14 +445,17 @@ def main():
             raise Stop('Configure at least one required check')
         tag = datetime.datetime.now().strftime('%Y%m%d-%H%M%S') + '-' + uuid.uuid4().hex[:6]
         root = repo.parent / (repo.name + '-ai-runs') / tag
-        branch = args.branch or 'ai/' + tag
-        try:
-            capture(['git', 'check-ref-format', '--branch', branch], repo)
-        except Stop:
-            raise Stop(f'Invalid branch name: {branch}')
-        if subprocess.run(['git', 'rev-parse', '--verify', '--quiet', 'refs/heads/' + branch],
-                          cwd=repo, stdout=subprocess.DEVNULL).returncode == 0:
-            raise Stop(f'Branch {branch} already exists. Choose another name.')
+        # Without --branch or --base the run stays on the current branch.
+        new_branch = bool(args.branch or args.base)
+        branch = (args.branch or 'ai/' + tag) if new_branch else capture(['git', 'branch', '--show-current'], repo)
+        if new_branch:
+            try:
+                capture(['git', 'check-ref-format', '--branch', branch], repo)
+            except Stop:
+                raise Stop(f'Invalid branch name: {branch}')
+            if subprocess.run(['git', 'rev-parse', '--verify', '--quiet', 'refs/heads/' + branch],
+                              cwd=repo, stdout=subprocess.DEVNULL).returncode == 0:
+                raise Stop(f'Branch {branch} already exists. Choose another name.')
         try:
             base = capture(['git', 'rev-parse', '--verify', (args.base or 'HEAD') + '^{commit}'], repo)
         except Stop:
@@ -462,8 +464,9 @@ def main():
             raise Stop(f'Spec file not found: {args.spec}')
         validate_skills(config)
         root.mkdir(parents=True)
-        checkout = root / 'checkout'
-        capture(['git', 'worktree', 'add', '-b', branch, str(checkout), base], repo)
+        checkout = repo
+        if new_branch:
+            capture(['git', 'switch', '-c', branch, base], repo)
         state = {'run': str(root), 'repo': str(repo), 'checkout': str(checkout),
                  'base': base, 'branch': branch, 'task': args.task, 'config': config,
                  'mode': 'bug' if args.bug else 'feature', 'round': 0, 'stage': 'setup',
@@ -473,10 +476,7 @@ def main():
         copy_skills(config, root)
         save(root / 'state.json', state)
         print(f'Run folder: {root}', flush=True)
-        if dirty and not args.base:
-            print('Uncommitted source changes were EXCLUDED; checkout starts at HEAD.', flush=True)
-        if args.base:
-            print(f'Checkout starts at {args.base} ({base[:7]}).', flush=True)
+        print(f'Working in place on branch {branch or "(detached HEAD)"} at {base[:7]}.', flush=True)
     with (root / 'run.lock').open('w') as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)

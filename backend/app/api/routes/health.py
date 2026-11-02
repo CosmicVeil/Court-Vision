@@ -16,7 +16,6 @@ def root():
             'health': '/api/health',
             'all_players': '/api/players',
             'player_by_id': '/api/players/<id>',
-            'search_player': '/api/players/search/<name>',
             'teams': '/api/teams',
             'positions': '/api/positions',
             'ai_predictions': '/api/ai-predictions',

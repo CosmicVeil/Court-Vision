@@ -81,6 +81,21 @@ def get_all_players():
     })
 
 
+def _find_player_by_id(player_id):
+    player = next((p for p in state.nba_data if p.get('PLAYER_ID') == player_id), None)
+    if player:
+        return player, False
+
+    if state.multi_season_data:
+        for season in sorted(state.multi_season_data.keys(), reverse=True):
+            player = next((p for p in state.multi_season_data[season] if p.get('PLAYER_ID') == player_id), None)
+            if player:
+                return player, False
+
+    player = next((p for p in state.current_season_data if p.get('PLAYER_ID') == player_id), None)
+    return player, bool(player)
+
+
 @bp.route('/players/<int:player_id>', methods=['GET'])
 def get_player_by_id(player_id):
     if not state.nba_data:
@@ -89,11 +104,12 @@ def get_player_by_id(player_id):
     if player_id <= 0 or player_id > 999_999_999:
         return jsonify({'error': 'Invalid player ID'}), 400
 
-    player = next((p for p in state.nba_data if p.get('PLAYER_ID') == player_id), None)
+    player, archive_only = _find_player_by_id(player_id)
     if not player:
         return jsonify({'error': 'Player not found'}), 404
 
-    return jsonify(get_player_stats_summary(player))
+    current_season = {p['PLAYER_ID']: p for p in state.current_season_data}
+    return jsonify(_player_result(player.get('PLAYER_NAME'), player, archive_only, current_season))
 
 
 @bp.route('/players/<int:player_id>/games', methods=['GET'])
@@ -128,6 +144,63 @@ def _season_line(season_player):
         'ft_pct': round(ft_pct * (100.0 if ft_pct <= 1.0 else 1.0), 1),
         'games_played': int(season_player.get('GAMES_PLAYED_LAST', 0) or 0),
         'minutes': round(season_player.get('MIN_LAST', 0), 1)
+    }
+
+
+def _player_result(name, curr_player, archive_only, current_season):
+    name_key = normalize_player_name(name)
+    history = {}
+    if state.multi_season_data:
+        for season in sorted(state.multi_season_data.keys()):
+            season_player = state.multi_season_name_indexes.get(season, {}).get(name_key)
+            if season_player:
+                history[str(season)] = _season_line(season_player)
+
+    archive_player = current_season.get(curr_player.get('PLAYER_ID'))
+    if archive_player:
+        history[str(state.current_season_year)] = {**_season_line(archive_player), 'in_progress': True}
+
+    ml_stats = None
+    if state.ai_available:
+        try:
+            if state.is_render or state.predictions_cache or archive_only:
+                pred = state.get_cached_player_prediction(name)
+            else:
+                pred = state.ai.get_player_prediction(name)
+            if pred:
+                ml_stats = {
+                    # This season so far, to compare the predictions against (None before any games).
+                    'so_far_stats': so_far_stats(archive_player) if archive_player else None,
+                    'predicted_stats': pred.get('predicted_stats'),
+                    'improvements': pred.get('improvements')
+                }
+        except Exception as e:
+            print(f"Error getting AI prediction for {name}: {e}")
+
+    stats_player = archive_player or curr_player
+    current = _season_line(stats_player)
+    return {
+        'id': curr_player.get('PLAYER_ID') or player_id_for(name),
+        'name': name,
+        'team': curr_player.get('TEAM', 'UNK'),
+        'position': curr_player.get('POSITION', 'UNK'),
+        'age': curr_player.get('AGE', 0),
+        'current_stats': {
+            'ppg': current['ppg'],
+            'apg': current['apg'],
+            'rpg': current['rpg'],
+            'spg': current['spg'],
+            'bpg': current['bpg'],
+            'tov': round(stats_player.get('TOV_LAST', 0), 1),
+            'mpg': round(stats_player.get('MIN_LAST', 0), 1),
+            'fg_pct': current['fg_pct'],
+            'fg3_pct': current['fg3_pct'],
+            'ft_pct': current['ft_pct'],
+            'games_played': current['games_played'],
+            'minutes': current['minutes'],
+        },
+        'ml_stats': ml_stats,
+        'history': history
     }
 
 
@@ -189,79 +262,9 @@ def search_players_all():
         if not curr_player:
             continue
 
-        history = {}
-        if multi_season_data:
-            for season in sorted(multi_season_data.keys()):
-                season_player = state.multi_season_name_indexes.get(season, {}).get(name_key)
-                if season_player:
-                    history[str(season)] = _season_line(season_player)
-
-        archive_player = current_season.get(curr_player.get('PLAYER_ID'))
-        if archive_player:
-            history[str(state.current_season_year)] = {**_season_line(archive_player), 'in_progress': True}
-
-        ml_stats = None
-        if state.ai_available:
-            try:
-                if state.is_render or state.predictions_cache or archive_only:
-                    pred = state.get_cached_player_prediction(name)
-                else:
-                    pred = state.ai.get_player_prediction(name)
-                if pred:
-                    ml_stats = {
-                        # This season so far, to compare the predictions against (None before any games).
-                        'so_far_stats': so_far_stats(archive_player) if archive_player else None,
-                        'predicted_stats': pred.get('predicted_stats'),
-                        'improvements': pred.get('improvements')
-                    }
-            except Exception as e:
-                print(f"Error getting AI prediction for {name}: {e}")
-
-        stats_player = archive_player or curr_player
-        current = _season_line(stats_player)
-        results.append({
-            'id': curr_player.get('PLAYER_ID') or player_id_for(name),
-            'name': name,
-            'team': curr_player.get('TEAM', 'UNK'),
-            'position': curr_player.get('POSITION', 'UNK'),
-            'age': curr_player.get('AGE', 0),
-            'current_stats': {
-                'ppg': current['ppg'],
-                'apg': current['apg'],
-                'rpg': current['rpg'],
-                'spg': current['spg'],
-                'bpg': current['bpg'],
-                'tov': round(stats_player.get('TOV_LAST', 0), 1),
-                'mpg': round(stats_player.get('MIN_LAST', 0), 1),
-                'fg_pct': current['fg_pct'],
-                'fg3_pct': current['fg3_pct'],
-                'ft_pct': current['ft_pct'],
-                'games_played': current['games_played'],
-                'minutes': current['minutes'],
-            },
-            'ml_stats': ml_stats,
-            'history': history
-        })
+        results.append(_player_result(name, curr_player, archive_only, current_season))
 
     return jsonify({'players': results})
-
-
-@bp.route('/players/search/<string:player_name>', methods=['GET'])
-def search_player(player_name):
-    if not state.nba_data:
-        return jsonify({'error': 'NBA data not loaded'}), 500
-
-    player_name_clean = sanitize_string(player_name, 50).lower()
-    if not player_name_clean:
-        return jsonify({'error': 'Invalid player name'}), 400
-
-    players = [p for p in state.nba_data if player_name_clean in p['PLAYER_NAME'].lower()]
-
-    if not players:
-        return jsonify({'error': 'No players found'}), 404
-
-    players_summary = [get_player_stats_summary(player) for player in players[:50]]
-    return jsonify({'players': players_summary})
 
 
 @bp.route('/teams', methods=['GET'])

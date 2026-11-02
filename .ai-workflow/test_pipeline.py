@@ -1,4 +1,4 @@
-"""Offline integration tests; fake AI CLIs, real isolated Git worktrees."""
+"""Offline integration tests; fake AI CLIs, real temporary Git repos."""
 import json
 import os
 from pathlib import Path
@@ -79,11 +79,17 @@ class PipelineTests(unittest.TestCase):
     def state(self):
         path=next((self.root/'repo-ai-runs').glob('*/state.json'))
         return path,json.loads(path.read_text())
-    def test_success_isolated(self):
+    def current_branch(self):
+        return self.git('branch','--show-current').stdout.decode().strip()
+    def test_success_in_place(self):
+        branch=self.current_branch()
         p=self.invoke(); self.assertEqual(p.returncode,0,p.stderr)
         _,s=self.state(); self.assertEqual(s['stage'],'complete')
-        self.assertEqual((self.repo/'value.txt').read_text(),'original')
-        self.assertEqual((Path(s['checkout'])/'value.txt').read_text(),'changed')
+        self.assertEqual(Path(s['checkout']).resolve(),self.repo.resolve())
+        self.assertEqual((s['branch'],self.current_branch()),(branch,branch))
+        self.assertEqual((self.repo/'value.txt').read_text(),'changed')
+        self.assertIn('value.txt',self.git('status','--porcelain').stdout.decode())
+        self.assertEqual(self.git('worktree','list').stdout.decode().count('\n'),1)
     def test_bounded_fix_loop(self):
         p=self.invoke('fix'); self.assertEqual(p.returncode,0,p.stderr)
         self.assertEqual(self.state()[1]['round'],1)
@@ -94,12 +100,12 @@ class PipelineTests(unittest.TestCase):
     def test_bad_review_fails_closed(self):
         p=self.invoke('invalid'); self.assertEqual(p.returncode,2)
         self.assertIn('Invalid review shape',p.stderr)
-    def test_dirty_requires_explicit_head(self):
+    def test_dirty_source_is_refused(self):
         (self.repo/'value.txt').write_text('user edits')
         p=self.invoke(); self.assertEqual(p.returncode,2)
         self.assertIn('uncommitted',p.stderr)
-        p=self.invoke(extra=['--from-head']); self.assertEqual(p.returncode,0,p.stderr)
         self.assertEqual((self.repo/'value.txt').read_text(),'user edits')
+        self.assertFalse((self.root/'repo-ai-runs').exists())
     def test_quota_resume(self):
         p=self.invoke('quota'); self.assertEqual(p.returncode,2)
         path,s=self.state(); self.assertEqual(s['stage'],'plan')
@@ -165,7 +171,7 @@ class PipelineTests(unittest.TestCase):
     def test_custom_branch_name(self):
         p=self.invoke(extra=['--branch','feat/value-change']); self.assertEqual(p.returncode,0,p.stderr)
         self.assertEqual(self.state()[1]['branch'],'feat/value-change')
-        self.git('rev-parse','--verify','refs/heads/feat/value-change')
+        self.assertEqual(self.current_branch(),'feat/value-change')
     def test_existing_or_invalid_branch_is_refused(self):
         self.git('branch','taken')
         p=self.invoke(extra=['--branch','taken']); self.assertEqual(p.returncode,2)
@@ -182,6 +188,7 @@ class PipelineTests(unittest.TestCase):
         path,s=self.state(); run=path.parent
         self.assertEqual((run/'spec.md').read_text(),'# Spec\nMake it blue.')
         self.assertEqual(s['base'],self.git('rev-parse','feature-base').stdout.decode().strip())
+        self.assertTrue(s['branch'].startswith('ai/')); self.assertEqual(self.current_branch(),s['branch'])
         prompts=[x for x in self.prompts().split('---\n') if x.strip()]
         for prompt in prompts:
             self.assertIn(str(run/'spec.md'),prompt)

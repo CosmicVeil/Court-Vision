@@ -1,3 +1,4 @@
+import json
 import os
 import unittest
 from copy import deepcopy
@@ -754,6 +755,162 @@ class ArchiveOnlySearchTests(SeasonRouteTestCase):
         expected = [f'Rookie {i:02d}' for i in range(14)]
         expected.insert(6, 'Rookie 05 Veteran')
         self.assertEqual([p['name'] for p in players], expected)
+
+
+class SearchAllSnapshotTests(SeasonRouteTestCase):
+    def test_full_output_unchanged(self):
+        state.current_season_data.append(season_player(
+            PLAYER_ID=1642000, PLAYER_NAME='AJ Dybantsa', TEAM='WAS', AGE=None,
+            PPG_LAST=18.26, TOV_LAST=2.44, MIN_LAST=31.0, GAMES_PLAYED_LAST=3,
+        ))
+        state.ai_available = True
+        state.predictions_cache = {'players': {'test player': {
+            'predicted_stats': {'ppg': 22.0}, 'improvements': {'ppg': 10.0},
+        }}}
+        expected = {'players': [{
+            'id': 1642000, 'name': 'AJ Dybantsa', 'team': 'WAS', 'position': 'F', 'age': None,
+            'current_stats': {
+                'ppg': 18.3, 'apg': 6.0, 'rpg': 5.0, 'spg': 1.0, 'bpg': 0.5,
+                'tov': 2.4, 'mpg': 31.0, 'fg_pct': 50.0, 'fg3_pct': 30.0,
+                'ft_pct': 80.0, 'games_played': 3, 'minutes': 31.0,
+            },
+            'ml_stats': None,
+            'history': {'2027': {
+                'ppg': 18.3, 'apg': 6.0, 'rpg': 5.0, 'spg': 1.0, 'bpg': 0.5,
+                'fg_pct': 50.0, 'fg3_pct': 30.0, 'ft_pct': 80.0,
+                'games_played': 3, 'minutes': 31.0, 'in_progress': True,
+            }},
+        }, {
+            'id': 1, 'name': 'Test Player', 'team': 'LAL', 'position': 'F', 'age': 30,
+            'current_stats': {
+                'ppg': 24.1, 'apg': 8.0, 'rpg': 7.2, 'spg': 1.0, 'bpg': 0.5,
+                'tov': 3.1, 'mpg': 32.5, 'fg_pct': 50.0, 'fg3_pct': 30.0,
+                'ft_pct': 80.0, 'games_played': 4, 'minutes': 32.5,
+            },
+            'ml_stats': {
+                'so_far_stats': {
+                    'ppg': 24.1, 'apg': 8.0, 'rpg': 7.2, 'spg': 1.0, 'bpg': 0.5,
+                    'tov': 3.1, 'mpg': 32.5, 'fg_pct': 50.0, 'fg3_pct': 30.0,
+                    'ft_pct': 80.0, 'gp': 4,
+                },
+                'predicted_stats': {'ppg': 22.0}, 'improvements': {'ppg': 10.0},
+            },
+            'history': {
+                '2026': {
+                    'ppg': 20.0, 'apg': 6.0, 'rpg': 5.0, 'spg': 1.0, 'bpg': 0.5,
+                    'fg_pct': 50.0, 'fg3_pct': 30.0, 'ft_pct': 80.0,
+                    'games_played': 70, 'minutes': 30.0,
+                },
+                '2027': {
+                    'ppg': 24.1, 'apg': 8.0, 'rpg': 7.2, 'spg': 1.0, 'bpg': 0.5,
+                    'fg_pct': 50.0, 'fg3_pct': 30.0, 'ft_pct': 80.0,
+                    'games_played': 4, 'minutes': 32.5, 'in_progress': True,
+                },
+            },
+        }]}
+        response = self.client.get('/api/players/search-all?query=t')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json(), expected)
+        self.assertEqual(response.data, (json.dumps(
+            expected, sort_keys=True, separators=(',', ':')) + '\n').encode())
+
+
+class PlayerByIdTests(SeasonRouteTestCase):
+    def test_pickle_player_returns_search_all_object_with_history(self):
+        player = self.get_json('/api/players/1')
+        self.assertEqual(player, self.get_json('/api/players/search-all?query=Test')['players'][0])
+        self.assertEqual(player['history']['2026'], {
+            'ppg': 20.0, 'apg': 6.0, 'rpg': 5.0, 'spg': 1.0, 'bpg': 0.5,
+            'fg_pct': 50.0, 'fg3_pct': 30.0, 'ft_pct': 80.0,
+            'games_played': 70, 'minutes': 30.0,
+        })
+        self.assertTrue(player['history']['2027']['in_progress'])
+        self.assertEqual(player['current_stats']['ppg'], 24.1)
+        self.assertEqual(player['team'], 'LAL')
+
+    def test_older_season_lookup_prefers_newest_then_nba_data(self):
+        older = season_player(PLAYER_ID=7, PLAYER_NAME='Older Player', TEAM='BOS')
+        newer = {**older, 'TEAM': 'NYK'}
+        state.multi_season_data = {2024: [older], 2025: [newer]}
+        state.multi_season_name_indexes = {2024: {'older player': older}, 2025: {'older player': newer}}
+        player = self.get_json('/api/players/7')
+        self.assertEqual(player['id'], 7)
+        self.assertEqual(player['team'], 'NYK')
+        self.assertEqual(set(player['history']), {'2024', '2025'})
+        self.assertEqual(player, self.get_json('/api/players/search-all?query=Older')['players'][0])
+        state.nba_data.append({**newer, 'TEAM': 'LAL'})
+        self.assertEqual(self.get_json('/api/players/7')['team'], 'LAL')
+
+    def test_archive_only_rookie_resolves_with_cache_only_predictions(self):
+        rookie = season_player(PLAYER_ID=1642000, PLAYER_NAME='AJ Dybantsa', TEAM='WAS', AGE=None)
+        state.current_season_data.append(rookie)
+        state.multi_season_data = None
+        state.multi_season_name_indexes = {}
+        state.ai_available = True
+        prediction = {'predicted_stats': {'ppg': 22.0}, 'improvements': {'ppg': 10.0}}
+        for cache in (None, {'players': {}}, {'players': {'aj dybantsa': prediction}}):
+            with self.subTest(cache=cache), patch.object(state, 'ai') as ai:
+                state.predictions_cache = cache
+                player = self.get_json('/api/players/1642000')
+                self.assertEqual(player, self.get_json('/api/players/search-all?query=Dybantsa')['players'][0])
+                self.assertEqual(player['team'], 'WAS')
+                self.assertIsNone(player['age'])
+                self.assertEqual(player['history'], {'2027': {
+                    'ppg': 20.0, 'apg': 6.0, 'rpg': 5.0, 'spg': 1.0, 'bpg': 0.5,
+                    'fg_pct': 50.0, 'fg3_pct': 30.0, 'ft_pct': 80.0,
+                    'games_played': 70, 'minutes': 30.0, 'in_progress': True,
+                }})
+                if cache and cache['players']:
+                    self.assertEqual(player['ml_stats']['predicted_stats'], {'ppg': 22.0})
+                    self.assertEqual(player['ml_stats']['so_far_stats']['ppg'], 20.0)
+                else:
+                    self.assertIsNone(player['ml_stats'])
+                ai.get_player_prediction.assert_not_called()
+
+    def test_live_predictions_without_archive_and_prediction_failure(self):
+        state.current_season_data = []
+        state.ai_available = True
+        with patch.object(state, 'ai') as ai:
+            ai.get_player_prediction.return_value = {
+                'predicted_stats': {'ppg': 22.0}, 'improvements': {'ppg': 10.0},
+            }
+            player = self.get_json('/api/players/1')
+            self.assertEqual(player.get('ml_stats'), {
+                'so_far_stats': None, 'predicted_stats': {'ppg': 22.0},
+                'improvements': {'ppg': 10.0},
+            })
+            ai.get_player_prediction.assert_called_once_with('Test Player')
+            self.assertEqual(player['current_stats']['ppg'], 20.0)
+            ai.get_player_prediction.side_effect = RuntimeError('prediction failed')
+            player = self.get_json('/api/players/1')
+            self.assertIsNone(player['ml_stats'])
+            self.assertEqual(player['current_stats']['ppg'], 20.0)
+
+    def test_unknown_id_returns_404(self):
+        response = self.client.get('/api/players/999999')
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.get_json(), {'error': 'Player not found'})
+
+    def test_invalid_ids_return_400(self):
+        for player_id in (0, 1000000000):
+            with self.subTest(player_id=player_id):
+                response = self.client.get(f'/api/players/{player_id}')
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.get_json(), {'error': 'Invalid player ID'})
+
+    def test_missing_data_returns_500(self):
+        state.nba_data = None
+        response = self.client.get('/api/players/1')
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.get_json(), {'error': 'NBA data not loaded'})
+
+
+class RemovedSearchRouteTests(SeasonRouteTestCase):
+    def test_search_by_name_route_removed(self):
+        response = self.client.get('/api/players/search/Test')
+        self.assertEqual(response.status_code, 404)
+        self.assertIsNone(response.get_json(silent=True))
+        self.assertNotIn('players.search_player', self.client.application.view_functions)
 
 
 class PredictionsSoFarTests(SeasonRouteTestCase):
