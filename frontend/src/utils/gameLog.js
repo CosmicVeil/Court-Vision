@@ -21,3 +21,15 @@ export function currentSeasonLabel(today = new Date()) {
   const endYear = today.getMonth() >= 9 ? today.getFullYear() + 1 : today.getFullYear();
   return `${endYear - 1}-${endYear}`;
 }
+
+// Oldest season (end year) in nba_multi_season_data.pkl; a history starting here may be cut off.
+const FIRST_HISTORY_SEASON = 2003;
+
+// Trims the game log seasons to the ones since the player's first season in `history` (keyed by end year).
+export function playerSeasons(seasons, history) {
+  const years = Object.keys(history || {}).map(Number).filter(Number.isInteger);
+  if (!years.length) return seasons;
+  const firstYear = Math.min(...years);
+  if (firstYear <= FIRST_HISTORY_SEASON) return seasons;
+  return seasons.filter(label => Number(label.split('-')[1]) >= firstYear);
+}

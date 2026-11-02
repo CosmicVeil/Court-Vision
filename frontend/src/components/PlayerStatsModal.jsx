@@ -97,7 +97,7 @@ export default function PlayerStatsModal({ player, loading, onClose }) {
                   </div>
                 </div>
               )}
-              {tab === 'games' && <PlayerGameLog playerId={player.id} />}
+              {tab === 'games' && <PlayerGameLog playerId={player.id} history={player.history} />}
               {tab === 'predictions' && (player.ml_stats ? (
                 <>
                   <h3 className="secondary-stats-title">Predicted · change vs this season</h3>
