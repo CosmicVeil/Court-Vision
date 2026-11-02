@@ -132,3 +132,15 @@ test("game log shows the absence message and keeps the generic empty message oth
   assert.match(gameLog, /!games\.length \? \(\s*absenceMessage \? \(\s*<div className="game-log-empty">\{absenceMessage\}<\/div>/);
   assert.match(gameLog, /No games recorded for this player in the \{selectedSeason\} season\./);
 });
+
+test("season dropdown starts at the player's first season in history", async () => {
+  const { playerSeasons } = await import(new URL("../src/utils/gameLog.js", import.meta.url));
+  const seasons = ["2026-2027", "2025-2026", "2024-2025", "2023-2024", "2022-2023", "2021-2022", "2002-2003", "2001-2002"];
+  // Rookie drafted in 2022: first season 2022-23 (end year 2023).
+  assert.deepEqual(playerSeasons(seasons, { 2023: {}, 2025: {}, 2027: {} }), seasons.slice(0, 5));
+  // History starting at the pkl's first season may be cut off, so keep every season.
+  assert.deepEqual(playerSeasons(seasons, { 2003: {}, 2004: {} }), seasons);
+  for (const history of [undefined, null, {}]) assert.deepEqual(playerSeasons(seasons, history), seasons);
+  assert.match(gameLog, /playerSeasons\(result\.data\?\.available_seasons/);
+  assert.match(readSource("PlayerStatsModal.jsx"), /<PlayerGameLog playerId=\{player\.id\} history=\{player\.history\} \/>/);
+});
