@@ -150,11 +150,15 @@ def _season_line(season_player):
 def _player_result(name, curr_player, archive_only, current_season):
     name_key = normalize_player_name(name)
     history = {}
+    age = curr_player.get('AGE', 0)
     if state.multi_season_data:
         for season in sorted(state.multi_season_data.keys()):
             season_player = state.multi_season_name_indexes.get(season, {}).get(name_key)
             if season_player:
                 history[str(season)] = _season_line(season_player)
+                # The pickle stores age per season, not a birth date: age now = latest known age + years since.
+                if not archive_only and season_player.get('AGE'):
+                    age = season_player['AGE'] + (state.current_season_year - season)
 
     archive_player = current_season.get(curr_player.get('PLAYER_ID'))
     if archive_player:
@@ -184,7 +188,7 @@ def _player_result(name, curr_player, archive_only, current_season):
         'name': name,
         'team': curr_player.get('TEAM', 'UNK'),
         'position': curr_player.get('POSITION', 'UNK'),
-        'age': curr_player.get('AGE', 0),
+        'age': age,
         'current_stats': {
             'ppg': current['ppg'],
             'apg': current['apg'],
@@ -223,12 +227,18 @@ def search_players_all():
         if query in name.lower() or (normalized_query and normalized_query in normalize_player_name(name)):
             matching_names.add(player.get('PLAYER_NAME'))
 
-    if not matching_names and multi_season_data:
-        for season, players in multi_season_data.items():
-            for p in players:
+    # Players only in older seasons (retired or inactive), listed after current players.
+    older_names = {}
+    if multi_season_data:
+        current_keys = {normalize_player_name(n) for n in matching_names}
+        for season in sorted(multi_season_data.keys(), reverse=True):
+            for p in multi_season_data[season]:
                 name = p.get('PLAYER_NAME', '')
-                if query in name.lower() or (normalized_query and normalized_query in normalize_player_name(name)):
-                    matching_names.add(p.get('PLAYER_NAME'))
+                name_key = normalize_player_name(name)
+                if name_key in current_keys:
+                    continue
+                if query in name.lower() or (normalized_query and normalized_query in name_key):
+                    older_names.setdefault(name_key, name)
 
     for player in state.current_season_data:
         name = player.get('PLAYER_NAME', '')
@@ -240,7 +250,7 @@ def search_players_all():
         if query in name.lower() or (normalized_query and normalized_query in name_key):
             matching_names.add(name)
 
-    matching_names = sorted(list(matching_names))[:15]
+    matching_names = (sorted(matching_names) + sorted(older_names.values()))[:15]
 
     current_season = {p['PLAYER_ID']: p for p in state.current_season_data}
     archive_by_name = {normalize_player_name(p.get('PLAYER_NAME')): p for p in state.current_season_data}

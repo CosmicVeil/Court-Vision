@@ -781,7 +781,7 @@ class SearchAllSnapshotTests(SeasonRouteTestCase):
                 'games_played': 3, 'minutes': 31.0, 'in_progress': True,
             }},
         }, {
-            'id': 1, 'name': 'Test Player', 'team': 'LAL', 'position': 'F', 'age': 30,
+            'id': 1, 'name': 'Test Player', 'team': 'LAL', 'position': 'F', 'age': 31,
             'current_stats': {
                 'ppg': 24.1, 'apg': 8.0, 'rpg': 7.2, 'spg': 1.0, 'bpg': 0.5,
                 'tov': 3.1, 'mpg': 32.5, 'fg_pct': 50.0, 'fg3_pct': 30.0,
@@ -813,6 +813,61 @@ class SearchAllSnapshotTests(SeasonRouteTestCase):
         self.assertEqual(response.get_json(), expected)
         self.assertEqual(response.data, (json.dumps(
             expected, sort_keys=True, separators=(',', ':')) + '\n').encode())
+
+
+class RetiredPlayerTests(SeasonRouteTestCase):
+    def use_older_seasons(self, seasons):
+        """Add pickle seasons {year: [players]} alongside the 2026 season."""
+        for season, players in seasons.items():
+            state.multi_season_data[season] = players
+            state.multi_season_name_indexes[season] = {p['PLAYER_NAME'].lower(): p for p in players}
+
+    def test_retired_player_age_counts_years_since_last_season(self):
+        self.use_older_seasons({2018: [season_player(PLAYER_ID=9, PLAYER_NAME='Dirk Retired', AGE=39)],
+                                2019: [season_player(PLAYER_ID=9, PLAYER_NAME='Dirk Retired', AGE=40)]})
+        player = self.get_json('/api/players/search-all?query=Dirk')['players'][0]
+        self.assertEqual(player['age'], 48)
+        self.assertEqual(self.get_json('/api/players/9')['age'], 48)
+
+    def test_seasons_without_age_are_skipped(self):
+        self.use_older_seasons({2018: [season_player(PLAYER_ID=9, PLAYER_NAME='Dirk Retired', AGE=39)],
+                                2019: [season_player(PLAYER_ID=9, PLAYER_NAME='Dirk Retired', AGE=0)]})
+        self.assertEqual(self.get_json('/api/players/search-all?query=Dirk')['players'][0]['age'], 48)
+
+    def test_active_player_age_matches_the_archive(self):
+        self.assertEqual(self.get_json('/api/players/search-all?query=Test')['players'][0]['age'], 31)
+
+    def test_without_multi_season_data_age_is_the_record_age(self):
+        state.multi_season_data = None
+        state.multi_season_name_indexes = {}
+        self.assertEqual(self.get_json('/api/players/search-all?query=Test')['players'][0]['age'], 30)
+
+    def test_search_includes_retired_players_after_current_ones(self):
+        current = season_player(PLAYER_ID=2, PLAYER_NAME='Kobe Current')
+        state.nba_data.append(current)
+        state.nba_name_index['kobe current'] = current
+        state.multi_season_data[2026].append(current)
+        state.multi_season_name_indexes[2026]['kobe current'] = current
+        self.use_older_seasons({
+            2015: [season_player(PLAYER_ID=8, PLAYER_NAME='Kobe Retired', AGE=36),
+                   season_player(PLAYER_ID=7, PLAYER_NAME='Akobe Old', AGE=30), current],
+            2016: [season_player(PLAYER_ID=8, PLAYER_NAME='Kobe Retired', AGE=37)],
+        })
+        players = self.get_json('/api/players/search-all?query=kobe')['players']
+        # Current first even though 'Akobe Old' sorts earlier; each player once.
+        self.assertEqual([p['name'] for p in players], ['Kobe Current', 'Akobe Old', 'Kobe Retired'])
+        self.assertEqual(players[2]['age'], 48)
+        self.assertEqual(set(players[2]['history']), {'2015', '2016'})
+
+    def test_result_cap_keeps_current_players(self):
+        currents = [season_player(PLAYER_ID=100 + i, PLAYER_NAME=f'Zed Current {i:02d}') for i in range(15)]
+        state.nba_data.extend(currents)
+        for p in currents:
+            state.nba_name_index[p['PLAYER_NAME'].lower()] = p
+        self.use_older_seasons({2010: [season_player(PLAYER_ID=99, PLAYER_NAME='Aaron Zed Retired')]})
+        names = [p['name'] for p in self.get_json('/api/players/search-all?query=zed')['players']]
+        self.assertEqual(len(names), 15)
+        self.assertNotIn('Aaron Zed Retired', names)
 
 
 class PlayerByIdTests(SeasonRouteTestCase):
