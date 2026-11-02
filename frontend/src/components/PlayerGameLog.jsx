@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { buildApiUrl } from '../config/api';
-import { currentSeasonLabel, formatAbsence, formatSeasonTeams, playerSeasons } from '../utils/gameLog';
+import { currentSeasonLabel, defaultSeason, formatAbsence, formatSeasonTeams, playerSeasons } from '../utils/gameLog';
 import './PlayerGameLog.css';
 
 // Matches the backend clamp and fits a full season including preseason, play-in, and playoffs.
@@ -21,7 +21,7 @@ const seasonTag = type => {
 };
 
 export default function PlayerGameLog({ playerId, history }) {
-  const [selectedSeason, setSelectedSeason] = useState(currentSeasonLabel);
+  const [selectedSeason, setSelectedSeason] = useState(() => defaultSeason(history));
   // Keyed by player and season so switching shows the loading state.
   const [result, setResult] = useState({ playerId: null, season: selectedSeason, status: 'loading', data: null });
 
@@ -46,7 +46,7 @@ export default function PlayerGameLog({ playerId, history }) {
   // The backend lists seasons newest first; without a response, offer the current and selected seasons.
   const currentSeason = currentSeasonLabel();
   const availableSeasons = playerSeasons(result.data?.available_seasons || [...new Set([currentSeason, selectedSeason])], history);
-  const seasonOptions = availableSeasons.map(s => ({ value: s, label: s === availableSeasons[0] ? `${s} (Current)` : s }));
+  const seasonOptions = availableSeasons.map(s => ({ value: s, label: s === currentSeason ? `${s} (Current)` : s }));
 
   const isLoading = result.playerId !== playerId || result.season !== selectedSeason || result.status === 'loading';
   const isError = result.status === 'error';
