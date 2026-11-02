@@ -25,11 +25,27 @@ export function currentSeasonLabel(today = new Date()) {
 // Oldest season (end year) in nba_multi_season_data.pkl; a history starting here may be cut off.
 const FIRST_HISTORY_SEASON = 2003;
 
-// Trims the game log seasons to the ones since the player's first season in `history` (keyed by end year).
-export function playerSeasons(seasons, history) {
-  const years = Object.keys(history || {}).map(Number).filter(Number.isInteger);
+const seasonEndYear = label => Number(label.split('-')[1]);
+const historyYears = history => Object.keys(history || {}).map(Number).filter(Number.isInteger);
+
+// Trims the game log seasons to the player's career in `history` (keyed by end year). A player whose
+// last season is older than last season is retired or inactive, so seasons after it are dropped too.
+export function playerSeasons(seasons, history, currentSeason = currentSeasonLabel()) {
+  const years = historyYears(history);
   if (!years.length) return seasons;
   const firstYear = Math.min(...years);
-  if (firstYear <= FIRST_HISTORY_SEASON) return seasons;
-  return seasons.filter(label => Number(label.split('-')[1]) >= firstYear);
+  const lastYear = Math.max(...years);
+  const retired = lastYear < seasonEndYear(currentSeason) - 1;
+  return seasons.filter(label => {
+    const endYear = seasonEndYear(label);
+    return (firstYear <= FIRST_HISTORY_SEASON || endYear >= firstYear) && (!retired || endYear <= lastYear);
+  });
+}
+
+// Season the game log opens on: a retired player's last season, otherwise the current season.
+export function defaultSeason(history, currentSeason = currentSeasonLabel()) {
+  const years = historyYears(history);
+  if (!years.length) return currentSeason;
+  const lastYear = Math.max(...years);
+  return lastYear < seasonEndYear(currentSeason) - 1 ? `${lastYear - 1}-${lastYear}` : currentSeason;
 }
