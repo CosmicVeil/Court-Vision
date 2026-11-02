@@ -1,6 +1,6 @@
 # CourtVision: Claude plan → Codex code → Claude review
 
-This is a local, on-demand pipeline. Give it one task; it creates a separate Git worktree, prepares dependencies, records baseline checks, asks Claude to plan, asks Codex to implement, runs checks, and asks a fresh Claude session to review the actual changes. Codex can address findings up to twice. It leaves the branch and evidence for you to inspect and merge.
+This is a local, on-demand pipeline. Give it one task; it works directly in this checkout, prepares dependencies, records baseline checks, asks Claude to plan, asks Codex to implement, runs checks, and asks a fresh Claude session to review the actual changes. Codex can address findings up to twice. It leaves the changes uncommitted for you to review in your editor, plus the evidence.
 
 There are two workflows:
 
@@ -32,15 +32,9 @@ For a bug, add `--bug` and describe what you did, what happened, what you expect
 python3 .ai-workflow/pipeline.py --bug "Player popup game log shows the previous player's games after switching players. Expected: the selected player's games."
 ```
 
-To name the branch instead of using `ai/<timestamp>`, add `--branch`, for example `--branch fix/players-missing-player-id`. The runner refuses an invalid name or one that already exists.
+The run stays on the current branch. To work on a new branch instead, add `--branch`, for example `--branch fix/players-missing-player-id`; the runner creates it and switches to it first. It refuses an invalid name or one that already exists.
 
-CourtVision currently has uncommitted backend/model changes. The runner refuses a dirty source checkout by default. To deliberately start at the latest commit and EXCLUDE all uncommitted changes:
-
-```bash
-python3 .ai-workflow/pipeline.py --from-head "Describe the task and acceptance criteria here"
-```
-
-This flag also excludes new/uncommitted tests. It does not stash, commit, or copy your work. The pipeline files themselves can run before being committed because the controller runs outside the new checkout.
+The runner refuses a checkout with uncommitted changes, because the run edits files in place and the review diff would mix your work with the agents'. Commit or stash first (this includes edits to the pipeline files themselves). Don't edit files in the checkout while a run is going, for the same reason.
 
 ## The bug workflow
 
@@ -59,7 +53,7 @@ Every agent prompt tells the agent to change only what the task asks for: no ref
 ## Design specs, starting branches and check scripts
 
 - `--spec path/to/spec.md` copies a design spec into the run folder; the planner, Codex and the reviewer must all follow it.
-- `--base <branch>` starts the run from that branch or commit instead of the current `HEAD`.
+- `--base <branch>` creates a new branch (named by `--branch`, or `ai/<timestamp>`) from that branch or commit and switches to it before the run.
 - Check commands can use `{workflow_dir}`, `{run_dir}` and `{checkout}`, and get `AI_RUN_DIR` and `AI_CHECK_LABEL` in their environment. Put controller-owned check scripts in `.ai-workflow/checks/` and reference them with `{workflow_dir}` so the agents can't edit them. A check that saves PNGs to `$AI_RUN_DIR/screenshots/$AI_CHECK_LABEL/` has them passed to the reviewer.
 - Codex's prompt includes two working rules adapted from the Superpowers skills: work test-first, and never report something as done without running the command that proves it.
 
@@ -94,11 +88,11 @@ The animation skills used in Atlas (`fixing-motion-performance`, `review-animati
 
 ## What a run does
 
-1. Creates `CourtVision-ai-runs/<timestamp>/checkout` alongside CourtVision, on a new `ai/<timestamp>` branch based on the current HEAD.
-2. Runs the configured `setup` commands in that checkout (`npm ci` in `frontend/` and a fresh `backend/.venv`). Dependencies are isolated; this requires network access. No Python environments, ignored files, or `.env` secrets are copied from your main checkout.
+1. Creates the run folder `CourtVision-ai-runs/<timestamp>/` alongside CourtVision for evidence. The work itself happens in this checkout, on the current branch (or a new one with `--branch`/`--base`).
+2. Runs the configured `setup` commands in the checkout (`npm ci` in `frontend/`, which reinstalls `node_modules`, and `backend/.venv`). This requires network access; stop a running Vite dev server first if `npm ci` disturbs it.
 3. Records baseline results for every configured check.
 4. Claude reads the code and produces `plan.md` with acceptance criteria.
-5. Codex edits the isolated checkout with the workspace-write sandbox and no interactive approval prompts. Operations outside its sandbox fail rather than being automatically escalated. It must add or update tests for everything it builds or changes (the plan lists them, and the reviewer treats missing tests as a finding).
+5. Codex edits the checkout with the workspace-write sandbox and no interactive approval prompts. Operations outside its sandbox fail rather than being automatically escalated. It must add or update tests for everything it builds or changes (the plan lists them, and the reviewer treats missing tests as a finding).
 6. The controller runs configured checks and saves logs. Claude independently reads the Git diff, new files, surrounding source, plan, and check results, and returns structured review findings.
 7. Up to two fix/review rounds run. Success requires both zero unresolved review findings and every required check passing. Otherwise the run ends with `needs-attention` and exit code 2.
 
@@ -133,7 +127,7 @@ python3 .ai-workflow/pipeline.py --resume /absolute/path/to/CourtVision-ai-runs/
 
 Inspect partial edits first: resuming repeats the interrupted stage, so model work is not guaranteed exactly once. The runner prevents two processes from resuming the same run simultaneously. After the two fix rounds are exhausted, `needs-attention` is terminal; inspect and address it manually or launch a new scoped task. Completed runs are not re-reviewed on resume.
 
-Review the checkout and its new files before committing or merging. Do not delete a worktree with uncommitted work you need. To remove a finished checkout, first preserve its work as appropriate, then use `git worktree remove /absolute/path/to/checkout`. Logs are retained separately. There is no automatic cleanup or scheduler.
+Review the uncommitted changes and new files in your editor (`git status`, `git diff`) before committing. To throw a run away, discard its changes with Git. Logs are retained separately in the run folder. There is no automatic cleanup or scheduler. Runs started before this change left worktrees under `CourtVision-ai-runs/*/checkout`; remove those with `git worktree remove` once their work is preserved.
 
 ## Reuse in another repository or machine
 
@@ -193,4 +187,4 @@ This setup uses `claude -p` without `--bare`: the currently documented bare mode
 
 ## Validation performed during setup
 
-Offline integration tests use fake AI executables and real temporary Git worktrees to verify isolation, repair-loop limits, failed-check gating, invalid-review rejection, dirty-source handling, checkpoint resumption, per-check `cwd`, strict-scope prompts, and the bug workflow (diagnosis before planning, the test-paths guard, empty reports). No live model task has been run: Claude Code still requires subscription sign-in, and no implementation task was supplied. The offline tests validate controller behavior, not model quality or live-provider availability.
+Offline integration tests use fake AI executables and real temporary Git repos to verify in-place runs, repair-loop limits, failed-check gating, invalid-review rejection, dirty-source handling, checkpoint resumption, per-check `cwd`, strict-scope prompts, and the bug workflow (diagnosis before planning, the test-paths guard, empty reports). No live model task has been run: Claude Code still requires subscription sign-in, and no implementation task was supplied. The offline tests validate controller behavior, not model quality or live-provider availability.
