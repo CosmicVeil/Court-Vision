@@ -134,16 +134,21 @@
   letter-spacing: 0.5px;
 }
 
-.player-pred-badge.positive {
+.player-pred-badge.up {
   background: rgba(76, 175, 80, 0.15);
   border: 1px solid rgba(76, 175, 80, 0.4);
   color: #4caf50;
 }
 
-.player-pred-badge.negative {
+.player-pred-badge.down {
   background: rgba(239, 83, 80, 0.15);
   border: 1px solid rgba(239, 83, 80, 0.4);
   color: #ef5350;
+}
+
+.player-pred-badge.flat {
+  border: 1px solid var(--color-stone);
+  color: var(--color-stone);
 }
 
 .badge-arrow {

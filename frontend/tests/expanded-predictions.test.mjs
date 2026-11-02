@@ -67,3 +67,10 @@ test("popup predictions compare against this season so far and work out the chan
   const grid = readFileSync(gridPath, "utf8");
   assert.match(grid, /hasCurrent/, "a player with no games this season shows no change");
 });
+
+test("popup predictions show the same absolute change as the prediction cards", () => {
+  const grid = readFileSync(gridPath, "utf8");
+  assert.match(grid, /import \{ getStatDelta \} from '\.\.\/utils\/playerCard'/);
+  assert.match(grid, /getStatDelta\(currentStats\[stat\.key\], predicted\)/);
+  assert.doesNotMatch(grid, /calculatePredictionChange/, "percent change would disagree with the card");
+});
