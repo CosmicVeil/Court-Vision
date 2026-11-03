@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 
 from app import db, state
 from app.api.helpers import SORT_KEY_MAP, get_player_stats_summary, sanitize_string, so_far_stats, validate_pagination
+from app.auth import optional_auth
 from app.services import game_archive
 from app.utils.player_ids import player_id_for
 from app.utils.player_names import normalize_player_name
@@ -97,6 +98,7 @@ def _find_player_by_id(player_id):
 
 
 @bp.route('/players/<int:player_id>', methods=['GET'])
+@optional_auth
 def get_player_by_id(player_id):
     if not state.nba_data:
         return jsonify({'error': 'NBA data not loaded'}), 500
@@ -109,7 +111,8 @@ def get_player_by_id(player_id):
         return jsonify({'error': 'Player not found'}), 404
 
     current_season = {p['PLAYER_ID']: p for p in state.current_season_data}
-    return jsonify(_player_result(player.get('PLAYER_NAME'), player, archive_only, current_season))
+    return jsonify(_player_result(player.get('PLAYER_NAME'), player, archive_only, current_season,
+                                  include_predictions=request.user_id is not None))
 
 
 @bp.route('/players/<int:player_id>/games', methods=['GET'])
@@ -147,7 +150,9 @@ def _season_line(season_player):
     }
 
 
-def _player_result(name, curr_player, archive_only, current_season):
+def _player_result(name, curr_player, archive_only, current_season, include_predictions=True):
+    """Player popup payload. Per-player predictions (ml_stats) need an account, so
+    signed-out callers get ml_stats=None and predictions_locked=True."""
     name_key = normalize_player_name(name)
     history = {}
     age = curr_player.get('AGE', 0)
@@ -165,7 +170,7 @@ def _player_result(name, curr_player, archive_only, current_season):
         history[str(state.current_season_year)] = {**_season_line(archive_player), 'in_progress': True}
 
     ml_stats = None
-    if state.ai_available:
+    if include_predictions and state.ai_available:
         try:
             if state.is_render or state.predictions_cache or archive_only:
                 pred = state.get_cached_player_prediction(name)
@@ -204,11 +209,13 @@ def _player_result(name, curr_player, archive_only, current_season):
             'minutes': current['minutes'],
         },
         'ml_stats': ml_stats,
+        'predictions_locked': not include_predictions,
         'history': history
     }
 
 
 @bp.route('/players/search-all', methods=['GET'])
+@optional_auth
 def search_players_all():
     nba_data = state.nba_data
     multi_season_data = state.multi_season_data
@@ -272,7 +279,8 @@ def search_players_all():
         if not curr_player:
             continue
 
-        results.append(_player_result(name, curr_player, archive_only, current_season))
+        results.append(_player_result(name, curr_player, archive_only, current_season,
+                                      include_predictions=request.user_id is not None))
 
     return jsonify({'players': results})
 

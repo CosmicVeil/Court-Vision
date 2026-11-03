@@ -20,6 +20,13 @@ export const isAuthenticated = () => {
   return !!getAuthToken();
 };
 
+// Authorization header for gated endpoints. Empty when signed out so the
+// request still reaches the server and comes back as a public preview / 401.
+export const authHeaders = () => {
+  const token = getAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 export const setAuth = (token, user) => {
   localStorage.setItem('authToken', token);
   localStorage.setItem('user', JSON.stringify(user));

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import PlayerGameLog from './PlayerGameLog';
 import PlayerPredictionGrid from './PlayerPredictionGrid';
 
@@ -11,6 +12,9 @@ const TABS = [
 
 export default function PlayerStatsModal({ player, loading, onClose }) {
   const [tab, setTab] = useState('current');
+  const location = useLocation();
+  // Bring the user back to this page after signing in from the locked predictions tab.
+  const returnTo = `${location.pathname}${location.search}`;
 
   useEffect(() => setTab('current'), [player?.id, player?.name]);
   useEffect(() => {
@@ -103,6 +107,15 @@ export default function PlayerStatsModal({ player, loading, onClose }) {
                   <h3 className="secondary-stats-title">Predicted · change vs this season</h3>
                   <PlayerPredictionGrid currentStats={player.ml_stats.so_far_stats} predictionStats={player.ml_stats.predicted_stats} />
                 </>
+              ) : player.predictions_locked ? (
+                <div className="no-data">
+                  <p>Sign in to see full predictions for {player.name}.</p>
+                  <p>
+                    <Link to="/login" state={{ from: returnTo }}>Log In</Link>
+                    {' · '}
+                    <Link to="/create-account" state={{ from: returnTo }}>Create a free account</Link>
+                  </p>
+                </div>
               ) : <div className="no-data">AI Prediction model is currently loading or unavailable for this player.</div>)}
               {tab === 'history' && (
                 <div className="stats-history-table-container">

@@ -7,6 +7,31 @@ repository root (see the main [README](../README.md)). To run only the backend, 
 .venv/bin/python main.py
 ```
 
+## Public vs account-gated predictions
+
+A limited preview of predictions is public so visitors see the product; the
+detailed features require a free account. The gate is enforced on the server
+(`app/api/routes/predictions.py`), not just the UI, so gated data is never sent
+to signed-out clients.
+
+| Endpoint | Access | Behaviour |
+|---|---|---|
+| `GET /api/ai-predictions` | Public | Top-N bundle preview. |
+| `GET /api/predictions` | Public preview / full | Signed out: first `PUBLIC_PREVIEW_LIMIT` players only, `page` forced to 1, response flagged `"preview": true`. Signed in: full searchable, sortable, paginated list. |
+| `GET /api/player-prediction/<name>` | Account | `require_auth` → 401 without a valid token. |
+| `GET /api/recommendations/<stat>` | Account | `require_auth` → 401 without a valid token. |
+| `GET /api/players/search-all`, `/api/players/<id>` | Public / full | Player stats and history are public. The per-player prediction (`ml_stats`) is only included with a valid token; signed out it is `null` with `"predictions_locked": true`. |
+| `GET /api/players`, `/api/stats/*`, `/api/games/*` | Public | Live games and season stats stay open. |
+
+Auth helpers live in `app/auth.py`: `require_auth` rejects missing/invalid/expired
+tokens with 401; `optional_auth` attaches `request.user_id` when a valid token is
+present but still serves signed-out callers (used by `/api/predictions` and the player
+endpoints to choose preview vs full). The frontend's fetch wrapper (`src/main.jsx`) sends
+the token with every request to this API, so signed-in users get the full data on every page. Responses are built per request with no user-keyed cache, so a
+gated payload can never be cached and served to an anonymous caller. Email
+verification is not yet required (see issue #80); the gate only checks for a valid
+session token. Tests: `tests/test_prediction_gating.py`.
+
 ## Scripts
 
 Command-line tools in `scripts/`. Run them from `backend/`:

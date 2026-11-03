@@ -4,6 +4,7 @@ from flask import Blueprint, jsonify, request
 
 from app import state
 from app.api.helpers import SO_FAR_KEYS, sanitize_string, so_far_stats, validate_pagination
+from app.auth import optional_auth, require_auth
 from app.services.recommendations import get_top_performers
 from app.utils.player_ids import player_id_for
 from app.utils.player_names import normalize_player_name
@@ -11,6 +12,10 @@ from app.utils.player_names import normalize_player_name
 bp = Blueprint('predictions', __name__, url_prefix='/api')
 
 AI_UNAVAILABLE = {'error': 'AI predictions not available', 'ai_available': False}
+
+# Signed-out visitors see a capped preview of the predictions list; the full
+# paginated list, per-player lookups and recommendations require a free account.
+PUBLIC_PREVIEW_LIMIT = 12
 
 
 def _so_far_lookup():
@@ -92,9 +97,12 @@ def _prediction_rows_from_model():
 
 
 @bp.route('/predictions', methods=['GET'])
+@optional_auth
 def get_all_predictions_paginated():
     if not state.ai_available:
         return jsonify(AI_UNAVAILABLE), 503
+
+    is_authenticated = request.user_id is not None
 
     try:
         if state.is_render and state.predictions_cache:
@@ -137,6 +145,13 @@ def get_all_predictions_paginated():
         limit = request.args.get('limit', 20)
         page, limit = validate_pagination(page, limit)
 
+        # Signed-out visitors get only a capped preview: the first PUBLIC_PREVIEW_LIMIT
+        # players, always page 1, so gated data is never sent to the client.
+        if not is_authenticated:
+            filtered = filtered[:PUBLIC_PREVIEW_LIMIT]
+            page = 1
+            limit = min(limit, PUBLIC_PREVIEW_LIMIT)
+
         start_idx = (page - 1) * limit
         end_idx = start_idx + limit
         page_results = filtered[start_idx:end_idx]
@@ -145,6 +160,7 @@ def get_all_predictions_paginated():
 
         return jsonify({
             'predictions': page_results,
+            'preview': not is_authenticated,
             'pagination': {
                 'page': page,
                 'limit': limit,
@@ -158,6 +174,7 @@ def get_all_predictions_paginated():
 
 
 @bp.route('/player-prediction/<string:player_name>', methods=['GET'])
+@require_auth
 def get_player_prediction_api(player_name):
     if not state.ai_available:
         return jsonify(AI_UNAVAILABLE), 503
@@ -186,6 +203,7 @@ def get_player_prediction_api(player_name):
 
 
 @bp.route('/recommendations/<stat>', methods=['GET'])
+@require_auth
 def recommendations(stat):
     if not state.ai_available and not state.is_render:
         return jsonify(AI_UNAVAILABLE), 503

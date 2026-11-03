@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import PlayerStatsModal from '../components/PlayerStatsModal';
 import { buildApiUrl } from '../config/api';
+import { clearAuth } from '../utils/auth';
 import { samePlayerName } from '../utils/playerNames';
 import { enterDelay } from '../utils/scrollReveal';
 import { formatSoFarLine } from '../utils/seasonSoFar';
@@ -55,6 +56,8 @@ const FALLBACK_PLAYERS = {
 const Recommendations = () => {
   const [topPerformers, setTopPerformers] = useState({});
   const [spotlightLoading, setSpotlightLoading] = useState(true);
+  // Recommendations need a free account; set when the API answers 401 (signed out or expired).
+  const [needsAuth, setNeedsAuth] = useState(false);
 
   // States for player details modal
   const [selectedPlayer, setSelectedPlayer] = useState(null);
@@ -103,6 +106,9 @@ const Recommendations = () => {
         const results = await Promise.all(
           stats.map(async (s) => {
             const res = await fetch(buildApiUrl(`recommendations/${s}`));
+            if (res.status === 401) {
+              return { stat: s, player: null, unauthorized: true };
+            }
             if (res.ok) {
               const data = await res.json();
               if (data && data.length > 0) {
@@ -112,6 +118,11 @@ const Recommendations = () => {
             return { stat: s, player: null };
           })
         );
+        if (results.some(r => r.unauthorized)) {
+          clearAuth();
+          setNeedsAuth(true);
+          return;
+        }
         const mapping = {};
         results.forEach(r => {
           mapping[r.stat] = r.player;
@@ -193,6 +204,21 @@ const Recommendations = () => {
               <div className="spotlight-loader-wrap">
                 <div className="spotlight-spinner"></div>
                 <p className="spotlight-loader">Calculating AI Forecasts...</p>
+              </div>
+            ) : needsAuth ? (
+              <div className="predictions-locked">
+                <div className="predictions-locked-icon" aria-hidden="true">🔒</div>
+                <h2 className="predictions-locked-title">Sign in to see full predictions</h2>
+                <p className="predictions-locked-desc">
+                  Breakout recommendations are a free account feature. Log in or create an
+                  account to see the players our model projects to make the biggest jumps.
+                </p>
+                <div className="predictions-locked-actions">
+                  <Link to="/login" state={{ from: '/recommendations' }} className="empty-cta">Log In</Link>
+                  <Link to="/create-account" state={{ from: '/recommendations' }} className="empty-cta prediction-auth-secondary">
+                    Create Account
+                  </Link>
+                </div>
               </div>
             ) : (
               <div className="spotlight-grid">

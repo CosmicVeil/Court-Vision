@@ -556,10 +556,13 @@ class SeasonRouteTestCase(unittest.TestCase):
             ('ai_available', False), ('is_render', False), ('predictions_cache', None),
         ):
             self.enterContext(patch.object(state, name, value))
+        # Prediction/recommendation routes are gated; treat every request as a
+        # signed-in user so these tests exercise the full (non-preview) path.
+        self.enterContext(patch('app.auth.validate_token', return_value=1))
         self.client = create_app(load_data=False).test_client()
 
     def get_json(self, url):
-        response = self.client.get(url)
+        response = self.client.get(url, headers={'Authorization': 'Bearer test'})
         self.assertEqual(response.status_code, 200, response.get_json())
         return response.get_json()
 
@@ -775,6 +778,7 @@ class SearchAllSnapshotTests(SeasonRouteTestCase):
                 'ft_pct': 80.0, 'games_played': 3, 'minutes': 31.0,
             },
             'ml_stats': None,
+            'predictions_locked': False,
             'history': {'2027': {
                 'ppg': 18.3, 'apg': 6.0, 'rpg': 5.0, 'spg': 1.0, 'bpg': 0.5,
                 'fg_pct': 50.0, 'fg3_pct': 30.0, 'ft_pct': 80.0,
@@ -795,6 +799,7 @@ class SearchAllSnapshotTests(SeasonRouteTestCase):
                 },
                 'predicted_stats': {'ppg': 22.0}, 'improvements': {'ppg': 10.0},
             },
+            'predictions_locked': False,
             'history': {
                 '2026': {
                     'ppg': 20.0, 'apg': 6.0, 'rpg': 5.0, 'spg': 1.0, 'bpg': 0.5,
@@ -808,7 +813,8 @@ class SearchAllSnapshotTests(SeasonRouteTestCase):
                 },
             },
         }]}
-        response = self.client.get('/api/players/search-all?query=t')
+        response = self.client.get('/api/players/search-all?query=t',
+                                   headers={'Authorization': 'Bearer test'})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json(), expected)
         self.assertEqual(response.data, (json.dumps(

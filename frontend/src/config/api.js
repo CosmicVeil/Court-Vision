@@ -41,6 +41,15 @@ export const buildApiUrl = (endpoint) => {
   return `/api/${cleanEndpoint}`;
 };
 
+// True for requests to this app's own API (relative /api paths or the configured API
+// origin). Used to attach the session token only to our backend, never to third parties.
+export const isApiRequest = (url) => {
+  if (typeof url !== 'string') return false;
+  if (url.startsWith('/api')) return true;
+  const base = API_BASE_URL.replace(/\/$/, '');
+  return Boolean(base) && url.startsWith(`${base}/`);
+};
+
 // Commonly used API endpoints
 export const API_ENDPOINTS = {
   players: buildApiUrl('players'),

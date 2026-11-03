@@ -13,7 +13,7 @@ test("AI prediction favourites are authenticated, isolated from card clicks, and
   const source = readComponent("Predictions.jsx");
 
   assert.match(source, /import \{ getFavorites, toggleFavorite \} from '\.\.\/utils\/favorites'/);
-  assert.match(source, /import \{ isAuthenticated \} from '\.\.\/utils\/auth'/);
+  assert.match(source, /import \{ authHeaders, clearAuth, isAuthenticated \} from '\.\.\/utils\/auth'/);
   assert.match(source, /const \[favoriteIds, setFavoriteIds\] = useState\(new Set\(\)\)/);
   assert.match(source, /event\.stopPropagation\(\)/);
   assert.match(source, /if \(!isAuthenticated\(\)\) \{[\s\S]*setShowAuthModal\(true\)/);

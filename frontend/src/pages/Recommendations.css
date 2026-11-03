@@ -545,3 +545,67 @@
   .recommendation-card:hover,
   .recommendation-card:focus-within { transform: none; }
 }
+
+/* ---------- Signed-out / gated lock prompt ---------- */
+.predictions-locked {
+  margin: 2rem auto 0;
+  max-width: 560px;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  border: 1px solid rgba(255, 100, 54, 0.3);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(24, 24, 30, 0.9) 0%, rgba(14, 14, 18, 0.96) 100%);
+  box-shadow: 0 0 40px rgba(255, 100, 54, 0.12);
+}
+
+.predictions-locked-icon {
+  font-size: 2.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.predictions-locked-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.4rem;
+  letter-spacing: 0.02em;
+}
+
+.predictions-locked-desc {
+  margin: 0 auto 1.5rem;
+  max-width: 44ch;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.5;
+}
+
+.predictions-locked-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.predictions-locked .empty-cta {
+  display: inline-block;
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-weight: 600;
+  text-decoration: none;
+  color: #0e0e12;
+  background: var(--color-ember-orange, #ff6436);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.predictions-locked .empty-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 28px rgba(255, 100, 54, 0.6);
+}
+
+.predictions-locked .prediction-auth-secondary {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 100, 54, 0.3);
+}
+
+.predictions-locked .prediction-auth-secondary:hover {
+  background: rgba(255, 100, 54, 0.15);
+  border-color: var(--color-ember-orange, #ff6436);
+}

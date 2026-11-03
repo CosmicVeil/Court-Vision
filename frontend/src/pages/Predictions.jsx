@@ -10,7 +10,7 @@ import useListQuery from '../hooks/useListQuery';
 import ScrollReveal from '../components/ScrollReveal';
 import { PREDICTION_STATS } from '../config/predictionStats';
 import { getFavorites, toggleFavorite } from '../utils/favorites';
-import { isAuthenticated } from '../utils/auth';
+import { authHeaders, clearAuth, isAuthenticated } from '../utils/auth';
 import { buildApiUrl } from '../config/api';
 import { scrollToIfAbove } from '../utils/scroll';
 import { samePlayerName } from '../utils/playerNames';
@@ -66,6 +66,9 @@ const Predictions = () => {
   const [loadingPlayer, setLoadingPlayer] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState(new Set());
   const [showAuthModal, setShowAuthModal] = useState(false);
+  // True when the server returned only the signed-out preview slice.
+  const [isPreview, setIsPreview] = useState(!isAuthenticated());
+  const [sessionExpired, setSessionExpired] = useState(false);
   const gridRef = useRef(null);
   const resultsRef = useRef(null);
   useFlip(gridRef);
@@ -170,12 +173,21 @@ const Predictions = () => {
       if (selectedTeam) params.append('team', selectedTeam);
       if (selectedPosition) params.append('position', selectedPosition);
 
-      const response = await fetch(buildApiUrl(`predictions?${params}`), { signal });
+      const response = await fetch(buildApiUrl(`predictions?${params}`), {
+        signal,
+        headers: authHeaders(),
+      });
       if (!response.ok) throw new Error('Failed to fetch predictions');
 
       const data = await response.json();
       if (signal.aborted) return;
       setPredictions(data.predictions || []);
+      setIsPreview(Boolean(data.preview));
+      if (data.preview && isAuthenticated()) {
+        // A stored token that the server rejected has expired: drop it and ask to sign in again.
+        clearAuth();
+        setSessionExpired(true);
+      }
       setTotalPages(data.pagination?.total_pages || 1);
       setTotalPlayers(data.pagination?.total || 0);
     } catch (err) {
@@ -349,13 +361,33 @@ const Predictions = () => {
             })}
           </div>
 
-          <Pagination
-            page={currentPage}
-            totalPages={totalPages}
-            totalItems={totalPlayers}
-            pageSize={PREDICTIONS_PAGE_SIZE}
-            onPageChange={goToPage}
-          />
+          {isPreview ? (
+            <div className="predictions-locked" data-enter>
+              <div className="predictions-locked-icon" aria-hidden="true">🔒</div>
+              <h2 className="predictions-locked-title">
+                {sessionExpired ? 'Your session expired. Sign in again to see full predictions' : 'Sign in to see full predictions'}
+              </h2>
+              <p className="predictions-locked-desc">
+                You're viewing a free preview of the top {PREDICTIONS_PAGE_SIZE} players.
+                Create a free account to unlock the full searchable, sortable predictions
+                list, per-player projections and breakout recommendations.
+              </p>
+              <div className="predictions-locked-actions">
+                <Link to="/login" state={{ from: '/predictions' }} className="empty-cta">Log In</Link>
+                <Link to="/create-account" state={{ from: '/predictions' }} className="empty-cta prediction-auth-secondary">
+                  Create Account
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <Pagination
+              page={currentPage}
+              totalPages={totalPages}
+              totalItems={totalPlayers}
+              pageSize={PREDICTIONS_PAGE_SIZE}
+              onPageChange={goToPage}
+            />
+          )}
         </>
       )}
 

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import "./Auth.css";
 import { enterDelay } from "../utils/scrollReveal";
 import { signup } from "../utils/auth";
@@ -15,6 +15,9 @@ const FIELDS = [
 
 const SignUp = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  // Return to the page that prompted the sign-up, falling back to home.
+  const redirectTo = location.state?.from || "/";
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -97,7 +100,7 @@ const SignUp = () => {
     setLoading(false);
 
     if (result.success) {
-      navigate("/");
+      navigate(redirectTo, { replace: true });
       window.location.reload();
     } else {
       setSubmitError(result.message || "Failed to create account. Please try again.");
@@ -148,7 +151,7 @@ const SignUp = () => {
         <div className="auth-footer" data-enter style={enterDelay(4)}>
           <p>
             Already have an account?{" "}
-            <Link to="/login" className="auth-link">
+            <Link to="/login" state={{ from: redirectTo }} className="auth-link">
               Login
             </Link>
           </p>

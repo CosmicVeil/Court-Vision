@@ -79,3 +79,22 @@ def require_auth(f):
         return f(*args, **kwargs)
 
     return decorated_function
+
+
+def optional_auth(f):
+    """Attach request.user_id when a valid Bearer token is present, else leave it None.
+
+    Unlike require_auth this never rejects the request, so a route can serve a
+    limited public preview to signed-out callers and the full data to signed-in
+    ones by branching on request.user_id.
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        request.user_id = None
+        auth_header = request.headers.get('Authorization')
+        if auth_header and auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+            request.user_id = validate_token(token)
+        return f(*args, **kwargs)
+
+    return decorated_function

@@ -1,11 +1,15 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import "./Auth.css";
 import { enterDelay } from "../utils/scrollReveal";
 import { isAuthenticated, login } from "../utils/auth";
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  // Return the user to the page they were trying to view before being prompted
+  // to sign in. Falls back to home.
+  const redirectTo = location.state?.from || "/";
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -32,7 +36,7 @@ const Login = () => {
     setLoading(false);
 
     if (result.success) {
-      navigate("/");
+      navigate(redirectTo, { replace: true });
       window.location.reload();
     } else {
       setError(result.message || "Login failed. Please try again.");
@@ -92,7 +96,7 @@ const Login = () => {
         <div className="auth-footer" data-enter style={enterDelay(4)}>
           {!isAuthenticated() && <p>
             Don't have an account?{" "}
-            <Link to="/create-account" className="auth-link">
+            <Link to="/create-account" state={{ from: redirectTo }} className="auth-link">
               Create Account
             </Link>
           </p>}

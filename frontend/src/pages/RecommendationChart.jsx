@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import PlayerStatsModal from '../components/PlayerStatsModal';
 import { samePlayerName } from '../utils/playerNames';
+import { authHeaders, clearAuth } from '../utils/auth';
 import { enterDelay } from '../utils/scrollReveal';
 import './Recommendations.css';
 
@@ -10,6 +11,8 @@ const RecommendationChart = () => {
     const [players, setPlayers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    // Set when the endpoint rejects a signed-out / expired request (401).
+    const [needsAuth, setNeedsAuth] = useState(false);
 
     // States for player details modal
     const [selectedPlayer, setSelectedPlayer] = useState(null);
@@ -56,8 +59,18 @@ const RecommendationChart = () => {
         const fetchRecommendations = async () => {
             try {
                 setLoading(true);
-                const response = await fetch(`${API_BASE_URL}/recommendations/${stat}`);
+                setNeedsAuth(false);
+                const response = await fetch(`${API_BASE_URL}/recommendations/${stat}`, {
+                    headers: authHeaders(),
+                });
 
+                if (response.status === 401) {
+                    // Signed out or token expired: drop any stale token and prompt to sign in.
+                    clearAuth();
+                    setNeedsAuth(true);
+                    setError(null);
+                    return;
+                }
                 if (!response.ok) {
                     throw new Error(`Failed to fetch recommendations: ${response.status}`);
                 }
@@ -83,6 +96,27 @@ const RecommendationChart = () => {
                 <div className="spotlight-loader-wrap">
                     <div className="spotlight-spinner"></div>
                     <p className="spotlight-loader">Processing AI Trend Indexes...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (needsAuth) {
+        return (
+            <div className="recommendations-wrapper">
+                <div className="predictions-locked" data-enter>
+                    <div className="predictions-locked-icon" aria-hidden="true">🔒</div>
+                    <h2 className="predictions-locked-title">Sign in to see full predictions</h2>
+                    <p className="predictions-locked-desc">
+                        Breakout recommendations are a free account feature. Create an account
+                        or log in to unlock AI-projected breakout candidates.
+                    </p>
+                    <div className="predictions-locked-actions">
+                        <Link to="/login" state={{ from: `/recommendations/${stat}` }} className="empty-cta">Log In</Link>
+                        <Link to="/create-account" state={{ from: `/recommendations/${stat}` }} className="empty-cta prediction-auth-secondary">
+                            Create Account
+                        </Link>
+                    </div>
                 </div>
             </div>
         );
