@@ -31,6 +31,84 @@
   background: rgba(255, 100, 54, 0.06);
 }
 
+/* ---------- Controls (season selector) ---------- */
+.standings-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  max-width: 1320px;
+  margin: 0 auto 22px;
+  padding: 16px 20px;
+  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
+  border: 1px solid rgba(255, 100, 54, 0.18);
+  border-radius: var(--radius-xl, 20px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+}
+
+.standings-season {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.standings-season-label {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--color-stone, #8e8c94);
+}
+
+.standings-season select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  border: 1px solid rgba(255, 100, 54, 0.3);
+  border-radius: var(--radius-full, 9999px);
+  padding: 9px 38px 9px 18px;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  /* Caret */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ff6436' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+}
+
+.standings-season select:hover,
+.standings-season select:focus {
+  border-color: var(--color-ember-orange, #ff6436);
+  background-color: rgba(255, 100, 54, 0.1);
+  outline: none;
+}
+
+.standings-season select option {
+  background: #14141a;
+  color: #fff;
+}
+
+.standings-status {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--color-stone, #8e8c94);
+}
+
+.standings-grid[aria-busy='true'] {
+  opacity: 0.55;
+  transition: opacity 0.2s ease;
+}
+
 /* ---------- Layout ---------- */
 .standings-grid {
   display: grid;
@@ -78,15 +156,22 @@
   table-layout: fixed;
 }
 
-/* Keep the numeric/record columns tight so the Team column takes the slack. */
+/* Keep the numeric/record columns tight so the Team column takes the slack.
+   Record columns (Home/Away/L10) need room for two-digit records like 35-16. */
 .standings-table th.align-center,
 .standings-table td.align-center {
-  width: 7.5%;
+  width: 8.5%;
 }
 
 .standings-table th:first-child,
 .standings-table td:first-child {
-  width: 6%;
+  width: 5.5%;
+}
+
+/* Records and streaks shouldn't be clipped. */
+.standings-table td.align-center {
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .standings-table thead {

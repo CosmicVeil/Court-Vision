@@ -7,15 +7,22 @@ already reads live data from ESPN. So LeagueStandings is tried first and, if it
 fails for any reason, we fall back to ESPN's public standings API — the same
 provider used by app.services.live_games.
 
+Standings are available for any season the app has stats for: from
+game_archive.FIRST_GAME_LOG_SEASON (1993-94) through the current season.
+
 Public interface:
-  get_standings(force_refresh=False) -> Dict with keys:
+  get_standings(season=None, force_refresh=False) -> Dict with keys:
     {
       "east": [TeamStanding, ...],   # ordered by conference rank (seed 1..15)
       "west": [TeamStanding, ...],
-      "season": "2025-26",
+      "season": 2026,                # ESPN end year (2026 == 2025-26)
+      "season_label": "2025-26",
+      "seasons": [2026, 2025, ...],  # every selectable end year, newest first
       "source": "nba_api" | "espn",
       "updated_at": ISO-8601 UTC string,
     }
+
+  available_seasons() -> List[int]  # selectable end years, newest first
 
 Each TeamStanding is:
     {
@@ -24,6 +31,7 @@ Each TeamStanding is:
       "tricode": str,         # e.g. "BOS"
       "team": str,            # full name, e.g. "Boston Celtics"
       "logo": str,            # NBA CDN logo URL
+      "logo_fallback": str,   # ESPN PNG logo, used if the NBA SVG fails to load
       "wins": int,
       "losses": int,
       "pct": float,           # win percentage, 0..1 (3 dp)
@@ -42,28 +50,51 @@ from typing import Dict, List, Optional
 
 import requests
 
+from app.services.game_archive import (
+    FIRST_GAME_LOG_SEASON,
+    current_season_year,
+    season_label,
+)
 from app.services.live_games import TEAM_IDS, TEAM_LOGOS, _normalize_tricode
 
 # ---------------------------------------------------------------------------
-# Hourly cache
+# Hourly cache, keyed by season end year
 # ---------------------------------------------------------------------------
 CACHE_TTL = 3600  # 1 hour
-_cache: Dict[str, object] = {"data": None, "ts": 0.0}
+_cache: Dict[int, Dict] = {}
 _lock = threading.Lock()
 
 _ESPN_STANDINGS = "https://site.api.espn.com/apis/v2/sports/basketball/nba/standings"
 
-# NBA team id -> full display name, for the nba_api path (which gives city + name).
+# NBA team id -> tricode, for the nba_api path.
 _ID_TO_TRICODE = {tid: tri for tri, tid in TEAM_IDS.items()}
 
 
-def _current_season() -> str:
-    """Return the current NBA season string, e.g. '2025-26'."""
-    now = datetime.now()
-    year = now.year
-    if now.month < 7:
-        return f"{year - 1}-{str(year)[2:]}"
-    return f"{year}-{str(year + 1)[2:]}"
+def available_seasons() -> List[int]:
+    """Selectable standings seasons as ESPN end years, newest first.
+
+    Bounded by the app's own stats coverage: FIRST_GAME_LOG_SEASON (1993-94)
+    through the current season.
+    """
+    newest = current_season_year()
+    return list(range(newest, FIRST_GAME_LOG_SEASON - 1, -1))
+
+
+def _resolve_season(season: Optional[object]) -> int:
+    """Clamp a requested season (end year) into the available range.
+
+    Accepts an int, a numeric string ('2015'), or None/'current' for the
+    current season. Anything out of range is clamped to the nearest valid year.
+    """
+    seasons = available_seasons()
+    newest, oldest = seasons[0], seasons[-1]
+    if season is None or str(season).lower() in ("", "current", "latest"):
+        return newest
+    try:
+        year = int(str(season).strip())
+    except (TypeError, ValueError):
+        return newest
+    return max(oldest, min(newest, year))
 
 
 def _pct(wins: int, losses: int) -> float:
@@ -85,7 +116,7 @@ def _espn_logo_for(tricode: str) -> str:
 # Primary source: nba_api LeagueStandings (stats.nba.com)
 # ---------------------------------------------------------------------------
 
-def _fetch_from_nba_api(season: str) -> Optional[Dict[str, List[Dict]]]:
+def _fetch_from_nba_api(season_lbl: str) -> Optional[Dict[str, List[Dict]]]:
     try:
         from nba_api.stats.endpoints import leaguestandings
     except ImportError:
@@ -93,7 +124,7 @@ def _fetch_from_nba_api(season: str) -> Optional[Dict[str, List[Dict]]]:
 
     try:
         resp = leaguestandings.LeagueStandings(
-            season=season, season_type="Regular Season", timeout=15,
+            season=season_lbl, season_type="Regular Season", timeout=15,
         )
         rows = resp.get_normalized_dict().get("Standings", [])
     except Exception as exc:
@@ -173,9 +204,9 @@ def _espn_stat_value(entry: Dict, name: str, default=0.0) -> float:
     return default
 
 
-def _fetch_from_espn() -> Optional[Dict[str, List[Dict]]]:
+def _fetch_from_espn(season_year: int) -> Optional[Dict[str, List[Dict]]]:
     try:
-        r = requests.get(_ESPN_STANDINGS, timeout=15)
+        r = requests.get(_ESPN_STANDINGS, params={"season": season_year}, timeout=15)
         r.raise_for_status()
         data = r.json()
     except Exception as exc:
@@ -251,48 +282,54 @@ def _espn_logo(team_info: Dict) -> str:
 # Public API
 # ---------------------------------------------------------------------------
 
-def _build() -> Dict:
-    season = _current_season()
+def _build(season_year: int) -> Dict:
+    label = season_label(season_year)
     source = "nba_api"
-    conferences = _fetch_from_nba_api(season)
+    conferences = _fetch_from_nba_api(label)
     if conferences is None:
         source = "espn"
-        conferences = _fetch_from_espn()
+        conferences = _fetch_from_espn(season_year)
     if conferences is None:
-        raise RuntimeError("Both nba_api and ESPN standings sources failed")
+        raise RuntimeError(f"Both nba_api and ESPN standings sources failed for {label}")
 
     return {
         "east": conferences["east"],
         "west": conferences["west"],
-        "season": season,
+        "season": season_year,
+        "season_label": label,
+        "seasons": available_seasons(),
         "source": source,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
 
 
-def get_standings(force_refresh: bool = False) -> Dict:
-    """Return conference standings, refreshing from source at most once per hour."""
+def get_standings(season: Optional[object] = None, force_refresh: bool = False) -> Dict:
+    """Return conference standings for a season, refreshing at most once per hour.
+
+    season is an ESPN end year (2026 == 2025-26); None means the current season.
+    Out-of-range values are clamped to the available range.
+    """
+    year = _resolve_season(season)
     now = time.time()
-    cached = _cache["data"]
-    if not force_refresh and cached is not None and now - _cache["ts"] < CACHE_TTL:
-        return cached
+    cached = _cache.get(year)
+    if not force_refresh and cached is not None and now - cached["ts"] < CACHE_TTL:
+        return cached["data"]
 
     with _lock:
         # Another thread may have refreshed while we waited for the lock.
         now = time.time()
-        cached = _cache["data"]
-        if not force_refresh and cached is not None and now - _cache["ts"] < CACHE_TTL:
-            return cached
+        cached = _cache.get(year)
+        if not force_refresh and cached is not None and now - cached["ts"] < CACHE_TTL:
+            return cached["data"]
 
         try:
-            data = _build()
+            data = _build(year)
         except Exception as exc:
             # Serve stale data rather than failing if we have any.
             if cached is not None:
                 print(f"[standings] refresh failed, serving stale cache: {exc}")
-                return cached
+                return cached["data"]
             raise
 
-        _cache["data"] = data
-        _cache["ts"] = time.time()
+        _cache[year] = {"data": data, "ts": time.time()}
         return data

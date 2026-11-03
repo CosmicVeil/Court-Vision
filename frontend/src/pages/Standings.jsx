@@ -50,6 +50,9 @@ const formatPct = (pct) => {
 
 const formatGb = (gb) => (!gb || Number(gb) === 0 ? '—' : Number(gb).toFixed(1));
 
+// ESPN end year (2026) -> "2025-26" for display.
+const seasonLabel = (year) => `${year - 1}-${String(year).slice(-2)}`;
+
 function ConferenceTable({ title, teams, sort, onSort }) {
   const sorted = useMemo(() => {
     const getValue = comparatorFor(sort.key, COLUMNS.find((c) => c.key === sort.key)?.numeric);
@@ -143,16 +146,21 @@ const Standings = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // null means "current season" until the first response tells us which year that is.
+  const [season, setSeason] = useState(null);
   // Each conference keeps its own sort so sorting one table never reorders the other.
   const [eastSort, setEastSort] = useState({ key: 'rank', dir: 'asc' });
   const [westSort, setWestSort] = useState({ key: 'rank', dir: 'asc' });
 
+  // Refetch whenever the chosen season changes. Each change aborts the previous
+  // request so a slow older response can't overwrite a newer one.
   useEffect(() => {
     const controller = new AbortController();
     const fetchStandings = async () => {
       try {
         setLoading(true);
-        const response = await fetch(buildApiUrl('standings'), { signal: controller.signal });
+        const url = season ? buildApiUrl(`standings?season=${season}`) : buildApiUrl('standings');
+        const response = await fetch(url, { signal: controller.signal });
         if (!response.ok) throw new Error('Failed to fetch standings');
         const json = await response.json();
         if (controller.signal.aborted) return;
@@ -167,7 +175,11 @@ const Standings = () => {
     };
     fetchStandings();
     return () => controller.abort();
-  }, []);
+  }, [season]);
+
+  // Available seasons come from the backend (bounded by the app's stats coverage).
+  const seasonOptions = data?.seasons || [];
+  const activeSeason = data?.season ?? season;
 
   // Clicking a column toggles direction; a new column starts descending for numbers
   // (best first) and ascending for text/records.
@@ -186,7 +198,7 @@ const Standings = () => {
       lead="All 30 teams ranked by conference, with playoff and play-in seeding"
       stats={[
         { key: 'teams', label: 'Teams', value: data ? '30' : '—' },
-        { key: 'season', label: 'Season', value: data?.season || '—' },
+        { key: 'season', label: 'Season', value: data?.season_label || (activeSeason ? seasonLabel(activeSeason) : '—') },
         { key: 'east', label: 'East', value: data ? String(data.east?.length || 0) : '—' },
         { key: 'west', label: 'West', value: data ? String(data.west?.length || 0) : '—' },
       ]}
@@ -219,7 +231,27 @@ const Standings = () => {
   return (
     <div className="standings-container">
       {hero}
-      <div className="standings-grid">
+
+      <div className="standings-controls">
+        <label className="standings-season" htmlFor="standings-season-select">
+          <span className="standings-season-label">Season</span>
+          <select
+            id="standings-season-select"
+            value={activeSeason ?? ''}
+            onChange={(e) => setSeason(Number(e.target.value))}
+            disabled={!seasonOptions.length}
+          >
+            {seasonOptions.map((year) => (
+              <option key={year} value={year}>{seasonLabel(year)}</option>
+            ))}
+          </select>
+        </label>
+        <span className="standings-status" role="status">
+          {loading ? 'Updating…' : `Source: ${data.source === 'nba_api' ? 'NBA Stats' : 'ESPN'}`}
+        </span>
+      </div>
+
+      <div className="standings-grid" aria-busy={loading}>
         <ConferenceTable
           title="Eastern Conference"
           teams={data.east || []}
