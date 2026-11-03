@@ -232,7 +232,8 @@
 
 .rank-cell {
   font-weight: 800;
-  color: var(--color-stone, #8e8c94);
+  color: #ffffff;
+  position: relative;
 }
 
 /* ---------- Team cell ---------- */
@@ -265,22 +266,25 @@
   color: var(--color-stone, #8e8c94);
 }
 
-/* ---------- Playoff / Play-In zones ---------- */
-/* The guaranteed-playoff rows (1-6) carry a subtle ember rail on the rank cell. */
-.zone-playoff .rank-cell {
-  color: var(--color-ember-orange, #ff6436);
-  box-shadow: inset 3px 0 0 var(--color-ember-orange, #ff6436);
+/* ---------- Playoff / Play-In side rails ----------
+   A colored bar on the left edge of each team's row: orange = guaranteed
+   playoff (seeds 1-6), blue = play-in (7-10). No box, no divider line. */
+.zone-playoff .rank-cell::before,
+.zone-playin .rank-cell::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
 }
 
-.zone-playin .rank-cell {
-  color: #ffce6d;
-  box-shadow: inset 3px 0 0 rgba(255, 206, 109, 0.7);
+.zone-playoff .rank-cell::before {
+  background: var(--color-ember-orange, #ff6436);
 }
 
-/* The visual separator between the 6th and 7th seed. */
-.standings-table tbody tr.playoff-cutoff td {
-  border-top: 2px solid var(--color-ember-orange, #ff6436);
-  box-shadow: 0 -4px 12px rgba(255, 100, 54, 0.25);
+.zone-playin .rank-cell::before {
+  background: #3b82f6;
 }
 
 /* ---------- Streak coloring ---------- */
@@ -299,18 +303,19 @@
   color: var(--color-stone, #8e8c94);
 }
 
-.legend-dot {
+.legend-rail {
   display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
   margin-left: 10px;
+  vertical-align: middle;
 }
 
-.legend-dot:first-child { margin-left: 0; }
+.legend-rail:first-child { margin-left: 0; }
 
 .legend-playoff { background: var(--color-ember-orange, #ff6436); }
-.legend-playin { background: #ffce6d; }
+.legend-playin { background: #3b82f6; }
 
 /* ---------- Small screens: swap full name for tricode ---------- */
 @media (max-width: 640px) {

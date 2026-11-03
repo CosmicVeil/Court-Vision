@@ -68,8 +68,6 @@ function ConferenceTable({ title, teams, sort, onSort }) {
     return copy;
   }, [teams, sort]);
 
-  // The playoff/play-in divider only makes sense while the table is in seed order.
-  const showDivider = sort.key === 'rank' && sort.dir === 'asc';
   const arrow = (key) => (sort.key === key ? (sort.dir === 'asc' ? '↑' : '↓') : '');
 
   return (
@@ -95,10 +93,10 @@ function ConferenceTable({ title, teams, sort, onSort }) {
           <tbody>
             {sorted.map((team, index) => {
               const seed = team.rank;
+              // Side rail by seed: orange = guaranteed playoff (1-6), blue = play-in (7-10).
               const zone = seed <= PLAYOFF_CUTOFF ? 'playoff' : seed <= 10 ? 'playin' : 'out';
-              const needsDivider = showDivider && index > 0 && sorted[index - 1].rank <= PLAYOFF_CUTOFF && seed > PLAYOFF_CUTOFF;
               return (
-                <tr key={team.team_id || team.tricode || index} className={`zone-${zone} ${needsDivider ? 'playoff-cutoff' : ''}`}>
+                <tr key={team.team_id || team.tricode || index} className={`zone-${zone}`}>
                   <td className="align-center rank-cell">{seed}</td>
                   <td className="align-left team-cell">
                     <img
@@ -135,8 +133,8 @@ function ConferenceTable({ title, teams, sort, onSort }) {
         </table>
       </div>
       <p className="standings-legend">
-        <span className="legend-dot legend-playoff" /> Playoff (1-6)
-        <span className="legend-dot legend-playin" /> Play-In (7-10)
+        <span className="legend-rail legend-playoff" /> Playoff (1-6)
+        <span className="legend-rail legend-playin" /> Play-In (7-10)
       </p>
     </section>
   );
