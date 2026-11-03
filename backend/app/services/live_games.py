@@ -330,7 +330,7 @@ def _roster_from_pkl(tricode: str, nba_data: Optional[List[Dict]]) -> List[Dict]
 
 def _todays_date_str() -> str:
     """Return today's date in YYYYMMDD format (Eastern Time)."""
-    return datetime.now(timezone(timedelta(hours=-4))).strftime("%Y%m%d")
+    return datetime.now(_ET).strftime("%Y%m%d")
 
 
 def _current_season() -> str:
@@ -343,7 +343,7 @@ def _current_season() -> str:
 
 
 def _filter_games_by_days(games: List[Dict], days: int) -> List[Dict]:
-    today = datetime.now(timezone(timedelta(hours=-4))).date()
+    today = datetime.now(_ET).date()
     cutoff = today + timedelta(days=days)
     filtered: List[Dict] = []
 
@@ -475,7 +475,7 @@ def _upcoming_month_events(start_date, end_date) -> Optional[List[Dict]]:
 
 def _fetch_upcoming_games(days: int, nba_data: Optional[List[Dict]]) -> Optional[List[Dict]]:
     """Return games from tomorrow through *days* ahead, or None if ESPN failed."""
-    today = datetime.now(timezone(timedelta(hours=-4))).date()
+    today = datetime.now(_ET).date()
     upcoming: List[Dict] = []
 
     start_date = today + timedelta(days=1)
@@ -492,7 +492,7 @@ def _fetch_upcoming_games(days: int, nba_data: Optional[List[Dict]]) -> Optional
 
         try:
             event_dt = datetime.fromisoformat(event.get("date", "").replace("Z", "+00:00"))
-            et_dt = event_dt.astimezone(timezone(timedelta(hours=-4)))
+            et_dt = event_dt.astimezone(_ET)
             date_str = et_dt.strftime("%Y%m%d")
             status_text = et_dt.strftime("%b %d")
         except Exception:
