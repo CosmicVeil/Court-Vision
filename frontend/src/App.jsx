@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home.jsx";
 import Stats from "./pages/Stats.jsx";
+import Standings from "./pages/Standings.jsx";
 import Recommendations from "./pages/Recommendations.jsx";
 import Favourites from "./pages/Favourites.jsx";
 import Login from "./pages/Login.jsx";
@@ -23,6 +24,7 @@ function App() {
         <Route element={<AppShell />}>
           <Route path="/" element={<Home />} />
           <Route path="/stats" element={<Stats />} />
+          <Route path="/standings" element={<Standings />} />
           <Route path="/recommendations" element={<Recommendations />} />
           <Route path="/favourites" element={<Favourites />} />
           <Route path="/login" element={<Login />} />

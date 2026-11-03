@@ -1,6 +1,7 @@
 // Primary site navigation, in the order the header shows it.
 export const NAV_LINKS = [
   { to: '/stats', label: 'STATS' },
+  { to: '/standings', label: 'STANDINGS' },
   { to: '/games', label: 'LIVE GAMES' },
   { to: '/predictions', label: 'PREDICTIONS' },
   { to: '/recommendations', label: 'RECOMMENDATIONS' },
