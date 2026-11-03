@@ -135,6 +135,8 @@ export const signup = async (firstName, lastName, email, password) => {
 export const logout = async () => {
   try {
     const token = getAuthToken();
+    // Sign out on this device immediately; server invalidation can finish in the background.
+    clearAuth();
     if (token) {
       await fetch(`${API_BASE_URL}/auth/logout`, {
         method: 'POST',
@@ -146,8 +148,6 @@ export const logout = async () => {
     }
   } catch (error) {
     console.error('Logout error:', error);
-  } finally {
-    clearAuth();
   }
 };
 

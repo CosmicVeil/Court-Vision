@@ -12,6 +12,8 @@ export default function SiteHeader() {
   const { pathname } = useLocation();
   const [user, setUser] = useState(readUser);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  // Keep the open panel's content unchanged while it fades closed after logout.
+  const [dropdownUser, setDropdownUser] = useState(user);
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const headerRef = useRef(null);
@@ -50,10 +52,10 @@ export default function SiteHeader() {
     };
   }, [dropdownOpen, menuOpen]);
 
-  const handleLogout = async () => {
-    await logout();
-    setUser(null);
+  const handleLogout = () => {
     setDropdownOpen(false);
+    logout();
+    setUser(null);
     navigate('/');
   };
 
@@ -75,33 +77,35 @@ export default function SiteHeader() {
           </button>
           <div className="header-profile">
             <button type="button" className="profile-btn" aria-label="Account" aria-expanded={dropdownOpen}
-              onClick={() => { setDropdownOpen(open => !open); setMenuOpen(false); }}>
+              onClick={() => {
+                if (!dropdownOpen) setDropdownUser(user);
+                setDropdownOpen(open => !open);
+                setMenuOpen(false);
+              }}>
               {user
                 ? <div className="profile-initials">{getInitials(user)}</div>
                 : <img src="/images/profile_image.jpg" alt="" className="profile-img" />}
             </button>
-            {dropdownOpen && (
-              <div className="profile-dropdown">
-                {user ? (
-                  <>
-                    <div className="dropdown-user-info">
-                      <div className="dropdown-user-name">{user.first_name} {user.last_name}</div>
-                      <div className="dropdown-user-email">{user.email}</div>
-                    </div>
-                    <div className="dropdown-divider" />
-                    <Link to="/favourites" className="dropdown-item" onClick={closeAll}>My Favourites</Link>
-                    <Link to="/recommendations" className="dropdown-item" onClick={closeAll}>Recommendations</Link>
-                    <div className="dropdown-divider" />
-                    <button type="button" className="dropdown-item logout-btn" onClick={handleLogout}>Logout</button>
-                  </>
-                ) : (
-                  <>
-                    <Link to="/login" className="dropdown-item" onClick={closeAll}>Login</Link>
-                    <Link to="/create-account" className="dropdown-item" onClick={closeAll}>Create Account</Link>
-                  </>
-                )}
-              </div>
-            )}
+            <div className={`profile-dropdown ${dropdownOpen ? 'open' : ''}`} inert={!dropdownOpen}>
+              {dropdownUser ? (
+                <>
+                  <div className="dropdown-user-info">
+                    <div className="dropdown-user-name">{dropdownUser.first_name} {dropdownUser.last_name}</div>
+                    <div className="dropdown-user-email">{dropdownUser.email}</div>
+                  </div>
+                  <div className="dropdown-divider" />
+                  <Link to="/favourites" className="dropdown-item" onClick={closeAll}>My Favourites</Link>
+                  <Link to="/recommendations" className="dropdown-item" onClick={closeAll}>Recommendations</Link>
+                  <div className="dropdown-divider" />
+                  <button type="button" className="dropdown-item logout-btn" onClick={handleLogout}>Logout</button>
+                </>
+              ) : (
+                <>
+                  <Link to="/login" className="dropdown-item" onClick={closeAll}>Login</Link>
+                  <Link to="/create-account" className="dropdown-item" onClick={closeAll}>Create Account</Link>
+                </>
+              )}
+            </div>
           </div>
         </div>
         <nav id="site-menu" className="header-menu" aria-label="Main" hidden={!menuOpen}>{links}</nav>

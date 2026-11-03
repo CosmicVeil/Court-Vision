@@ -101,6 +101,7 @@ Every route renders inside one **layout route** in `App.jsx`: `<Route element={<
 - **Solid on scroll** without a scroll listener: a hidden 80px sentinel at the top of the document is watched by an `IntersectionObserver`, and the header gets `.scrolled` once it leaves the viewport.
 - **Below 1100px** the link row (which needs about 1080px) is replaced by a menu button: a disclosure (`aria-expanded`, `aria-controls="site-menu"`) that opens the same links as a panel. Escape or a click outside closes it. Below 768px the header padding shrinks.
 - **Login and SignUp** show the header too, so people can leave the form.
+- **Account dropdown** stays mounted and toggles `.open` with the phone menu's fade/slide motion and brand timing tokens; it is inert when closed. Logout clears local auth immediately while the server request finishes in the background, preserving the closing panel's content and fading in the default avatar. Reduced motion disables both transitions.
 - Header styles live in `src/components/SiteHeader.css` (moved out of `Home.css`).
 
 ## Phase 1 scope: Live Games (`/games`)
