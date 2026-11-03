@@ -101,5 +101,28 @@ class UpcomingGamesTests(unittest.TestCase):
         self.assertEqual(len(live_games._load_upcoming_csv("20261220")), 1)
 
 
+class TodaysDateTests(unittest.TestCase):
+    def requested_date_at(self, utc_now):
+        class Clock(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return utc_now.astimezone(tz)
+
+        live_games._cache.clear()
+        with patch.object(live_games, "datetime", Clock), \
+             patch.object(live_games, "_get", return_value=None) as get:
+            live_games.get_todays_games()
+        return get.call_args.kwargs["params"]["dates"]
+
+    def test_uses_eastern_date_after_dst_ends(self):
+        # 11:21pm EST on Nov 2: a fixed UTC-4 offset would already say Nov 3.
+        self.assertEqual(self.requested_date_at(datetime(2026, 11, 3, 4, 21, tzinfo=timezone.utc)), "20261102")
+        self.assertEqual(self.requested_date_at(datetime(2026, 11, 3, 5, 1, tzinfo=timezone.utc)), "20261103")
+
+    def test_uses_eastern_date_during_dst(self):
+        # 11:30pm EDT on Oct 14.
+        self.assertEqual(self.requested_date_at(datetime(2026, 10, 15, 3, 30, tzinfo=timezone.utc)), "20261014")
+
+
 if __name__ == "__main__":
     unittest.main()
