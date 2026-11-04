@@ -1562,3 +1562,81 @@ html[data-motion] .detail-momentum:not([data-revealed]) .period-bar { transform:
 .court-halfline { stroke: rgba(224, 196, 170, 0.4); }
 
 /* --- shot dots --- */
+.shot-dot {
+  stroke-width: 0.28;
+  cursor: pointer;
+  transition: r var(--duration-fast) var(--ease-brand);
+}
+.shot-dot.is-missed { stroke-width: 0.32; }
+.shot-dot:focus-visible { outline: none; }
+.shot-dot.is-active { stroke-width: 0.4; }
+
+.shotchart-empty, .pbp-empty {
+  padding: calc(var(--space) * 8);
+  text-align: center;
+  color: var(--color-stone);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+/* --- shot chart controls --- */
+.shotchart-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: calc(var(--space) * 4);
+  margin-bottom: calc(var(--space) * 4);
+}
+
+.shotchart-filter {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space) * 2);
+}
+.shotchart-filter-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--color-stone);
+}
+.shotchart-filter select {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  color: #fff;
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  max-width: 200px;
+}
+
+.shotchart-legend {
+  display: flex;
+  gap: calc(var(--space) * 4);
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-stone);
+}
+.legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.legend-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  border: 2px solid var(--color-stone);
+}
+.legend-dot.made { background: var(--color-stone); }
+.legend-dot.missed { background: transparent; }
+
+.shotchart-summary {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  font-size: var(--text-lg);
+}
+.shotchart-pct {
+  font-size: var(--text-xs);
+  color: var(--color-stone);
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+/* --- tooltip --- */
