@@ -1,5 +1,5 @@
 """
-live_games.py — NBA game data via ESPN's public API
+live_games.py ΓÇö NBA game data via ESPN's public API
 
 Switched from stats.nba.com (blocked on cloud servers) to ESPN's public API
 which works reliably from any hosting platform including Render.
@@ -53,7 +53,7 @@ _UPCOMING_COLUMNS = [
     "away_record",
 ]
 
-# ESPN sometimes uses shortened abbreviations — map them to standard tricodes
+# ESPN sometimes uses shortened abbreviations ΓÇö map them to standard tricodes
 ESPN_TO_TRICODE = {
     "GS": "GSW", "SA": "SAS", "NO": "NOP", "NY": "NYK", "WSH": "WAS",
 }
@@ -72,6 +72,16 @@ TEAM_IDS = {
 TEAM_LOGOS = {
     t: f"https://cdn.nba.com/logos/nba/{tid}/global/L/logo.svg"
     for t, tid in TEAM_IDS.items()
+}
+# ESPN tags each play's team with its own numeric team id (not the NBA.com id above).
+# This maps ESPN team id -> our standard tricode so play-by-play can be coloured by team.
+ESPN_TEAM_ID_TO_TRICODE = {
+    "1": "ATL", "2": "BOS", "17": "BKN", "30": "CHA", "4": "CHI",
+    "5": "CLE", "6": "DAL", "7": "DEN", "8": "DET", "9": "GSW",
+    "10": "HOU", "11": "IND", "12": "LAC", "13": "LAL", "29": "MEM",
+    "14": "MIA", "15": "MIL", "16": "MIN", "3": "NOP", "18": "NYK",
+    "25": "OKC", "19": "ORL", "20": "PHI", "21": "PHX", "22": "POR",
+    "23": "SAC", "24": "SAS", "28": "TOR", "26": "UTA", "27": "WAS",
 }
 
 # ---------------------------------------------------------------------------
@@ -534,7 +544,7 @@ def get_todays_games(nba_data: Optional[List[Dict]] = None) -> List[Dict]:
         away_tri = game["away"]["tricode"]
 
         if game["status"] in (2, 3):
-            # Live or final — fetch real boxscore
+            # Live or final ΓÇö fetch real boxscore
             players = _fetch_boxscore(game["gameId"], home_tri, away_tri)
             if players["home"] or players["away"]:
                 _apply_boxscore_teams(players, home_tri, away_tri, nba_data)
@@ -544,7 +554,7 @@ def get_todays_games(nba_data: Optional[List[Dict]] = None) -> List[Dict]:
                 game["players"]["home"] = _roster_from_pkl(home_tri, nba_data)
                 game["players"]["away"] = _roster_from_pkl(away_tri, nba_data)
         else:
-            # Scheduled later today — show season rosters
+            # Scheduled later today ΓÇö show season rosters
             game["players"]["home"] = _roster_from_pkl(home_tri, nba_data)
             game["players"]["away"] = _roster_from_pkl(away_tri, nba_data)
 
