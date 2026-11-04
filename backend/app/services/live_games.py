@@ -1,5 +1,5 @@
 """
-live_games.py ΓÇö NBA game data via ESPN's public API
+live_games.py — NBA game data via ESPN's public API
 
 Switched from stats.nba.com (blocked on cloud servers) to ESPN's public API
 which works reliably from any hosting platform including Render.
@@ -53,7 +53,7 @@ _UPCOMING_COLUMNS = [
     "away_record",
 ]
 
-# ESPN sometimes uses shortened abbreviations ΓÇö map them to standard tricodes
+# ESPN sometimes uses shortened abbreviations — map them to standard tricodes
 ESPN_TO_TRICODE = {
     "GS": "GSW", "SA": "SAS", "NO": "NOP", "NY": "NYK", "WSH": "WAS",
 }
@@ -73,6 +73,7 @@ TEAM_LOGOS = {
     t: f"https://cdn.nba.com/logos/nba/{tid}/global/L/logo.svg"
     for t, tid in TEAM_IDS.items()
 }
+
 # ESPN tags each play's team with its own numeric team id (not the NBA.com id above).
 # This maps ESPN team id -> our standard tricode so play-by-play can be coloured by team.
 ESPN_TEAM_ID_TO_TRICODE = {
@@ -544,7 +545,7 @@ def get_todays_games(nba_data: Optional[List[Dict]] = None) -> List[Dict]:
         away_tri = game["away"]["tricode"]
 
         if game["status"] in (2, 3):
-            # Live or final ΓÇö fetch real boxscore
+            # Live or final — fetch real boxscore
             players = _fetch_boxscore(game["gameId"], home_tri, away_tri)
             if players["home"] or players["away"]:
                 _apply_boxscore_teams(players, home_tri, away_tri, nba_data)
@@ -554,7 +555,7 @@ def get_todays_games(nba_data: Optional[List[Dict]] = None) -> List[Dict]:
                 game["players"]["home"] = _roster_from_pkl(home_tri, nba_data)
                 game["players"]["away"] = _roster_from_pkl(away_tri, nba_data)
         else:
-            # Scheduled later today ΓÇö show season rosters
+            # Scheduled later today — show season rosters
             game["players"]["home"] = _roster_from_pkl(home_tri, nba_data)
             game["players"]["away"] = _roster_from_pkl(away_tri, nba_data)
 
@@ -570,7 +571,6 @@ def get_todays_games(nba_data: Optional[List[Dict]] = None) -> List[Dict]:
 # ESPN marks free throws as shooting plays but gives them a sentinel coordinate
 # (int32 min, ~-2.1e9). Any coordinate this far out of range is not a court location.
 _COORD_SENTINEL_LIMIT = 1000
-
 
 def _play_category(type_text: str, description: str, score_value: int,
                    scoring: bool, shooting: bool) -> str:
@@ -597,6 +597,7 @@ def _play_category(type_text: str, description: str, score_value: int,
         return "score" if scoring else "miss"
     return "event"
 
+
 def _parse_play(play: Dict) -> Optional[Dict]:
     """Convert one ESPN play object into our internal shape."""
     try:
@@ -613,7 +614,7 @@ def _parse_play(play: Dict) -> Optional[Dict]:
         team_id = str(team_obj.get("id", "")) if team_obj else ""
         tricode = ESPN_TEAM_ID_TO_TRICODE.get(team_id, "")
 
-        # Shot coordinate (field goals only - free throws carry a sentinel value).
+        # Shot coordinate (field goals only — free throws carry a sentinel value).
         shot = None
         coord = play.get("coordinate") or {}
         cx, cy = coord.get("x"), coord.get("y")
@@ -650,6 +651,92 @@ def _parse_play(play: Dict) -> Optional[Dict]:
     except Exception as exc:
         print(f"[live_games] play parse error: {exc}")
         return None
+
+
+def get_playbyplay(game_id: str) -> Dict:
+    """Return play-by-play feed and shot chart data for a game from ESPN.
+
+    Shape:
+      {
+        "gameId": str,
+        "available": bool,          # False when ESPN has no plays yet (scheduled game)
+        "plays":  [ {play}, ... ],  # newest last (chronological, as ESPN returns)
+        "shots":  [ {shot + player + team}, ... ],
+        "teams":  {"home": tricode, "away": tricode},
+      }
+    """
+    data = _get(_SUMMARY, params={"event": str(game_id)})
+    empty = {"gameId": str(game_id), "available": False, "plays": [], "shots": [],
+             "teams": {"home": "", "away": ""}}
+    if not data:
+        return empty
+
+    # Resolve home/away tricodes from the header so shots can be side-coloured.
+    home_tri = away_tri = ""
+    try:
+        competitors = (data.get("header", {}).get("competitions", [{}])[0]
+                       .get("competitors", []))
+        for comp in competitors:
+            tri = ESPN_TEAM_ID_TO_TRICODE.get(str(comp.get("id", "")),
+                                              _normalize_tricode(comp.get("team", {}).get("abbreviation", "")))
+            if comp.get("homeAway") == "home":
+                home_tri = tri
+            elif comp.get("homeAway") == "away":
+                away_tri = tri
+    except Exception as exc:
+        print(f"[live_games] pbp header parse error: {exc}")
+
+    # Map ESPN athlete id -> display name from the boxscore (plays only carry athlete ids).
+    athlete_names: Dict[str, str] = {}
+    try:
+        for team_obj in data.get("boxscore", {}).get("players", []):
+            for group in team_obj.get("statistics", []):
+                for ath_obj in group.get("athletes", []):
+                    ath = ath_obj.get("athlete", {})
+                    athlete_names[str(ath.get("id", ""))] = ath.get("displayName", "")
+    except Exception as exc:
+        print(f"[live_games] pbp athlete map error: {exc}")
+
+    raw_plays = data.get("plays") or []
+    if not raw_plays:
+        return {**empty, "available": False, "teams": {"home": home_tri, "away": away_tri}}
+
+    plays: List[Dict] = []
+    shots: List[Dict] = []
+    for raw in raw_plays:
+        parsed = _parse_play(raw)
+        if not parsed:
+            continue
+
+        # Resolve shooter name from the first participant athlete id.
+        shooter = ""
+        participants = raw.get("participants") or []
+        if participants:
+            ath_id = str(participants[0].get("athlete", {}).get("id", ""))
+            shooter = athlete_names.get(ath_id, "")
+        parsed["player"] = shooter
+        parsed["playerId"] = player_id_for(shooter) if shooter else None
+
+        plays.append(parsed)
+
+        if parsed["shot"] is not None:
+            shots.append({
+                **parsed["shot"],
+                "player": shooter,
+                "playerId": parsed["playerId"],
+                "team": parsed["team"],
+                "period": parsed["period"],
+                "clock": parsed["clock"],
+            })
+
+    return {
+        "gameId": str(game_id),
+        "available": True,
+        "plays": plays,
+        "shots": shots,
+        "teams": {"home": home_tri, "away": away_tri},
+    }
+
 
 def get_upcoming_games(days: int = 365, nba_data: Optional[List[Dict]] = None) -> List[Dict]:
     """Return scheduled games in the next *days* days, cached in nba_upcoming_data.csv."""
