@@ -4,7 +4,7 @@ from flask import Blueprint, jsonify, request
 
 from app import state
 from app.services.game_archive import archive_finished_games
-from app.services.live_games import get_todays_games, get_upcoming_games
+from app.services.live_games import get_playbyplay, get_todays_games, get_upcoming_games
 
 bp = Blueprint('games', __name__, url_prefix='/api/games')
 
