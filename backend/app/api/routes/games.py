@@ -45,6 +45,17 @@ def get_upcoming():
         return jsonify({'error': 'Failed to fetch upcoming games', 'games': []}), 500
 
 
+@bp.route('/<string:game_id>/playbyplay', methods=['GET'])
+def get_game_playbyplay(game_id):
+    try:
+        data = get_playbyplay(game_id)
+        return jsonify(data), 200
+    except Exception as e:
+        print(f"Error fetching play-by-play for {game_id}: {e}")
+        return jsonify({'error': 'Failed to fetch play-by-play', 'available': False,
+                        'plays': [], 'shots': []}), 500
+
+
 @bp.route('/<string:game_id>', methods=['GET'])
 def get_game_detail(game_id):
     try:
