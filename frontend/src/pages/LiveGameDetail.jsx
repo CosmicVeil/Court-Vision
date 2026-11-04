@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { buildApiUrl } from '../config/api';
 import { BoxScore, QuarterTable } from '../components/GameBoxScore';
+import CourtView from '../components/CourtView';
 import GameScoreboard from '../components/GameScoreboard';
+import PillNav from '../components/PillNav';
 import PlayerStatsModal from '../components/PlayerStatsModal';
 import ScrollReveal from '../components/ScrollReveal';
 import SyncDock from '../components/SyncDock';
@@ -33,7 +35,7 @@ function PeriodMomentum({ game }) {
               {[['away', row.away, row.awayShare], ['home', row.home, row.homeShare]].map(([side, points, share]) => (
                 <span key={side} className="period-bar-slot">
                   <span className={`period-bar bar-${side}`} style={{ '--share': share, '--i': index }} />
-                  <span className="bar-value" data-numeric style={{ '--share': share }}>{points ?? '–'}</span>
+                  <span className="bar-value" data-numeric style={{ '--share': share }}>{points ?? 'ΓÇô'}</span>
                 </span>
               ))}
             </div>
@@ -177,7 +179,7 @@ export default function LiveGameDetail() {
         </section>
       ) : (
         <div className="lg-hero">
-          <Link to="/games" className="back-to-home">← ALL GAMES</Link>
+          <Link to="/games" className="back-to-home">ΓåÉ ALL GAMES</Link>
           <h1 className="lg-title">GAME <span className="text-ember">DETAIL</span></h1>
         </div>
       )}
