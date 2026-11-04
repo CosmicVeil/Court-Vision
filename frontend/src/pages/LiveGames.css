@@ -1763,3 +1763,34 @@ html[data-motion] .detail-momentum:not([data-revealed]) .period-bar { transform:
 }
 
 /* --- "what just happened" banner --- */
+.pbp-banner {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space) * 3);
+  margin-bottom: calc(var(--space) * 2);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(10, 10, 14, 0.95);
+  border: 1px solid var(--color-ember-orange);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  animation: rise var(--duration-base) var(--ease-brand);
+}
+.pbp-banner.cat-three { border-color: #3ddc84; }
+.pbp-banner.cat-steal { border-color: #5aaaff; }
+.pbp-banner.cat-block { border-color: #be78ff; }
+.pbp-banner-tag {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  font-size: var(--text-xs);
+  letter-spacing: 1px;
+  color: var(--color-ember-orange);
+  white-space: nowrap;
+}
+.pbp-banner.cat-three .pbp-banner-tag { color: #3ddc84; }
+.pbp-banner.cat-steal .pbp-banner-tag { color: #5aaaff; }
+.pbp-banner.cat-block .pbp-banner-tag { color: #be78ff; }
+.pbp-banner-text { font-size: var(--text-sm); }
+
