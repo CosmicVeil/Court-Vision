@@ -563,6 +563,40 @@ def get_todays_games(nba_data: Optional[List[Dict]] = None) -> List[Dict]:
     return result
 
 
+# ---------------------------------------------------------------------------
+# Play-by-play + shot chart (ESPN summary `plays`)
+# ---------------------------------------------------------------------------
+
+# ESPN marks free throws as shooting plays but gives them a sentinel coordinate
+# (int32 min, ~-2.1e9). Any coordinate this far out of range is not a court location.
+_COORD_SENTINEL_LIMIT = 1000
+
+
+def _play_category(type_text: str, description: str, score_value: int,
+                   scoring: bool, shooting: bool) -> str:
+    """Classify a play for ticker colour-coding.
+
+    Returns one of: 'three', 'dunk', 'steal', 'block', 'score', 'miss', 'event'.
+    A made 3PT always wins (that's the marquee event users want highlighted).
+    ESPN has no standalone steal/block play types, so those are detected from the
+    play description text ("... blocks ...", "... steals ...").
+    """
+    type_lower = (type_text or "").lower()
+    desc_lower = (description or "").lower()
+    combined = f"{type_lower} {desc_lower}"
+
+    if shooting and scoring and score_value == 3:
+        return "three"
+    if "dunk" in combined or "alley" in combined:
+        return "dunk"
+    if "steal" in combined:
+        return "steal"
+    if "block" in combined:
+        return "block"
+    if shooting:
+        return "score" if scoring else "miss"
+    return "event"
+
 def get_upcoming_games(days: int = 365, nba_data: Optional[List[Dict]] = None) -> List[Dict]:
     """Return scheduled games in the next *days* days, cached in nba_upcoming_data.csv."""
     cache_date = _todays_date_str()
