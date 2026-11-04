@@ -597,6 +597,60 @@ def _play_category(type_text: str, description: str, score_value: int,
         return "score" if scoring else "miss"
     return "event"
 
+def _parse_play(play: Dict) -> Optional[Dict]:
+    """Convert one ESPN play object into our internal shape."""
+    try:
+        type_obj = play.get("type", {}) or {}
+        type_text = type_obj.get("text", "")
+        period_obj = play.get("period", {}) or {}
+        clock_obj = play.get("clock", {}) or {}
+        team_obj = play.get("team", {}) or {}
+
+        shooting = bool(play.get("shootingPlay"))
+        scoring = bool(play.get("scoringPlay"))
+        score_value = int(play.get("scoreValue", 0) or 0)
+
+        team_id = str(team_obj.get("id", "")) if team_obj else ""
+        tricode = ESPN_TEAM_ID_TO_TRICODE.get(team_id, "")
+
+        # Shot coordinate (field goals only - free throws carry a sentinel value).
+        shot = None
+        coord = play.get("coordinate") or {}
+        cx, cy = coord.get("x"), coord.get("y")
+        is_field_goal = shooting and "free throw" not in type_text.lower()
+        if (is_field_goal and isinstance(cx, (int, float)) and isinstance(cy, (int, float))
+                and abs(cx) <= _COORD_SENTINEL_LIMIT and abs(cy) <= _COORD_SENTINEL_LIMIT):
+            shot = {
+                "x": int(cx),
+                "y": int(cy),
+                "made": scoring,
+                "value": score_value if score_value else (3 if "three" in type_text.lower() else 2),
+                "type": type_text,
+            }
+
+        category = _play_category(type_text, play.get("text", ""), score_value, scoring, shooting)
+
+        return {
+            "id": str(play.get("id", "")),
+            "sequence": int(play.get("sequenceNumber", 0) or 0),
+            "period": int(period_obj.get("number", 0) or 0),
+            "periodLabel": period_obj.get("displayValue", ""),
+            "clock": clock_obj.get("displayValue", ""),
+            "text": play.get("text", ""),
+            "team": tricode,
+            "teamId": team_id,
+            "scoring": scoring,
+            "shooting": shooting,
+            "scoreValue": score_value,
+            "awayScore": int(play.get("awayScore", 0) or 0),
+            "homeScore": int(play.get("homeScore", 0) or 0),
+            "category": category,
+            "shot": shot,
+        }
+    except Exception as exc:
+        print(f"[live_games] play parse error: {exc}")
+        return None
+
 def get_upcoming_games(days: int = 365, nba_data: Optional[List[Dict]] = None) -> List[Dict]:
     """Return scheduled games in the next *days* days, cached in nba_upcoming_data.csv."""
     cache_date = _todays_date_str()
