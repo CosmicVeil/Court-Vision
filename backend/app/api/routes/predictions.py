@@ -85,6 +85,8 @@ def _prediction_rows_from_model():
             result[f'predicted_{key}'] = round(float(row.get(f'PREDICTED_{key.upper()}', 0)), 1)
         result['mpg_last'] = round(float(row.get('MIN_LAST', 0)), 1)
         result['predicted_mpg'] = round(float(row.get('PREDICTED_MPG', 0)), 1)
+        result['fantasy_last'] = round(float(row.get('FANTASY_LAST', 0)), 1)
+        result['predicted_fantasy'] = round(float(row.get('PREDICTED_FANTASY', 0)), 1)
         for key, column in (
             ('fg_pct', 'FG_PCT'),
             ('fg3_pct', 'FG3_PCT'),
@@ -118,7 +120,9 @@ def get_all_predictions_paginated():
         sort_by = request.args.get('sort_by', 'name')
         sort_order = request.args.get('sort_order', 'asc')
 
-        filtered = results
+        # A copy: the sort below would otherwise reorder the shared cached list in place (and
+        # CPython empties a list while sorting it, so a concurrent request could read it empty).
+        filtered = list(results)
         if search:
             filtered = [p for p in filtered if search in p['name'].lower()]
         if team:
@@ -133,11 +137,12 @@ def get_all_predictions_paginated():
             'predicted_ppg', 'predicted_apg', 'predicted_rpg',
             'predicted_spg', 'predicted_bpg', 'predicted_tov', 'predicted_mpg',
             'predicted_fg_pct', 'predicted_fg3_pct', 'predicted_ft_pct',
+            'predicted_fantasy',
         }
         if sort_by in text_sort_keys:
             filtered.sort(key=lambda p: p[sort_by].lower(), reverse=reverse)
         elif sort_by in numeric_sort_keys:
-            filtered.sort(key=lambda p: p[sort_by], reverse=reverse)
+            filtered.sort(key=lambda p: p.get(sort_by) or 0, reverse=reverse)
         else:
             filtered.sort(key=lambda p: p['name'].lower(), reverse=reverse)
 

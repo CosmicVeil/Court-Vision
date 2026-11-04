@@ -503,7 +503,7 @@ class CurrentSeasonStateTests(unittest.TestCase):
 
 
 SO_FAR_ROW_KEYS = tuple(f'so_far_{key}' for key in (
-    'ppg', 'apg', 'rpg', 'spg', 'bpg', 'tov', 'mpg', 'fg_pct', 'fg3_pct', 'ft_pct', 'gp'))
+    'ppg', 'apg', 'rpg', 'spg', 'bpg', 'tov', 'mpg', 'fg_pct', 'fg3_pct', 'ft_pct', 'fantasy', 'gp'))
 
 
 def season_player(**changes):
@@ -546,6 +546,8 @@ class BackfillStartTests(unittest.TestCase):
 class SeasonRouteTestCase(unittest.TestCase):
     def setUp(self):
         self.pickle = season_player()
+        # Unrounded averages: fantasy is 24.14 + 1.2*7.24 + 1.5*8.04 + 3 + 1.5 - 3.1 = 46.288 -> 46.3,
+        # where scoring the rounded 24.1/7.2/8.0 would give 46.1.
         self.current = season_player(TEAM='DAL', PPG_LAST=24.14, RPG_LAST=7.24, APG_LAST=8.04,
                                      TOV_LAST=3.1, MIN_LAST=32.5, GAMES_PLAYED_LAST=4)
         for name, value in (
@@ -642,7 +644,7 @@ class SearchAllTests(SeasonRouteTestCase):
         self.assertEqual(player['ml_stats'], {
             'so_far_stats': {'ppg': 24.1, 'apg': 8.0, 'rpg': 7.2, 'spg': 1.0, 'bpg': 0.5,
                              'tov': 3.1, 'mpg': 32.5, 'fg_pct': 50.0, 'fg3_pct': 30.0,
-                             'ft_pct': 80.0, 'gp': 4},
+                             'ft_pct': 80.0, 'fantasy': 46.3, 'gp': 4},
             'predicted_stats': prediction['predicted_stats'],
             'improvements': prediction['improvements'],
         })
@@ -795,7 +797,7 @@ class SearchAllSnapshotTests(SeasonRouteTestCase):
                 'so_far_stats': {
                     'ppg': 24.1, 'apg': 8.0, 'rpg': 7.2, 'spg': 1.0, 'bpg': 0.5,
                     'tov': 3.1, 'mpg': 32.5, 'fg_pct': 50.0, 'fg3_pct': 30.0,
-                    'ft_pct': 80.0, 'gp': 4,
+                    'ft_pct': 80.0, 'fantasy': 46.3, 'gp': 4,
                 },
                 'predicted_stats': {'ppg': 22.0}, 'improvements': {'ppg': 10.0},
             },
@@ -1001,7 +1003,7 @@ class PredictionsSoFarTests(SeasonRouteTestCase):
         expected = [
             {'so_far_ppg': 24.1, 'so_far_apg': 8.0, 'so_far_rpg': 7.2, 'so_far_spg': 1.0,
              'so_far_bpg': 0.5, 'so_far_tov': 3.1, 'so_far_mpg': 32.5, 'so_far_fg_pct': 50.0,
-             'so_far_fg3_pct': 30.0, 'so_far_ft_pct': 80.0, 'so_far_gp': 4},
+             'so_far_fg3_pct': 30.0, 'so_far_ft_pct': 80.0, 'so_far_fantasy': 46.3, 'so_far_gp': 4},
             {key: None for key in SO_FAR_ROW_KEYS},
         ]
         self.assertEqual(rows, [{**original, **extra} for original, extra in zip(originals, expected)])

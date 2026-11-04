@@ -62,6 +62,14 @@ def main():
             prediction['predicted_mpg'] = round(float(row.get('PREDICTED_MPG', 0)), 1)
             prediction['current_stats']['mpg'] = prediction['mpg_last']
             prediction['predicted_stats']['mpg'] = prediction['predicted_mpg']
+
+            # Fantasy points, scored from the unrounded stats in build_predictions_df.
+            current_fantasy = float(row.get('FANTASY_LAST', 0))
+            predicted_fantasy = float(row.get('PREDICTED_FANTASY', 0))
+            prediction['fantasy_last'] = prediction['current_stats']['fantasy'] = round(current_fantasy, 1)
+            prediction['predicted_fantasy'] = prediction['predicted_stats']['fantasy'] = round(predicted_fantasy, 1)
+            prediction['improvements']['fantasy'] = round(
+                (predicted_fantasy - current_fantasy) / current_fantasy * 100, 1) if current_fantasy else 0
             
             for key, column in (('fg_pct', 'FG_PCT'), ('fg3_pct', 'FG3_PCT'), ('ft_pct', 'FT_PCT')):
                 prediction[f'{key}_last'] = round(float(row.get(f'{column}_LAST', 0)) * 100, 1)

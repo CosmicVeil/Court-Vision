@@ -24,6 +24,8 @@ export function getStatDelta(current, predicted) {
 }
 
 const PREDICTION_MAIN = ['ppg', 'apg', 'rpg'];
+// The Predictions page also shows fantasy points, so the stat it can be sorted by is on the card.
+const PREDICTION_CARD_MAIN = [...PREDICTION_MAIN, 'fantasy'];
 const SHOOTING = [
   { key: 'fg_pct', label: 'FG%' },
   { key: 'fg3_pct', label: '3P%' },
@@ -39,7 +41,7 @@ const soFarShooting = player => SHOOTING.map(({ key, label }) => {
 });
 
 export function getPredictionCardStats(player) {
-  const main = PREDICTION_MAIN.map(key => {
+  const main = PREDICTION_CARD_MAIN.map(key => {
     const stat = PREDICTION_STATS.find(item => item.key === key);
     return {
       key,

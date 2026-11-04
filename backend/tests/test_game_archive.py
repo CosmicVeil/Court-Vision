@@ -158,6 +158,46 @@ class EmptyConnection:
         pass
 
 
+class GameLogFantasyTests(unittest.TestCase):
+    """Each played game gets FanDuel fantasy points (fpts); DNPs get None and averages skip them."""
+
+    @staticmethod
+    def row(game_id, day, **stats):
+        return {**dict.fromkeys(game_archive._LOG_FIELDS), "game_id": game_id,
+                "game_date": date(2020, 1, day), "team": "GSW", "opponent": "BOS", "is_home": True,
+                "home_score": 110, "away_score": 100, "season_type": 2, "did_not_play": False, **stats}
+
+    def test_db_games_carry_fpts_and_averages(self):
+        rows = [
+            # 30 + 1.2*10 + 1.5*5 + 3*2 + 3*1 - 4 = 54.5
+            self.row("403", 3, pts=30, reb=10, ast=5, stl=2, blk=1, tov=4),
+            self.row("402", 2, did_not_play=True, dnp_reason="Rest"),
+            # 10 + 1.2*4 + 1.5*1 - 1 = 15.3 (stl/blk missing count as 0)
+            self.row("401", 1, pts=10, reb=4, ast=1, tov=1),
+        ]
+
+        class Connection(EmptyConnection):
+            def fetchall(self):
+                return rows
+
+        result = game_archive.player_game_log(Connection(), 202691, season="2019-2020")
+        self.assertEqual([g["fpts"] for g in result["games"]], [54.5, None, 15.3])
+        # (54.5 + 15.3) / 2 = 34.9, the DNP not counted.
+        self.assertEqual(result["averages"]["season"]["fpts"], 34.9)
+        self.assertEqual(result["averages"]["last5"]["fpts"], 34.9)
+
+    def test_espn_fallback_games_get_fpts_without_mutating_the_cache(self):
+        espn_game = {"game_id": "501", "date": "2020-01-01", "team": "GSW", "season_type": 2,
+                     "did_not_play": False, "pts": 20, "reb": 5, "ast": 5, "stl": 1, "blk": 0, "tov": 2,
+                     "minutes": 30, "fgm": 8, "fga": 16, "fg3m": 2, "fg3a": 5, "ftm": 2, "fta": 2}
+        with patch.object(game_archive, "_get_espn_athlete_id", return_value=6475), \
+             patch.object(game_archive, "_fetch_espn_athlete_gamelog", return_value=[espn_game]):
+            result = game_archive.player_game_log(EmptyConnection(), 202691, season="2019-2020")
+        # 20 + 6 + 7.5 + 3 - 2 = 34.5
+        self.assertEqual(result["games"][0]["fpts"], 34.5)
+        self.assertNotIn("fpts", espn_game)
+
+
 class EspnSeasonAbsenceTests(unittest.TestCase):
     def setUp(self):
         for name in ("_espn_absence_cache", "_espn_team_tricode_cache", "_espn_athlete_cache"):

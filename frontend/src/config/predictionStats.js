@@ -21,6 +21,15 @@ export const PREDICTION_GROUPS = [
       { key: 'ft_pct', label: 'Free Throw Percentage', unit: 'FT%', changeUnit: 'pp', currentField: 'ft_pct_last', predictedField: 'predicted_ft_pct' },
     ],
   },
+  {
+    id: 'fantasy',
+    label: 'Fantasy',
+    stats: [
+      // FanDuel scoring (PTS + 1.2 REB + 1.5 AST + 3 STL + 3 BLK − TOV). derived: the backend computes it
+      // from the other predictions, so it is not one of the model's own forecasts.
+      { key: 'fantasy', label: 'Fantasy Points (FanDuel)', unit: 'FPTS', changeUnit: '%', currentField: 'fantasy_last', predictedField: 'predicted_fantasy', derived: true },
+    ],
+  },
 ];
 
 export const PREDICTION_STATS = PREDICTION_GROUPS.flatMap((group) => group.stats);
