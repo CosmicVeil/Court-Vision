@@ -4,7 +4,7 @@ from flask import Blueprint, jsonify, request
 
 from app import state
 from app.services.game_archive import archive_finished_games
-from app.services.live_games import get_playbyplay, get_todays_games, get_upcoming_games
+from app.services.live_games import get_todays_games, get_upcoming_games
 
 bp = Blueprint('games', __name__, url_prefix='/api/games')
 
@@ -43,17 +43,6 @@ def get_upcoming():
     except Exception as e:
         print(f"Error fetching upcoming games: {e}")
         return jsonify({'error': 'Failed to fetch upcoming games', 'games': []}), 500
-
-
-@bp.route('/<string:game_id>/playbyplay', methods=['GET'])
-def get_game_playbyplay(game_id):
-    try:
-        data = get_playbyplay(game_id)
-        return jsonify(data), 200
-    except Exception as e:
-        print(f"Error fetching play-by-play for {game_id}: {e}")
-        return jsonify({'error': 'Failed to fetch play-by-play', 'available': False,
-                        'plays': [], 'shots': []}), 500
 
 
 @bp.route('/<string:game_id>', methods=['GET'])
