@@ -1534,3 +1534,31 @@ html[data-motion] .detail-momentum:not([data-revealed]) .period-bar { transform:
 /* --- SVG court --- */
 .courtview-chart { min-width: 0; }
 
+.shotchart-court {
+  position: relative;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 10%, rgba(255, 122, 26, 0.06), transparent 60%);
+}
+
+.court-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.court-floor { fill: #171013; }
+.court-line {
+  fill: none;
+  stroke: rgba(224, 196, 170, 0.55);
+  stroke-width: 0.22;
+}
+.court-bounds { stroke: rgba(224, 196, 170, 0.4); }
+.court-paint { fill: rgba(255, 122, 26, 0.07); }
+.court-three { stroke-width: 0.26; }
+.court-rim { stroke: var(--color-ember-orange); stroke-width: 0.3; }
+.court-backboard { stroke: rgba(255, 255, 255, 0.7); stroke-width: 0.32; }
+.court-halfline { stroke: rgba(224, 196, 170, 0.4); }
+
+/* --- shot dots --- */
