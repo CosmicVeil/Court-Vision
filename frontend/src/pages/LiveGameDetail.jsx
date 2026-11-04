@@ -35,7 +35,7 @@ function PeriodMomentum({ game }) {
               {[['away', row.away, row.awayShare], ['home', row.home, row.homeShare]].map(([side, points, share]) => (
                 <span key={side} className="period-bar-slot">
                   <span className={`period-bar bar-${side}`} style={{ '--share': share, '--i': index }} />
-                  <span className="bar-value" data-numeric style={{ '--share': share }}>{points ?? 'ΓÇô'}</span>
+                  <span className="bar-value" data-numeric style={{ '--share': share }}>{points ?? '–'}</span>
                 </span>
               ))}
             </div>
@@ -58,6 +58,7 @@ export default function LiveGameDetail() {
   const [playerLoading, setPlayerLoading] = useState(false);
   const [scoreChanges, setScoreChanges] = useState({});
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [tab, setTab] = useState('box');
   const gameStatusRef = useRef(null);
   const gameRequestsRef = useRef(new Set());
   const playerRequestRef = useRef(null);
@@ -151,9 +152,12 @@ export default function LiveGameDetail() {
     }
   }, []);
 
+  useEffect(() => { setTab('box'); }, [gameId]);
+
   const ready = !loading && !notFound && !error && game;
   const leaders = ready ? getGameLeaders(game) : [];
   const isLive = Number(game?.status) === STATUS_LIVE;
+  const teams = game ? { home: game.home?.tricode, away: game.away?.tricode } : {};
 
   return (
     <div className="lg-page lg-detail-page">
@@ -179,7 +183,7 @@ export default function LiveGameDetail() {
         </section>
       ) : (
         <div className="lg-hero">
-          <Link to="/games" className="back-to-home">ΓåÉ ALL GAMES</Link>
+          <Link to="/games" className="back-to-home">← ALL GAMES</Link>
           <h1 className="lg-title">GAME <span className="text-ember">DETAIL</span></h1>
         </div>
       )}
@@ -192,11 +196,28 @@ export default function LiveGameDetail() {
           <div className="no-games"><h2>UNABLE TO LOAD GAME</h2><p>{error}</p><button className="expand-btn" onClick={() => requestGame(false)}>TRY AGAIN</button></div>
         ) : game && (
           <div className="lg-detail-card detail-body">
-            {Number(game.status) !== STATUS_SCHEDULED && <PeriodMomentum game={game} />}
-            <section className="detail-section detail-boxscore" data-reveal>
-              <h2 className="detail-section-title">Box score</h2>
-              <BoxScore game={game} onPlayerClick={selectPlayer} />
-            </section>
+            <PillNav className="lg-tabs detail-tabs" label="Game detail view" idPrefix="detail"
+              panelId="detail-panel" value={tab} onChange={setTab}
+              items={[
+                { id: 'box', label: <span className="lg-tab-label">BOX SCORE</span> },
+                { id: 'court', label: <span className="lg-tab-label">LIVE COURT</span> },
+              ]} />
+            <div id="detail-panel" role="tabpanel" aria-labelledby={`detail-tab-${tab}`}>
+              {tab === 'box' ? (
+                <>
+                  {Number(game.status) !== STATUS_SCHEDULED && <PeriodMomentum game={game} />}
+                  <section className="detail-section detail-boxscore" data-reveal>
+                    <h2 className="detail-section-title">Box score</h2>
+                    <BoxScore game={game} onPlayerClick={selectPlayer} />
+                  </section>
+                </>
+              ) : (
+                <section className="detail-section detail-court" data-reveal>
+                  <h2 className="detail-section-title">Live court</h2>
+                  <CourtView gameId={gameId} status={game.status} teams={teams} />
+                </section>
+              )}
+            </div>
           </div>
         )}
       </main>
