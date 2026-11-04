@@ -1466,3 +1466,71 @@ html[data-motion] .detail-momentum:not([data-revealed]) .period-bar { transform:
   .bar-value { transition-property: opacity; translate: -50% 0; }
   .leader-card { transition-property: border-color; }
 }
+/* ============================================================================
+   LIVE COURT tab — shot chart + play-by-play
+   ============================================================================ */
+
+.detail-tabs {
+  margin: 0 auto calc(var(--space) * 6);
+}
+
+.detail-court { padding: calc(var(--space) * 4); }
+
+.courtview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--space) * 4);
+  margin-bottom: calc(var(--space) * 5);
+}
+
+.courtview-teams {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space) * 2);
+  font-family: var(--font-mono);
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+.courtview-teams .cv-vs {
+  color: var(--color-stone);
+  font-weight: 500;
+  text-transform: lowercase;
+}
+
+.court-toggle {
+  padding: 8px 16px;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-full, 999px);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-stone);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-brand),
+    border-color var(--duration-fast) var(--ease-brand),
+    background var(--duration-fast) var(--ease-brand);
+}
+.court-toggle:hover { color: #fff; border-color: var(--color-ember-orange); }
+.court-toggle[aria-pressed="true"] {
+  color: #fff;
+  border-color: var(--color-ember-orange);
+  background: rgba(255, 122, 26, 0.12);
+}
+
+.courtview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: calc(var(--space) * 6);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .courtview-grid { grid-template-columns: 1fr; }
+}
+
+/* --- SVG court --- */
+.courtview-chart { min-width: 0; }
+
