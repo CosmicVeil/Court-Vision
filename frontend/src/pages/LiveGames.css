@@ -1640,3 +1640,35 @@ html[data-motion] .detail-momentum:not([data-revealed]) .period-bar { transform:
 }
 
 /* --- tooltip --- */
+.shot-tooltip {
+  position: absolute;
+  top: calc(var(--space) * 3);
+  left: calc(var(--space) * 3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: rgba(10, 10, 14, 0.92);
+  border: 1px solid var(--border-glass);
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+  max-width: 240px;
+}
+.shot-tooltip-player { font-weight: 800; font-size: var(--text-sm); }
+.shot-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-xs);
+  color: var(--color-stone);
+}
+.shot-tooltip-result { font-family: var(--font-mono); font-weight: 800; letter-spacing: 1px; }
+.shot-tooltip-result.made { color: #3ddc84; }
+.shot-tooltip-result.missed { color: #ff5a5a; }
+.shot-tooltip-meta {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-stone);
+}
+
