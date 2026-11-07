@@ -13,7 +13,7 @@ class PredictionsCacheGenerationTests(unittest.TestCase):
 
         actual = build_recommendations(fake_getter)
 
-        self.assertEqual(calls, ["PPG", "APG", "RPG", "PRA"])
+        self.assertEqual(calls, ["PPG", "APG", "RPG", "PRA", "FANTASY"])
         self.assertEqual(
             actual,
             {
@@ -21,6 +21,7 @@ class PredictionsCacheGenerationTests(unittest.TestCase):
                 "APG": [{"stat": "APG"}],
                 "RPG": [{"stat": "RPG"}],
                 "PRA": [{"stat": "PRA"}],
+                "FANTASY": [{"stat": "FANTASY"}],
             },
         )
 

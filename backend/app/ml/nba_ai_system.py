@@ -440,6 +440,11 @@ class NBAAISystem:
         for column, template in (('FANTASY_LAST', '{}_LAST'), ('PREDICTED_FANTASY', 'PREDICTED_{}')):
             results[column] = sum(weight * results[template.format(PER_GAME_KEYS[stat].upper())]
                                   for stat, weight in FANTASY_WEIGHTS.items())
+        results['FANTASY_IMPROVEMENT'] = np.where(
+            results['FANTASY_LAST'] > 0,
+            (results['PREDICTED_FANTASY'] - results['FANTASY_LAST']) / results['FANTASY_LAST'] * 100,
+            0,
+        )
 
         self._predictions_df = results
         return self._predictions_df

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import usePointerTilt from '../hooks/usePointerTilt';
+import TiltCard from './TiltCard';
 import { getChangedStatKeys, toStatValues } from '../utils/playerCard';
 import { getRevealDelay } from '../utils/scrollReveal';
 import './PlayerCard.css';
@@ -34,11 +34,11 @@ function StatList({ stats, label, className, changed }) {
 // One player as a card: who they are, a few numbers, a favourite toggle, and a way in.
 // The name is the button that opens the player; its ::after stretches over the whole card,
 // so the card is clickable without nesting the favourite button inside another button.
+// The tilt, spotlight, lift and corner arrow come from TiltCard, shared with other cards.
 export default function PlayerCard({
   player, stats, statsLabel, extraStats, extraLabel,
   isFavorite = false, onToggleFavorite, onOpen, index = 0, ctaLabel = 'View player', children,
 }) {
-  const { ref, onPointerMove, onPointerLeave } = usePointerTilt();
   // Compare against the values from the previous render (the usePrevious pattern), so only
   // values that actually changed tick in, and nothing animates on the first render.
   const allStats = [...(stats || []), ...(extraStats || [])];
@@ -47,8 +47,8 @@ export default function PlayerCard({
   const changed = getChangedStatKeys(previousRef.current, allStats);
 
   return (
-    <article ref={ref} className="pc-card" data-flip={player.id} data-reveal data-defer style={{ '--reveal-delay': getRevealDelay(index) }}
-      onPointerMove={onPointerMove} onPointerLeave={onPointerLeave}>
+    <TiltCard as="article" className="pc-card" cta={ctaLabel}
+      data-flip={player.id} data-reveal data-defer style={{ '--reveal-delay': getRevealDelay(index) }}>
       <header className="pc-head">
         <div className="pc-identity">
           <h3 className="pc-name">
@@ -74,11 +74,6 @@ export default function PlayerCard({
       <StatList stats={stats} label={statsLabel} className="pc-main" changed={changed} />
       <StatList stats={extraStats} label={extraLabel} className="pc-extra" changed={changed} />
       {children}
-
-      <span className="pc-cta" aria-hidden="true">
-        <span className="pc-cta-label">{ctaLabel}</span>
-        <span className="pc-cta-arrow">→</span>
-      </span>
-    </article>
+    </TiltCard>
   );
 }

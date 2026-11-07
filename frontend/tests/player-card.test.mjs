@@ -97,7 +97,8 @@ test('PlayerCard opens through a real button, keeps favourites separate, and use
   assert.match(card, /aria-pressed={isFavorite}/);
   assert.match(card, /data-reveal/);
   assert.match(card, /getRevealDelay\(index\)/);
-  assert.match(card, /usePointerTilt\(\)/);
+  assert.match(card, /<TiltCard as="article" className="pc-card" cta=\{ctaLabel\}/, 'tilt, spotlight and arrow come from TiltCard');
+  assert.doesNotMatch(card, /usePointerTilt|pc-cta/, 'no second copy of the effect');
   assert.match(card, /data-numeric/);
   assert.match(card, /{children}/, 'pages compose extra content into the card');
   assert.doesNotMatch(card, /<div[^>]*onClick/);

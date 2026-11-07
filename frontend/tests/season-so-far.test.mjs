@@ -41,6 +41,12 @@ test('spotlight so-far line includes all stats and GP', async () => {
   assert.equal(formatSoFarLine({ ...player, so_far_ppg: 0 }), '0.0 PPG · 7.2 RPG · 8.0 APG · 4 GP');
 });
 
+test('spotlight so-far line adds fantasy points before GP when the API sends them', async () => {
+  const { formatSoFarLine } = await helpers();
+  assert.equal(formatSoFarLine({ ...player, so_far_fantasy: 46.288 }), '24.1 PPG · 7.2 RPG · 8.0 APG · 46.3 FPTS · 4 GP');
+  assert.equal(formatSoFarLine({ ...player, so_far_fantasy: null }), '24.1 PPG · 7.2 RPG · 8.0 APG · 4 GP');
+});
+
 test('spotlight handles null and absent fallback data', async () => {
   const { formatSoFarLine } = await helpers();
   assert.equal(formatSoFarLine({}), '—');

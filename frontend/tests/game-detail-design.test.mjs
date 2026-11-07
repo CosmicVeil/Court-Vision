@@ -34,15 +34,16 @@ test('game leaders pick the top points, rebounds and assists across both teams',
   assert.deepEqual(detail.getGameLeaders({ ...game, players: undefined }), []);
 });
 
-test('scheduled games lead with season averages', () => {
+test('scheduled games lead with season averages and season fantasy points', () => {
   const game = {
     status: 1, away: { tricode: 'BKN' }, home: { tricode: 'BOS' },
-    players: { away: [player(1, 0, 0, 0, { season_ppg: 21.4, season_rpg: 5, season_apg: 6.1 })], home: [player(2, 0, 0, 0, { season_ppg: 18, season_rpg: 9.8, season_apg: 2 })] },
+    players: { away: [player(1, 0, 0, 0, { season_ppg: 21.4, season_rpg: 5, season_apg: 6.1, season_fpts: 38.2 })], home: [player(2, 0, 0, 0, { season_ppg: 18, season_rpg: 9.8, season_apg: 2, season_fpts: 40.5 })] },
   };
   assert.deepEqual(detail.getGameLeaders(game).map(({ key, label, value, tricode }) => ({ key, label, value, tricode })), [
     { key: 'season_ppg', label: 'Season PPG', value: 21.4, tricode: 'BKN' },
     { key: 'season_rpg', label: 'Season RPG', value: 9.8, tricode: 'BOS' },
     { key: 'season_apg', label: 'Season APG', value: 6.1, tricode: 'BKN' },
+    { key: 'season_fpts', label: 'Season FPTS', value: 40.5, tricode: 'BOS' },
   ]);
 });
 
@@ -144,4 +145,10 @@ test('detail-page styles fix the oversized logos and stay scoped', () => {
   for (const selector of ['.bs-row', '.period-bar', '.scoreboard-score']) {
     assert.match(section, new RegExp(`prefers-reduced-motion[\\s\\S]*\\${selector}`), `${selector} has a reduced-motion rule`);
   }
+});
+
+test('upcoming-game box scores show season fantasy points next to the season averages', () => {
+  const box = read('src/components/GameBoxScore.jsx');
+  assert.match(box, /\['season_fpts', 'S·FPTS'\]/);
+  assert.match(box, /<td className="season-stat">\{player\.season_fpts \?\? '–'\}<\/td>/);
 });

@@ -16,5 +16,7 @@ export function getSoFarStats(player) {
 export function formatSoFarLine(player) {
   if (SO_FAR_KEYS.every(key => player[`so_far_${key}`] == null)) return '—';
   const { stats } = getSoFarStats(player);
-  return [...stats.map(stat => `${stat.value} ${stat.label}`), `${player.so_far_gp ?? '—'} GP`].join(' · ');
+  // Fantasy points so far, when the API sent them (it does for every player with games this season).
+  const fantasy = player.so_far_fantasy == null ? [] : [`${Number(player.so_far_fantasy).toFixed(1)} FPTS`];
+  return [...stats.map(stat => `${stat.value} ${stat.label}`), ...fantasy, `${player.so_far_gp ?? '—'} GP`].join(' · ');
 }

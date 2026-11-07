@@ -12,7 +12,7 @@ from app.services.recommendations import get_top_performers
 from app.utils.player_ids import player_id_for
 
 
-RECOMMENDATION_STATS = ("PPG", "APG", "RPG", "PRA")
+RECOMMENDATION_STATS = ("PPG", "APG", "RPG", "PRA", "FANTASY")
 
 
 def build_recommendations(getter=get_top_performers):

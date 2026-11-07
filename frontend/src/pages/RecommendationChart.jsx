@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import PlayerStatsModal from '../components/PlayerStatsModal';
+import TiltCard from '../components/TiltCard';
+import { FPTS_TITLE, getFantasyComparison } from '../utils/fantasy';
 import { samePlayerName } from '../utils/playerNames';
 import { authHeaders, clearAuth } from '../utils/auth';
 import { enterDelay } from '../utils/scrollReveal';
@@ -131,6 +133,8 @@ const RecommendationChart = () => {
     }
 
     const predictedKey = `PREDICTED_${stat}`;
+    // The API key for fantasy points is FANTASY (matching its FANTASY_LAST/PREDICTED_FANTASY columns).
+    const statLabel = stat === 'FANTASY' ? 'FPTS' : stat;
     const lastKey = `${stat}_LAST`;
     const improvementKey = `${stat}_IMPROVEMENT`;
 
@@ -150,6 +154,11 @@ const RecommendationChart = () => {
                 return {
                     title: "Glass Dominators",
                     desc: "Physical forces projected to exert total glass supremacy and record-shattering rebound climbs."
+                };
+            case 'FANTASY':
+                return {
+                    title: "Fantasy Risers",
+                    desc: "Players projected to add the most FanDuel fantasy points per game, counting every stat they fill."
                 };
             case 'PRA':
                 return {
@@ -192,16 +201,18 @@ const RecommendationChart = () => {
                             const predictedKeyVal = Number(player[predictedKey] ?? 0);
 
                             // Bar fill as a 0-1 fraction of the stat's scale; CSS scales the bar by it
-                            const maxScale = stat === 'PRA' ? 60 : stat === 'PPG' ? 40 : 20;
+                            const maxScale = stat === 'PRA' || stat === 'FANTASY' ? 60 : stat === 'PPG' ? 40 : 20;
                             const currentFill = Math.min(Math.max(lastKeyVal / maxScale, 0), 1);
                             const predictedFill = Math.min(Math.max(predictedKeyVal / maxScale, 0), 1);
+                            const fantasy = getFantasyComparison(player);
 
                             return (
-                            <div
+                            <TiltCard
                                 key={player.PLAYER_NAME ?? index}
                                 className="recommendation-card analytic-card"
                                 data-enter
                                 style={enterDelay(index + 1)}
+                                cta="Full projection"
                             >
                                 <div className="card-header">
                                     <span className="rank-badge">#{index + 1}</span>
@@ -227,7 +238,7 @@ const RecommendationChart = () => {
                                     <div className="stats-comparison-bars">
                                         <div className="bar-container">
                                             <div className="bar-header">
-                                                <span className="bar-lbl">Current {stat}</span>
+                                                <span className="bar-lbl">Current {statLabel}</span>
                                                 <span className="bar-val">{lastKeyVal.toFixed(1)}</span>
                                             </div>
                                             <div className="bar-track">
@@ -237,7 +248,7 @@ const RecommendationChart = () => {
 
                                         <div className="bar-container projected">
                                             <div className="bar-header">
-                                                <span className="bar-lbl">AI Projected {stat}</span>
+                                                <span className="bar-lbl">AI Projected {statLabel}</span>
                                                 <span className="bar-val">{predictedKeyVal.toFixed(1)}</span>
                                             </div>
                                             <div className="bar-track">
@@ -245,8 +256,23 @@ const RecommendationChart = () => {
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* On the fantasy list the bars already show FPTS, so this row would repeat them. */}
+                                    {fantasy && stat !== 'FANTASY' && (
+                                        <div className="rec-fantasy-row">
+                                            <span className="bar-lbl" title={FPTS_TITLE}>Fantasy (FPTS)</span>
+                                            <span className="rec-fantasy-val" data-numeric>
+                                                {fantasy.last.toFixed(1)} → <strong>{fantasy.predicted.toFixed(1)}</strong>
+                                            </span>
+                                            {player.so_far_fantasy != null && (
+                                                <span className="rec-fantasy-so-far" data-numeric>
+                                                    2026-27 so far {Number(player.so_far_fantasy).toFixed(1)}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
+                            </TiltCard>
                             );
                         })}
                     </div>

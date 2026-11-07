@@ -214,8 +214,8 @@ def recommendations(stat):
         return jsonify(AI_UNAVAILABLE), 503
 
     stat_clean = sanitize_string(stat, 10).upper()
-    if stat_clean not in ('PPG', 'APG', 'RPG', 'PRA'):
-        return jsonify({'error': 'Invalid stat. Use PPG, APG, RPG, or PRA.'}), 400
+    if stat_clean not in ('PPG', 'APG', 'RPG', 'PRA', 'FANTASY'):
+        return jsonify({'error': 'Invalid stat. Use PPG, APG, RPG, PRA, or FANTASY.'}), 400
 
     try:
         cache = state.predictions_cache

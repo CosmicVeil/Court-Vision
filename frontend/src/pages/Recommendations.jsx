@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import PlayerStatsModal from '../components/PlayerStatsModal';
+import TiltCard from '../components/TiltCard';
 import { buildApiUrl } from '../config/api';
 import { clearAuth } from '../utils/auth';
+import { FPTS_TITLE, getFantasyComparison } from '../utils/fantasy';
 import { samePlayerName } from '../utils/playerNames';
 import { enterDelay } from '../utils/scrollReveal';
 import { formatSoFarLine } from '../utils/seasonSoFar';
@@ -53,6 +55,14 @@ const FALLBACK_PLAYERS = {
   }
 };
 
+// Spotlight categories: the API stat key, its display name and the card's role tag.
+const SPOTLIGHTS = [
+  { stat: 'PPG', name: 'PPG', role: 'Scoring Outbreak' },
+  { stat: 'APG', name: 'APG', role: 'Playmaking Visionary' },
+  { stat: 'RPG', name: 'RPG', role: 'Glass Dominator' },
+  { stat: 'FANTASY', name: 'FPTS', role: 'Fantasy Riser' },
+];
+
 const Recommendations = () => {
   const [topPerformers, setTopPerformers] = useState({});
   const [spotlightLoading, setSpotlightLoading] = useState(true);
@@ -102,7 +112,7 @@ const Recommendations = () => {
     const fetchSpotlights = async () => {
       try {
         setSpotlightLoading(true);
-        const stats = ['PPG', 'APG', 'RPG', 'PRA'];
+        const stats = ['PPG', 'APG', 'RPG', 'PRA', 'FANTASY'];
         const results = await Promise.all(
           stats.map(async (s) => {
             const res = await fetch(buildApiUrl(`recommendations/${s}`));
@@ -176,6 +186,16 @@ const Recommendations = () => {
       icon: 'RPG',
       details: 'Biggest predicted RPG jumps for players next season',
       link: '/recommendations/RPG'
+    },
+
+    {
+      id: 5,
+      title: 'Fantasy Risers',
+      category: 'Trending',
+      description: 'Players projected to add the most FanDuel fantasy points per game across every stat',
+      icon: 'FPTS',
+      details: 'Biggest predicted fantasy points per game jumps for players next season',
+      link: '/recommendations/FANTASY'
     }
   ]
 
@@ -222,16 +242,18 @@ const Recommendations = () => {
               </div>
             ) : (
               <div className="spotlight-grid">
-                {['PPG', 'APG', 'RPG'].map((s, index) => {
+                {SPOTLIGHTS.map(({ stat: s, name, role }, index) => {
+                  // Fantasy points have no built-in fallback player, so that card waits for real data.
                   const player = topPerformers[s] || FALLBACK_PLAYERS[s];
+                  if (!player) return null;
                   const improvement = player[`${s}_IMPROVEMENT`] || 0;
-                  const label = s === 'PPG' ? 'Scoring Outbreak' : s === 'APG' ? 'Playmaking Visionary' : 'Glass Dominator';
+                  const fantasy = getFantasyComparison(player);
                   
                   return (
-                    <div key={s} className="spotlight-card" data-enter style={enterDelay(index + 1)}>
+                    <TiltCard key={s} className="spotlight-card" data-enter style={enterDelay(index + 1)} cta="Full projection">
                       <div className="spotlight-badge-row">
-                        <span className="spotlight-stat-tag">{s} Spotlight</span>
-                        <span className="spotlight-role-tag">{label}</span>
+                        <span className="spotlight-stat-tag">{name} Spotlight</span>
+                        <span className="spotlight-role-tag">{role}</span>
                       </div>
                       <h3 className="spotlight-player-name">
                         <button
@@ -245,7 +267,7 @@ const Recommendations = () => {
                       <div className="spotlight-team-badge">{player.TEAM} · {player.POSITION}</div>
                       
                       <div className={`spotlight-growth-badge ${improvement >= 0 ? 'positive' : 'negative'}`}>
-                        {improvement >= 0 ? '+' : ''}{improvement.toFixed(1)}% {s} Breakout
+                        {improvement >= 0 ? '+' : ''}{improvement.toFixed(1)}% {name} Breakout
                       </div>
                       
                       <div className="spotlight-stats-list">
@@ -269,12 +291,25 @@ const Recommendations = () => {
                             </div>
                           );
                         })}
+                        {fantasy && (
+                          <div className={`spotlight-stat-row ${s === 'FANTASY' ? 'highlighted' : ''}`}>
+                            <span className="stat-label" title={FPTS_TITLE}>FPTS</span>
+                            <div className="spotlight-stat-comparison">
+                              <span className="spotlight-stat-val">{fantasy.last.toFixed(1)}</span>
+                              <span className="spotlight-stat-arrow">→</span>
+                              <span className="spotlight-stat-val predicted">{fantasy.predicted.toFixed(1)}</span>
+                            </div>
+                            <span className={`spotlight-stat-growth ${fantasy.change >= 0 ? 'positive' : 'negative'}`}>
+                              {fantasy.change >= 0 ? '+' : ''}{fantasy.change.toFixed(1)}%
+                            </span>
+                          </div>
+                        )}
                         <div className="spotlight-stat-row">
                           <span className="stat-label">2026-27 SO FAR</span>
                           <span className="spotlight-stat-val" data-numeric>{formatSoFarLine(player)}</span>
                         </div>
                       </div>
-                    </div>
+                    </TiltCard>
                   );
                 })}
               </div>
@@ -287,7 +322,7 @@ const Recommendations = () => {
           </p>
           <div className="recommendations-grid">
             {insights.map((insight) => (
-              <div key={insight.id} className="recommendation-card insight-card" data-enter style={enterDelay(insight.id + 4)}>
+              <TiltCard key={insight.id} className="recommendation-card insight-card" data-enter style={enterDelay(insight.id + 4)}>
                 <div className="card-header">
                   <div className="insight-icon">{insight.icon}</div>
                   <div className="category-badge">{insight.category}</div>
@@ -304,7 +339,7 @@ const Recommendations = () => {
                     Explore More →
                   </Link>
                 </div>
-              </div>
+              </TiltCard>
             ))}
           </div>
         </div>

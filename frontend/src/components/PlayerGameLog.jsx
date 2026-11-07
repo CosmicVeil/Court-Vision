@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { buildApiUrl } from '../config/api';
+import { FPTS_TITLE } from '../utils/fantasy';
 import { currentSeasonLabel, defaultSeason, formatAbsence, formatSeasonTeams, playerSeasons } from '../utils/gameLog';
 import './PlayerGameLog.css';
 
@@ -16,7 +17,6 @@ const formatDate = iso => new Date(`${iso}T12:00:00`).toLocaleDateString('en-US'
 const pct = value => (value === null || value === undefined ? '—' : `${value}%`);
 const plusMinus = value => (value > 0 ? `+${value}` : `${value ?? '—'}`);
 const fpts = value => (value === null || value === undefined ? '—' : Number(value).toFixed(1));
-const FPTS_TITLE = 'FanDuel fantasy points: PTS + 1.2 REB + 1.5 AST + 3 STL + 3 BLK − TOV';
 const seasonTag = type => {
   const tag = SEASON_TYPE_TAGS[type];
   return tag && <span className={`game-log-tag game-log-tag--${tag.modifier}`}>{tag.label}</span>;

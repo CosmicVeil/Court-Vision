@@ -9,6 +9,7 @@ from app import state
 from app.api.helpers import so_far_stats
 from app.api.routes.predictions import _prediction_rows_from_model
 from app.ml.nba_ai_system import FEATURE_COLUMNS, NBAAISystem
+from app.services import live_games, recommendations
 from app.utils.fantasy import PER_GAME_KEYS, fantasy_points
 from tests.test_current_season import SeasonRouteTestCase, season_player
 from tests.test_nba_ai_model import make_player
@@ -62,6 +63,10 @@ class UnroundedSourceTests(unittest.TestCase):
         # 12.04 + 1.2*5.04 + 1.5*3.04 + 3*1.04 + 3*0.54 - 2 = 25.388
         self.assertAlmostEqual(row['PREDICTED_FANTASY'], 25.388)
 
+    def test_predictions_frame_has_fantasy_improvement(self):
+        row = self._system().build_predictions_df().iloc[0]
+        self.assertAlmostEqual(row['FANTASY_IMPROVEMENT'], (25.388 - 21.188) / 21.188 * 100)
+
     def test_player_prediction_scores_raw_values(self):
         system = self._system()
         system.prepare_data = Mock(return_value=(np.zeros((1, len(FEATURE_COLUMNS))), None, None))
@@ -79,6 +84,45 @@ class UnroundedSourceTests(unittest.TestCase):
             ai.nba_ai_system.build_predictions_df.return_value = frame
             row = _prediction_rows_from_model()[0]
         self.assertEqual((row['fantasy_last'], row['predicted_fantasy']), (21.2, 25.4))
+
+
+class UpcomingRosterFantasyTests(unittest.TestCase):
+    def test_upcoming_roster_carries_season_fpts_from_raw_averages(self):
+        # 20.04 + 1.2*5.04 + 1.5*6.04 + 3*1 + 3*0.5 - 2 = 37.648 -> 37.6 (rounded stats would give 37.5).
+        player = season_player(TEAM='LAL', PPG_LAST=20.04, RPG_LAST=5.04, APG_LAST=6.04)
+        roster = live_games._roster_from_pkl('LAL', [player])
+        self.assertEqual(roster[0]['season_ppg'], 20.0)
+        self.assertEqual(roster[0]['season_fpts'], 37.6)
+
+
+class FantasyRecommendationTests(unittest.TestCase):
+    def _frame(self):
+        def row(name, last, predicted):
+            return {'PLAYER_NAME': name, 'FANTASY_LAST': last, 'PREDICTED_FANTASY': predicted,
+                    'FANTASY_IMPROVEMENT': (predicted - last) / last * 100}
+        return pd.DataFrame([
+            row('Small Base', 10.0, 15.0),   # +50%, but projected under 25 FPTS: filtered out
+            row('Steady Star', 50.0, 52.0),  # +4%
+            row('Riser', 30.0, 36.0),        # +20%
+        ])
+
+    def test_ranks_biggest_fantasy_jump_among_meaningful_projections(self):
+        with patch.object(recommendations, '_build_predictions_df', return_value=self._frame()):
+            ranked = recommendations.get_top_performers('FANTASY')
+        self.assertEqual([player['PLAYER_NAME'] for player in ranked], ['Riser', 'Steady Star'])
+
+
+
+class FantasyRecommendationRouteTests(SeasonRouteTestCase):
+    def test_route_serves_fantasy_from_cache_and_model(self):
+        state.ai_available = True
+        state.is_render = True
+        state.predictions_cache = {'recommendations': {'FANTASY': [{'PLAYER_NAME': 'Cached Riser'}]}}
+        self.assertEqual(self.get_json('/api/recommendations/fantasy')[0]['PLAYER_NAME'], 'Cached Riser')
+        state.is_render = False
+        with patch('app.api.routes.predictions.get_top_performers', return_value=[{'PLAYER_NAME': 'Live Riser'}]) as getter:
+            self.assertEqual(self.get_json('/api/recommendations/FANTASY')[0]['PLAYER_NAME'], 'Live Riser')
+        getter.assert_called_once_with('FANTASY')
 
 
 class FantasySortTests(SeasonRouteTestCase):
