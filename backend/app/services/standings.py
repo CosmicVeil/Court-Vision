@@ -1,11 +1,11 @@
 """
 standings.py — NBA conference standings, cached hourly server-side.
 
-Primary source is nba_api's LeagueStandings (stats.nba.com). That host is
-blocked on several cloud platforms (Render), which is why the rest of this app
-already reads live data from ESPN. So LeagueStandings is tried first and, if it
-fails for any reason, we fall back to ESPN's public standings API — the same
-provider used by app.services.live_games.
+Primary source is ESPN's public standings API, the same provider used by
+app.services.live_games. nba_api's LeagueStandings (stats.nba.com) is only a
+fallback: that host is blocked on several cloud platforms (Render), where trying
+it first made every uncached season wait out the full request timeout (~15s)
+before ESPN was even asked.
 
 Standings are available for any season the app has stats for: from
 game_archive.FIRST_GAME_LOG_SEASON (1993-94) through the current season.
@@ -113,7 +113,7 @@ def _espn_logo_for(tricode: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Primary source: nba_api LeagueStandings (stats.nba.com)
+# Fallback source: nba_api LeagueStandings (stats.nba.com)
 # ---------------------------------------------------------------------------
 
 def _fetch_from_nba_api(season_lbl: str) -> Optional[Dict[str, List[Dict]]]:
@@ -183,7 +183,7 @@ def _fetch_from_nba_api(season_lbl: str) -> Optional[Dict[str, List[Dict]]]:
 
 
 # ---------------------------------------------------------------------------
-# Fallback source: ESPN public standings API
+# Primary source: ESPN public standings API
 # ---------------------------------------------------------------------------
 
 def _espn_stat(entry: Dict, name: str, default="") -> str:
@@ -284,13 +284,15 @@ def _espn_logo(team_info: Dict) -> str:
 
 def _build(season_year: int) -> Dict:
     label = season_label(season_year)
-    source = "nba_api"
-    conferences = _fetch_from_nba_api(label)
+    # ESPN first: it answers in well under a second everywhere, while
+    # stats.nba.com hangs until timeout on hosts that block it.
+    source = "espn"
+    conferences = _fetch_from_espn(season_year)
     if conferences is None:
-        source = "espn"
-        conferences = _fetch_from_espn(season_year)
+        source = "nba_api"
+        conferences = _fetch_from_nba_api(label)
     if conferences is None:
-        raise RuntimeError(f"Both nba_api and ESPN standings sources failed for {label}")
+        raise RuntimeError(f"Both ESPN and nba_api standings sources failed for {label}")
 
     return {
         "east": conferences["east"],
