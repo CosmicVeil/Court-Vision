@@ -50,7 +50,8 @@ export function getStatsHeroStats({ ready, total, year, sort, order, page, total
 export function getPredictionsHeroStats({ ready, total, sort, order, page, totalPages } = {}) {
   return build(ready, [
     ['players', 'Players', countValue(total)],
-    ['forecast', 'Stats forecast', String(PREDICTION_STATS.length)],
+    // Only the model's own forecasts; derived stats such as fantasy points are not counted.
+    ['forecast', 'Stats forecast', String(PREDICTION_STATS.filter(stat => !stat.derived).length)],
     ['sort', 'Sorted by', sortValue(PREDICTION_SORT_LABELS, sort, order)],
     ['page', 'Page', pageValue(page, totalPages)],
   ]);

@@ -114,7 +114,7 @@ class ExpandedPredictionPayloadTests(unittest.TestCase):
         self.system.prepare_data = Mock(return_value=(np.zeros((1, len(FEATURE_COLUMNS))), None, None))
         self.system.predict = Mock(return_value=np.array([[11, 3, 5, 1.2, 0.7, 1.7, 27, 0.48, 0.37, 0.82]]))
         payload = self.system.get_player_prediction("Test Player")
-        self.assertEqual(set(payload["predicted_stats"]), {spec["key"] for spec in TARGET_SPECS})
+        self.assertEqual(set(payload["predicted_stats"]), {spec["key"] for spec in TARGET_SPECS} | {"fantasy"})
         self.assertEqual(payload["predicted_stats"]["fg_pct"], 48.0)
         self.assertEqual(payload["improvements"]["fg_pct"], 3.0)
 

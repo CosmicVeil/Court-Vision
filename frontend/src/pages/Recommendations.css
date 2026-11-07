@@ -70,7 +70,8 @@
 
 .spotlight-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  /* Four spotlights: two per row on desktop (a 2x2 grid), one per row on narrow screens. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
   gap: 24px;
   max-width: 1200px;
   margin: 0 auto 36px;
@@ -84,18 +85,9 @@
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   position: relative;
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
   text-align: left;
-}
-
-.spotlight-card:hover,
-.spotlight-card:focus-within {
-  transform: translateY(-6px);
-  border-color: rgba(255, 100, 54, 0.5);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 24px rgba(255, 100, 54, 0.2);
+  /* Tilt, spotlight, lift and the corner arrow: TiltCard.css, shared with PlayerCard. */
 }
 
 /* Player cards open the stats popup from a real <button> on the name; its ::after
@@ -274,7 +266,8 @@
 
 .recommendations-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  /* Five insight cards: three then two on desktop rather than four and one alone. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
   gap: 24px;
   max-width: 1200px;
   margin: 0 auto;
@@ -288,21 +281,15 @@
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   position: relative;
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
 }
 
-.recommendation-card:hover,
-.recommendation-card:focus-within {
-  transform: translateY(-6px);
-  border-color: rgba(255, 100, 54, 0.5);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 24px rgba(255, 100, 54, 0.2);
-}
+/* Layout only: space above TiltCard's corner arrow. */
+.spotlight-card .tilt-cta,
+.recommendation-card .tilt-cta { margin-top: 20px; }
 
 .card-header {
   display: flex;
@@ -480,6 +467,36 @@
   align-items: center;
 }
 
+/* Fantasy points on the ranked cards: last season -> projected, then this season so far. */
+.rec-fantasy-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.rec-fantasy-val {
+  margin-left: auto;
+  color: var(--color-pure-white, #fff);
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+}
+
+.rec-fantasy-val strong { color: var(--color-ember-orange); }
+
+.rec-fantasy-so-far {
+  flex-basis: 100%;
+  color: var(--color-stone, #8e8c94);
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  text-align: right;
+}
+
 .bar-lbl {
   font-family: var(--font-mono, monospace);
   font-size: 10px;
@@ -532,18 +549,10 @@
   animation-delay: 0.12s;
 }
 
-/* Same contract as tokens.css: with reduced motion, bars render at their final length and
-   cards don't lift; colour and border feedback stay. */
+/* Same contract as tokens.css: with reduced motion, bars render at their final length. The cards'
+   tilt and lift stop in TiltCard.css. */
 @media (prefers-reduced-motion: reduce) {
   .bar-fill { animation: none; }
-
-  .spotlight-card,
-  .recommendation-card { transition-property: border-color, box-shadow; }
-
-  .spotlight-card:hover,
-  .spotlight-card:focus-within,
-  .recommendation-card:hover,
-  .recommendation-card:focus-within { transform: none; }
 }
 
 /* ---------- Signed-out / gated lock prompt ---------- */

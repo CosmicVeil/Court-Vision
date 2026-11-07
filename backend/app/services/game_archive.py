@@ -30,6 +30,7 @@ from psycopg.types.json import Jsonb
 
 from app import db
 from app.services.live_games import TEAM_IDS
+from app.utils.fantasy import FANTASY_WEIGHTS, fantasy_points
 from app.utils.player_ids import nba_player_id
 from app.utils.player_names import normalize_player_name
 
@@ -595,6 +596,8 @@ def _averages(games: List[Dict]) -> Optional[Dict]:
     averages = {"games": len(games)}
     for key in ("minutes", "pts", "reb", "ast", "stl", "blk", "tov", "fg3m"):
         averages[key] = round(total(key) / len(games), 1)
+    # Fantasy points are linear, so the average of per-game FPTS is FPTS of the raw averages.
+    averages["fpts"] = fantasy_points({key: total(key) / len(games) for key in FANTASY_WEIGHTS})
     averages["fg_pct"] = _pct(total("fgm"), total("fga"))
     averages["fg3_pct"] = _pct(total("fg3m"), total("fg3a"))
     averages["ft_pct"] = _pct(total("ftm"), total("fta"))
@@ -989,6 +992,8 @@ def player_game_log(conn, player_id: int, limit: int = 10, season: Optional[str]
             if not games:
                 teams, absence = _fetch_espn_season_absence(espn_id, target_year)
 
+    # Copies, because ESPN games are shared entries in _espn_athlete_cache. DNP games score nothing.
+    games = [{**g, "fpts": None if g.get("did_not_play") else fantasy_points(g)} for g in games]
     played = [g for g in games if not g.get("did_not_play")]
     counted = [g for g in played if g.get("season_type") != 1] or played
     return {

@@ -45,7 +45,15 @@ test("season teams preserve trade order and omit unknown or missing teams", asyn
 test("games show the player's team before the opponent with an unknown placeholder", () => {
   assert.match(gameLog, /<th>Team<\/th>\s*<th>Opp<\/th>/);
   assert.match(gameLog, /<td className="game-log-team">\{game\.team && game\.team !== 'UNK' \? game\.team : '—'\}<\/td>\s*<td>\{game\.is_home/);
-  assert.match(gameLog, /colSpan=\{11\}/);
+  // The DNP cell spans every stat column: MIN through +/- plus FPTS.
+  assert.match(gameLog, /colSpan=\{12\}/);
+});
+
+test("games and averages show FanDuel fantasy points from the API's fpts field", () => {
+  assert.match(gameLog, /<th>\+\/-<\/th><th title=\{FPTS_TITLE\}>FPTS<\/th><\/tr>/);
+  assert.match(gameLog, /<th>3P%<\/th><th title=\{FPTS_TITLE\}>FPTS<\/th><\/tr>/);
+  assert.match(gameLog, /<td>\{fpts\(game\.fpts\)\}<\/td>/);
+  assert.match(gameLog, /<td>\{fpts\(avg\.fpts\)\}<\/td>/);
 });
 
 test("season badge shows formatted teams only after the selected season loads", () => {

@@ -11,6 +11,7 @@ const SEASON_LEADERS = [
   { key: 'season_ppg', label: 'Season PPG' },
   { key: 'season_rpg', label: 'Season RPG' },
   { key: 'season_apg', label: 'Season APG' },
+  { key: 'season_fpts', label: 'Season FPTS' },
 ];
 
 export const BOX_SCORE_LEADER_KEYS = ['pts', 'reb', 'ast', 'stl', 'blk'];

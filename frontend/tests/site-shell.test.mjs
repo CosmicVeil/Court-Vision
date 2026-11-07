@@ -15,9 +15,9 @@ test('every nav link points at a route the app defines', () => {
   }
 });
 
-test('nav keeps Home\'s link order, with Privacy right after Contact', () => {
+test('nav keeps Home\'s link order, with Standings after Stats and Privacy right after Contact', () => {
   assert.deepEqual(NAV_LINKS.map(link => link.to),
-    ['/stats', '/games', '/predictions', '/recommendations', '/favourites', '/contact', '/privacy']);
+    ['/stats', '/standings', '/games', '/predictions', '/recommendations', '/favourites', '/contact', '/privacy']);
 });
 
 test('initials come from the first and last name, upper-cased', () => {

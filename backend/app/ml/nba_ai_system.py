@@ -12,6 +12,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error, r2_score
 
 from app.scraping.nba_web_scraper import NBAWebScraper
+from app.utils.fantasy import FANTASY_WEIGHTS, PER_GAME_KEYS, fantasy_points
 from app.utils.player_names import fix_mojibake, normalize_player_name
 from app import config
 
@@ -435,6 +436,15 @@ class NBAAISystem:
             (results['PREDICTED_PRA'] - results['PRA_LAST']) / results['PRA_LAST'] * 100,
             0,
         )
+        # Fantasy points from the unrounded stats, so every page that rounds them agrees.
+        for column, template in (('FANTASY_LAST', '{}_LAST'), ('PREDICTED_FANTASY', 'PREDICTED_{}')):
+            results[column] = sum(weight * results[template.format(PER_GAME_KEYS[stat].upper())]
+                                  for stat, weight in FANTASY_WEIGHTS.items())
+        results['FANTASY_IMPROVEMENT'] = np.where(
+            results['FANTASY_LAST'] > 0,
+            (results['PREDICTED_FANTASY'] - results['FANTASY_LAST']) / results['FANTASY_LAST'] * 100,
+            0,
+        )
 
         self._predictions_df = results
         return self._predictions_df
@@ -614,6 +624,16 @@ class NBAAISystem:
                     (predicted_value - current_value) / current_value * 100,
                     1,
                 ) if current_value else 0
+
+        # Fantasy points are derived, not predicted, and scored before rounding: the player row by
+        # column name (PPG_LAST, ...), the prediction array by naming its slots in TARGET_SPECS order.
+        current_fantasy = fantasy_points(player, lambda stat: f'{PER_GAME_KEYS[stat].upper()}_LAST', digits=None)
+        predicted_by_key = dict(zip((spec['key'] for spec in TARGET_SPECS), prediction))
+        predicted_fantasy = fantasy_points(predicted_by_key, PER_GAME_KEYS.get, digits=None)
+        current_stats['fantasy'] = round(current_fantasy, 1)
+        predicted_stats['fantasy'] = round(predicted_fantasy, 1)
+        improvements['fantasy'] = round(
+            (predicted_fantasy - current_fantasy) / current_fantasy * 100, 1) if current_fantasy else 0
 
         return {
             'name': player['PLAYER_NAME'],

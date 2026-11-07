@@ -13,6 +13,18 @@ test("prediction config defines all ten metrics", () => {
   }
 });
 
+test("prediction config has a fantasy group backed by the API's fantasy fields", async () => {
+  const { PREDICTION_GROUPS, PREDICTION_STATS, toPredictionPageStats } = await import(configPath.href);
+  const group = PREDICTION_GROUPS.find(item => item.id === "fantasy");
+  assert.deepEqual(group.stats.map(stat => [stat.key, stat.currentField, stat.predictedField]),
+    [["fantasy", "fantasy_last", "predicted_fantasy"]]);
+  assert.ok(PREDICTION_STATS.some(stat => stat.predictedField === "predicted_fantasy"));
+  const { currentStats, predictionStats, improvements } = toPredictionPageStats({ fantasy_last: 40, predicted_fantasy: 44 });
+  assert.equal(currentStats.fantasy, 40);
+  assert.equal(predictionStats.fantasy, 44);
+  assert.equal(improvements.fantasy, 10);
+});
+
 test("shared grid labels percentage changes as percentage points", () => {
   const grid = readFileSync(gridPath, "utf8");
   assert.match(grid, /changeUnit === ["']pp["']/);

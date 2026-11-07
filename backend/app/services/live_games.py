@@ -24,6 +24,7 @@ from typing import Dict, List, Optional, Any
 from zoneinfo import ZoneInfo
 
 from app import config
+from app.utils.fantasy import PER_GAME_KEYS, fantasy_points
 from app.utils.player_ids import player_id_for
 
 # ---------------------------------------------------------------------------
@@ -323,6 +324,8 @@ def _roster_from_pkl(tricode: str, nba_data: Optional[List[Dict]]) -> List[Dict]
             "season_ppg": round(p.get("PPG_LAST", 0), 1),
             "season_rpg": round(p.get("RPG_LAST", 0), 1),
             "season_apg": round(p.get("APG_LAST", 0), 1),
+            # From the unrounded averages, like every other FPTS on the site.
+            "season_fpts": fantasy_points(p, lambda stat: f"{PER_GAME_KEYS[stat].upper()}_LAST"),
         })
     result.sort(key=lambda x: x["season_ppg"], reverse=True)
     return result

@@ -1,0 +1,91 @@
+/* TiltCard: the pointer play every interactive card shares (PlayerCard, the recommendation cards).
+   Only the effect lives here; each card keeps its own look (background, padding, layout) in its
+   own CSS. Cards must not set transform or transition themselves, or they would cancel this. */
+.tilt-card {
+  position: relative;
+  /* --rx/--ry come from usePointerTilt; --lift from hover below. One transform, so they compose
+     (useFlip animates the separate `translate` property, so it composes too). */
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(var(--lift, 0px));
+  transition: transform var(--duration-base) var(--ease-brand), border-color var(--duration-base) var(--ease-brand);
+}
+
+/* A card that also scroll-reveals (PlayerCard) would otherwise lose the transitions above:
+   tokens.css's `html[data-motion-ready] [data-reveal]` rule is more specific and replaces them,
+   so the tilt snapped instead of easing. Keep the reveal's transitions and add the card's. */
+html[data-motion-ready] .tilt-card[data-reveal] {
+  transition: opacity var(--duration-reveal) var(--ease-brand) var(--reveal-delay, 0s),
+    translate var(--duration-reveal) var(--ease-brand) var(--reveal-delay, 0s),
+    transform var(--duration-base) var(--ease-brand), border-color var(--duration-base) var(--ease-brand);
+}
+
+/* Spotlight that follows the pointer (--mx/--my from usePointerTilt). */
+.tilt-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 100, 54, 0.16), transparent 60%);
+  opacity: 0;
+  transition: opacity var(--duration-base) var(--ease-brand);
+}
+
+/* Corner call to action. Decorative: the card's own button is the accessible way in. */
+.tilt-cta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: calc(var(--space) * 2);
+  margin-top: auto;
+  color: var(--color-pure-white);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.tilt-cta-label {
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 100, 54, 0.4);
+  border-radius: var(--radius-full);
+  background: rgba(255, 100, 54, 0.12);
+  transition: opacity var(--duration-base) var(--ease-brand), translate var(--duration-base) var(--ease-brand);
+}
+
+.tilt-cta-arrow {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, #ff6436, #e04a1c);
+  font-size: .9rem;
+  rotate: -45deg;
+  transition: rotate var(--duration-base) var(--ease-brand), scale var(--duration-fast) var(--ease-brand);
+}
+
+/* The arrow turns on hover, or when the card's button has keyboard focus. */
+.tilt-card:hover .tilt-cta-arrow,
+.tilt-card:has(:focus-visible) .tilt-cta-arrow { rotate: 0deg; }
+
+.tilt-card:active .tilt-cta-arrow { scale: .9; }
+
+/* Pointer-only play: lift, spotlight and the CTA label sliding out. Touch keeps the label visible. */
+@media (hover: hover) and (pointer: fine) {
+  .tilt-card:hover { --lift: -6px; border-color: rgba(255, 100, 54, 0.5); }
+  .tilt-card:hover::before { opacity: 1; }
+
+  .tilt-cta-label { opacity: 0; translate: 8px 0; }
+
+  .tilt-card:hover .tilt-cta-label,
+  .tilt-card:has(:focus-visible) .tilt-cta-label { opacity: 1; translate: 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tilt-card { transform: none; transition: none; }
+  /* Same as tokens.css for reveals: fade only. */
+  html[data-motion-ready] .tilt-card[data-reveal] { transition-property: opacity; }
+  .tilt-cta-arrow,
+  .tilt-cta-label { transition: none; }
+}

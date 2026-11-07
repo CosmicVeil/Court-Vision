@@ -102,6 +102,7 @@ function PlayerRow({ player, onClick, isFuture, leaders = {}, index = 0 }) {
           <td className="season-stat">{player.season_ppg ?? '–'}</td>
           <td className="season-stat">{player.season_rpg ?? '–'}</td>
           <td className="season-stat">{player.season_apg ?? '–'}</td>
+          <td className="season-stat">{player.season_fpts ?? '–'}</td>
         </>
       ) : (
         <>
@@ -117,7 +118,7 @@ function PlayerRow({ player, onClick, isFuture, leaders = {}, index = 0 }) {
 
 const STAT_COLUMNS = [['min', 'MIN'], ['pts', 'PTS'], ['reb', 'REB'], ['ast', 'AST'], ['stl', 'STL'], ['blk', 'BLK']];
 const GAME_COLUMNS = [['fg', 'FG'], ['fg3', '3P'], ['ft', 'FT'], ['plusMinus', '+/-']];
-const SEASON_COLUMNS = [['season_ppg', 'S·PPG'], ['season_rpg', 'S·RPG'], ['season_apg', 'S·APG']];
+const SEASON_COLUMNS = [['season_ppg', 'S·PPG'], ['season_rpg', 'S·RPG'], ['season_apg', 'S·APG'], ['season_fpts', 'S·FPTS']];
 
 export function BoxScore({ game, onPlayerClick }) {
   const [tab, setTab] = useState('home');

@@ -7,6 +7,7 @@ STAT_SORT_COLUMNS = {
     'APG': 'APG_IMPROVEMENT',
     'RPG': 'RPG_IMPROVEMENT',
     'PRA': 'PRA_IMPROVEMENT',
+    'FANTASY': 'FANTASY_IMPROVEMENT',
 }
 
 # Only include players the model projects at a meaningful level (avoids
@@ -16,6 +17,8 @@ STAT_MIN_PREDICTED = {
     'APG': ('PREDICTED_APG', 5), 
     'RPG': ('PREDICTED_RPG', 5), 
     'PRA': ('PREDICTED_PRA', 20),
+    # Roughly the same pool as PRA > 20 (136 vs 132 players in the 2026-27 predictions).
+    'FANTASY': ('PREDICTED_FANTASY', 25),
 }
 
 def _ensure_ai():

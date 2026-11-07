@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { buildApiUrl } from '../config/api';
+import { FPTS_TITLE } from '../utils/fantasy';
 import { currentSeasonLabel, defaultSeason, formatAbsence, formatSeasonTeams, playerSeasons } from '../utils/gameLog';
 import './PlayerGameLog.css';
 
@@ -15,6 +16,7 @@ const SEASON_TYPE_TAGS = {
 const formatDate = iso => new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 const pct = value => (value === null || value === undefined ? '—' : `${value}%`);
 const plusMinus = value => (value > 0 ? `+${value}` : `${value ?? '—'}`);
+const fpts = value => (value === null || value === undefined ? '—' : Number(value).toFixed(1));
 const seasonTag = type => {
   const tag = SEASON_TYPE_TAGS[type];
   return tag && <span className={`game-log-tag game-log-tag--${tag.modifier}`}>{tag.label}</span>;
@@ -101,7 +103,7 @@ export default function PlayerGameLog({ playerId, history }) {
           <h3 className="secondary-stats-title">Recent Form · {seasonDisplay}</h3>
           <div className="stats-history-scroll-box">
             <table className="stats-history-table game-log-averages">
-              <thead><tr><th>Span</th><th>GP</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>FG%</th><th>3P%</th></tr></thead>
+              <thead><tr><th>Span</th><th>GP</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>FG%</th><th>3P%</th><th title={FPTS_TITLE}>FPTS</th></tr></thead>
               <tbody>
                 {AVERAGE_ROWS.filter(([key]) => averages[key]).map(([key, label]) => {
                   const avg = averages[key];
@@ -110,6 +112,7 @@ export default function PlayerGameLog({ playerId, history }) {
                       <td><strong>{label}</strong></td><td>{avg.games}</td><td>{avg.minutes}</td>
                       <td className="game-log-highlight">{avg.pts}</td><td>{avg.reb}</td><td>{avg.ast}</td>
                       <td>{avg.stl}</td><td>{avg.blk}</td><td>{pct(avg.fg_pct)}</td><td>{pct(avg.fg3_pct)}</td>
+                      <td>{fpts(avg.fpts)}</td>
                     </tr>
                   );
                 })}
@@ -120,7 +123,7 @@ export default function PlayerGameLog({ playerId, history }) {
           <h3 className="secondary-stats-title game-log-title">All Games ({games.length})</h3>
           <div className="stats-history-scroll-box game-log-scroll" tabIndex={0} role="region" aria-label="Season game log">
             <table className="stats-history-table">
-              <thead><tr><th>Date</th><th>Team</th><th>Opp</th><th>Result</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>TOV</th><th>FG</th><th>3PT</th><th>FT</th><th>+/-</th></tr></thead>
+              <thead><tr><th>Date</th><th>Team</th><th>Opp</th><th>Result</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>TOV</th><th>FG</th><th>3PT</th><th>FT</th><th>+/-</th><th title={FPTS_TITLE}>FPTS</th></tr></thead>
               <tbody>
                 {games.map(game => (
                   <tr key={game.game_id}>
@@ -129,13 +132,13 @@ export default function PlayerGameLog({ playerId, history }) {
                     <td>{game.is_home ? 'vs' : '@'} {game.opponent}</td>
                     <td><span className={game.result === 'W' ? 'game-log-win' : 'game-log-loss'}>{game.result}</span> {game.score}</td>
                     {game.did_not_play ? (
-                      <td colSpan={11} className="game-log-dnp">DNP{game.dnp_reason ? ` — ${game.dnp_reason.toLowerCase()}` : ''}</td>
+                      <td colSpan={12} className="game-log-dnp">DNP{game.dnp_reason ? ` — ${game.dnp_reason.toLowerCase()}` : ''}</td>
                     ) : (
                       <>
                         <td>{game.minutes}</td><td className="game-log-highlight">{game.pts}</td><td>{game.reb}</td><td>{game.ast}</td>
                         <td>{game.stl}</td><td>{game.blk}</td><td>{game.tov}</td>
                         <td>{game.fgm}-{game.fga}</td><td>{game.fg3m}-{game.fg3a}</td><td>{game.ftm}-{game.fta}</td>
-                        <td>{plusMinus(game.plus_minus)}</td>
+                        <td>{plusMinus(game.plus_minus)}</td><td>{fpts(game.fpts)}</td>
                       </>
                     )}
                   </tr>

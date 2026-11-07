@@ -31,18 +31,20 @@ test('a delta is the signed change from now to the prediction, flat inside half 
   assert.equal(getStatDelta(22.3, undefined), null);
 });
 
-test('prediction cards lead with predicted PPG/APG/RPG and their change vs this season so far, then its shooting', () => {
+test('prediction cards lead with predicted PPG/APG/RPG/FPTS and their change vs this season so far, then its shooting', () => {
   assert.equal(typeof getPredictionCardStats, 'function');
   const { main, extra } = getPredictionCardStats({
     predicted_ppg: 24.1, ppg_last: 10, so_far_ppg: 22.3,
     predicted_apg: 5, apg_last: 10, so_far_apg: 5.02,
     predicted_rpg: 7.2, rpg_last: 10, so_far_rpg: 8,
+    predicted_fantasy: 41.3, fantasy_last: 10, so_far_fantasy: 38.04,
     fg_pct_last: 40, so_far_fg_pct: 48.12, so_far_fg3_pct: 36.6, so_far_ft_pct: null,
   });
   assert.deepEqual(main, [
     { key: 'ppg', label: 'PPG', value: '24.1', delta: { text: '+1.8', direction: 'up' } },
     { key: 'apg', label: 'APG', value: '5.0', delta: { text: '0.0', direction: 'flat' } },
     { key: 'rpg', label: 'RPG', value: '7.2', delta: { text: '−0.8', direction: 'down' } },
+    { key: 'fantasy', label: 'FPTS', value: '41.3', delta: { text: '+3.3', direction: 'up' } },
   ]);
   assert.deepEqual(extra, [
     { key: 'fg_pct', label: 'FG%', value: '48.1%' },
@@ -95,7 +97,8 @@ test('PlayerCard opens through a real button, keeps favourites separate, and use
   assert.match(card, /aria-pressed={isFavorite}/);
   assert.match(card, /data-reveal/);
   assert.match(card, /getRevealDelay\(index\)/);
-  assert.match(card, /usePointerTilt\(\)/);
+  assert.match(card, /<TiltCard as="article" className="pc-card" cta=\{ctaLabel\}/, 'tilt, spotlight and arrow come from TiltCard');
+  assert.doesNotMatch(card, /usePointerTilt|pc-cta/, 'no second copy of the effect');
   assert.match(card, /data-numeric/);
   assert.match(card, /{children}/, 'pages compose extra content into the card');
   assert.doesNotMatch(card, /<div[^>]*onClick/);
