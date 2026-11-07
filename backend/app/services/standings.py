@@ -113,7 +113,7 @@ def _espn_logo_for(tricode: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Primary source: nba_api LeagueStandings (stats.nba.com)
+# Fallback source: nba_api LeagueStandings (stats.nba.com)
 # ---------------------------------------------------------------------------
 
 def _fetch_from_nba_api(season_lbl: str) -> Optional[Dict[str, List[Dict]]]:
@@ -183,7 +183,7 @@ def _fetch_from_nba_api(season_lbl: str) -> Optional[Dict[str, List[Dict]]]:
 
 
 # ---------------------------------------------------------------------------
-# Fallback source: ESPN public standings API
+# Primary source: ESPN public standings API
 # ---------------------------------------------------------------------------
 
 def _espn_stat(entry: Dict, name: str, default="") -> str:
