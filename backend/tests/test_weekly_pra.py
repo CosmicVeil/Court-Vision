@@ -133,8 +133,8 @@ class WeeklyPraTests(unittest.TestCase):
         live_games._cache[summary_key] = {"data": {"stale": True}, "ts": 1}
         with patch.object(live_games, "_fetch_boxscore", side_effect=[stale, fresh]) as fetch, \
              patch.object(live_games.time, "time", return_value=10):
-            self.assertEqual(live_games._weekly_boxscore(game, True), stale)
-            self.assertEqual(live_games._weekly_boxscore(game, False), fresh)
+            self.assertEqual(live_games._game_boxscore(game, True), stale)
+            self.assertEqual(live_games._game_boxscore(game, False), fresh)
         self.assertEqual(fetch.call_count, 2)
         self.assertNotIn(summary_key, live_games._cache)
         self.assertTrue(live_games._WEEK_BOX_CACHE["changing"]["final"])

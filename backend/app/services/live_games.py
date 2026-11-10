@@ -19,6 +19,7 @@ import os
 import requests
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Any
 from zoneinfo import ZoneInfo
@@ -56,7 +57,7 @@ _UPCOMING_COLUMNS = [
 
 # ESPN sometimes uses shortened abbreviations — map them to standard tricodes
 ESPN_TO_TRICODE = {
-    "GS": "GSW", "SA": "SAS", "NO": "NOP", "NY": "NYK", "WSH": "WAS",
+    "GS": "GSW", "SA": "SAS", "NO": "NOP", "NY": "NYK", "WSH": "WAS", "UTAH": "UTA",
 }
 
 TEAM_IDS = {
@@ -81,10 +82,17 @@ TEAM_LOGOS = {
 _cache: Dict[str, Dict] = {}
 CACHE_TTL = 30  # seconds
 LIVE_BOX_TTL = 60
+REQUEST_TIMEOUT = 10
+# Box scores are fetched several at a time, so one slow game must give up early
+# rather than hold the whole slate for the default timeout.
+BOXSCORE_TIMEOUT = 4
+BOXSCORE_WORKERS = 8
 _ET = ZoneInfo("America/New_York")
 _WEEK_BOX_CACHE: Dict[str, Dict] = {}
 _WEEK_DAY_CACHE: Dict[str, Dict] = {}
 _team_lock = threading.Lock()
+# The last slate get_todays_games() built, served again if ESPN's scoreboard fails.
+_last_today: Dict[str, Any] = {"date": None, "games": []}
 
 
 def _get(url: str, params: Optional[Dict] = None) -> Optional[Any]:
@@ -94,7 +102,8 @@ def _get(url: str, params: Optional[Dict] = None) -> Optional[Any]:
     if cache_key in _cache and now - _cache[cache_key]["ts"] < CACHE_TTL:
         return _cache[cache_key]["data"]
     try:
-        r = requests.get(url, params=params, timeout=10)
+        timeout = BOXSCORE_TIMEOUT if url == _SUMMARY else REQUEST_TIMEOUT
+        r = requests.get(url, params=params, timeout=timeout)
         r.raise_for_status()
         data = r.json()
         _cache[cache_key] = {"data": data, "ts": now}
@@ -367,7 +376,9 @@ def _filter_games_by_days(games: List[Dict], days: int) -> List[Dict]:
     return filtered
 
 
-def _attach_rosters(games: List[Dict], nba_data: Optional[List[Dict]]) -> List[Dict]:
+def attach_rosters(games: List[Dict], nba_data: Optional[List[Dict]]) -> List[Dict]:
+    """Add season rosters to scheduled games. Costs a scan of nba_data per team, so
+    callers with a long list (the upcoming schedule) should pass only the games they return."""
     for game in games:
         home_tri = game["home"]["tricode"]
         away_tri = game["away"]["tricode"]
@@ -524,55 +535,68 @@ def _fetch_upcoming_games(days: int, nba_data: Optional[List[Dict]]) -> Optional
 # Public API (identical signatures to original)
 # ---------------------------------------------------------------------------
 
+def _todays_boxscore(game: Dict) -> Dict[str, List]:
+    """Box score for one of today's started games. Runs in a worker thread, so it never raises."""
+    try:
+        # live_ttl=0: live games rely on _get's 30s cache, as before; finals are fetched once.
+        return _game_boxscore(game, game["status"] == 2, live_ttl=0)
+    except Exception as exc:
+        print(f"[live_games] boxscore error ({game.get('gameId', '')}): {exc}")
+        return {"home": [], "away": []}
+
+
 def get_todays_games(nba_data: Optional[List[Dict]] = None) -> List[Dict]:
     """Return today's games with live scores and player stats where available."""
-    data = _get(_SCOREBOARD, params={"dates": _todays_date_str()})
+    date_key = _todays_date_str()
+    data = _get(_SCOREBOARD, params={"dates": date_key})
     if not data:
-        return []
+        # ESPN is down or slow: show the last slate built today rather than nothing.
+        return _last_today["games"] if _last_today["date"] == date_key else []
 
-    result = []
-    for event in data.get("events", []):
-        game = _parse_espn_game(event)
-        if not game:
-            continue
+    games = [game for game in map(_parse_espn_game, data.get("events", [])) if game]
 
+    # Live or final — fetch the real box scores side by side. The requests spend their
+    # time waiting on ESPN, so threads overlap that waiting; map() keeps scoreboard order.
+    started = [game for game in games if game["status"] in (2, 3)]
+    boxscores: Dict[str, Dict[str, List]] = {}
+    if started:
+        with ThreadPoolExecutor(max_workers=min(BOXSCORE_WORKERS, len(started))) as pool:
+            boxscores = dict(zip((game["gameId"] for game in started), pool.map(_todays_boxscore, started)))
+
+    for game in games:
         home_tri = game["home"]["tricode"]
         away_tri = game["away"]["tricode"]
-
-        if game["status"] in (2, 3):
-            # Live or final — fetch real boxscore
-            players = _fetch_boxscore(game["gameId"], home_tri, away_tri)
-            if players["home"] or players["away"]:
-                _apply_boxscore_teams(players, home_tri, away_tri, nba_data)
-                game["players"] = players
-            else:
-                # Fall back to season rosters if boxscore is empty
-                game["players"]["home"] = _roster_from_pkl(home_tri, nba_data)
-                game["players"]["away"] = _roster_from_pkl(away_tri, nba_data)
+        players = boxscores.get(game["gameId"])
+        if players and (players["home"] or players["away"]):
+            _apply_boxscore_teams(players, home_tri, away_tri, nba_data)
+            game["players"] = players
         else:
-            # Scheduled later today — show season rosters
+            # Scheduled later today, or the box score is empty — show season rosters
             game["players"]["home"] = _roster_from_pkl(home_tri, nba_data)
             game["players"]["away"] = _roster_from_pkl(away_tri, nba_data)
 
-        result.append(game)
-
-    return result
+    _last_today.update(date=date_key, games=games)
+    return games
 
 
 def get_upcoming_games(days: int = 365, nba_data: Optional[List[Dict]] = None) -> List[Dict]:
-    """Return scheduled games in the next *days* days, cached in nba_upcoming_data.csv."""
+    """Return scheduled games in the next *days* days, cached in nba_upcoming_data.csv.
+
+    Without nba_data the games carry empty rosters; a caller that returns only a few of
+    them should do that and call attach_rosters() on the ones it keeps.
+    """
     cache_date = _todays_date_str()
     cached_games = _load_upcoming_csv(cache_date)
 
     if cached_games is not None:
-        return _attach_rosters(_filter_games_by_days(cached_games, days), nba_data)
+        return attach_rosters(_filter_games_by_days(cached_games, days), nba_data)
 
     upcoming = _fetch_upcoming_games(365, nba_data)
     if upcoming is None:
         # Don't cache a failure; the next request will retry ESPN.
         return []
     _write_upcoming_csv(cache_date, upcoming)
-    return _attach_rosters(_filter_games_by_days(upcoming, days), nba_data)
+    return attach_rosters(_filter_games_by_days(upcoming, days), nba_data)
 
 
 def current_week_bounds(now=None):
@@ -615,11 +639,17 @@ def _weekly_events(day, today):
     return events
 
 
-def _weekly_boxscore(game: Dict, is_live: bool):
+def _game_boxscore(game: Dict, is_live: bool, live_ttl: float = LIVE_BOX_TTL):
+    """Box score for a started game, shared by today's slate and the weekly PRA card.
+
+    A final game's box score never changes, so it is fetched once and kept for this
+    process. A live one is reused for live_ttl seconds. If ESPN returns nothing, the
+    last good box score is returned instead.
+    """
     game_id = str(game["gameId"])
     now_ts = time.time()
     cached = _WEEK_BOX_CACHE.get(game_id)
-    if cached and (cached["final"] or (is_live and now_ts - cached["ts"] < LIVE_BOX_TTL)):
+    if cached and (cached["final"] or (is_live and now_ts - cached["ts"] < live_ttl)):
         return cached["players"]
     if not is_live:
         # A summary cached while the game was live must be refreshed once before
@@ -631,6 +661,8 @@ def _weekly_boxscore(game: Dict, is_live: bool):
         _WEEK_BOX_CACHE[game_id] = {
             "players": players, "final": not is_live, "ts": now_ts,
         }
+    elif cached:
+        return cached["players"]
     return players
 
 
@@ -662,7 +694,7 @@ def get_weekly_top_pra(now=None) -> Dict:
             if not game:
                 continue
             is_live = game["status"] == 2
-            players = _weekly_boxscore(game, is_live)
+            players = _game_boxscore(game, is_live)
             for side, opponent_side in (("home", "away"), ("away", "home")):
                 for player in players.get(side, []):
                     if player.get("status") == "DNP":

@@ -49,6 +49,7 @@ export default function LiveGames() {
   const [upcomingTotalPages, setUpcomingTotalPages] = useState(1);
   const [upcomingTotalGames, setUpcomingTotalGames] = useState(0);
   const [upcomingLoading, setUpcomingLoading] = useState(false);
+  const [upcomingReady, setUpcomingReady] = useState(false);
   const [scoreChanges, setScoreChanges] = useState({});
   const previousTodayRef = useRef([]);
   const heroRef = useRef(null);
@@ -68,6 +69,8 @@ export default function LiveGames() {
       } catch (error) {
         console.error('Failed to fetch today\'s games', error);
       }
+      // Today's slate shows as soon as it settles; it never waits for the upcoming schedule.
+      setLoading(false);
     };
     const fetchUpcoming = async () => {
       try {
@@ -81,10 +84,10 @@ export default function LiveGames() {
       } catch (error) {
         console.error('Failed to fetch upcoming games', error);
       }
+      setUpcomingReady(true);
+      setUpcomingLoading(false);
     };
     await Promise.all([fetchToday(), fetchUpcoming()]);
-    setLoading(false);
-    setUpcomingLoading(false);
   }, [upcomingPage]);
 
   useEffect(() => { fetchGames(); const interval = setInterval(fetchGames, LIVE_GAMES_REFRESH_MS); return () => clearInterval(interval); }, [fetchGames]);
@@ -94,8 +97,10 @@ export default function LiveGames() {
     (a, b) => (GAME_STATUS_ORDER[a.status] ?? 3) - (GAME_STATUS_ORDER[b.status] ?? 3),
   );
   const games = tab === 'today' ? displayToday : upcomingGames;
-  const stats = getLiveGamesStats({ todayGames, upcomingTotalGames, lastUpdated, loading });
-  const revealKey = `${tab}:${upcomingPage}:${loading}:${games.map(g => g.gameId).join(',')}`;
+  // Each tab waits only for its own first response.
+  const panelLoading = tab === 'today' ? loading : !upcomingReady;
+  const stats = getLiveGamesStats({ todayGames, upcomingTotalGames, lastUpdated, loading, upcomingLoading: !upcomingReady });
+  const revealKey = `${tab}:${upcomingPage}:${loading}:${panelLoading}:${games.map(g => g.gameId).join(',')}`;
 
   return <div className="lg-page lg-live-page">
     <section className="lg-hero" ref={heroRef}>
@@ -133,8 +138,8 @@ export default function LiveGames() {
       ]} />
     {!loading && tab === 'today' && <LiveTicker games={displayToday} />}
     <div className="lg-content" id="lg-panel" role="tabpanel" aria-labelledby={`lg-tab-${tab}`}>
-      {loading ? (
-        <div className="lg-loading"><div className="spinner" /><p>LOADING REAL-TIME SLATE...</p></div>
+      {panelLoading ? (
+        <div className="lg-loading"><div className="spinner" /><p>{tab === 'today' ? 'LOADING REAL-TIME SLATE...' : 'LOADING UPCOMING SCHEDULE...'}</p></div>
       ) : games.length === 0 ? (
         <div className="no-games">
           {tab === 'today' && <div className="trend-empty-radar" data-defer style={{ margin: '0 auto 1.5rem' }}><div className="trend-empty-dot" /></div>}

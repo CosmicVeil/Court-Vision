@@ -72,9 +72,24 @@ test("Upcoming Games marks itself loading for each fetch so the pager disables u
   );
   // A page change creates a new fetchGames (it depends on upcomingPage), whose effect runs it at once.
   assert.match(fetchGames, /^const fetchGames = useCallback\(async \(\) => \{\s*setUpcomingLoading\(true\);/);
-  assert.match(fetchGames, /await Promise\.all\(\[fetchToday\(\), fetchUpcoming\(\)\]\);[\s\S]*setUpcomingLoading\(false\);/);
+  // The upcoming request clears its own flag, so a slow box score fetch can't keep the pager disabled.
+  assert.match(fetchGames, /const fetchUpcoming = async \(\) => \{[\s\S]*setUpcomingLoading\(false\);\s*\};\s*await Promise\.all\(\[fetchToday\(\), fetchUpcoming\(\)\]\);\s*$/);
   assert.match(liveGamesSource, /useEffect\(\(\) => \{ fetchGames\(\);[^\n]*\}, \[fetchGames\]\);/);
   assert.match(liveGamesSource, /loading=\{upcomingLoading\}/);
+});
+
+test("Today's slate stops loading when its own request settles, without waiting for upcoming games", () => {
+  const fetchToday = liveGamesSource.slice(
+    liveGamesSource.indexOf("const fetchToday = async"),
+    liveGamesSource.indexOf("const fetchUpcoming = async"),
+  );
+  // After the try/catch, so a failed request clears the spinner too.
+  assert.match(fetchToday, /catch \(error\) \{[^}]*\}[\s\S]*setLoading\(false\);\s*\};\s*$/);
+  assert.equal(liveGamesSource.match(/setLoading\(false\)/g).length, 1, "nothing after Promise.all clears it");
+  // Each tab shows its own spinner; the upcoming tab's is tied to the first upcoming response.
+  assert.match(liveGamesSource, /const panelLoading = tab === 'today' \? loading : !upcomingReady;/);
+  assert.match(liveGamesSource, /\{panelLoading \? \(/);
+  assert.match(liveGamesSource, /setUpcomingReady\(true\);/);
 });
 
 test("Live Games leaves pagination to the shared pager and styles the roster button with site controls", () => {

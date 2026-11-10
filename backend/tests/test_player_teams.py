@@ -185,6 +185,7 @@ class LiveBoxscoreTeamTests(PlayerTeamsTestCase):
     def setUp(self):
         super().setUp()
         self.enterContext(patch.object(live_games, "_cache", {}))
+        self.enterContext(patch.object(live_games, "_WEEK_BOX_CACHE", {}))
         self.boxscore = {"home": [], "away": [{"personId": 1, "name": "Traded Player"}]}
         self.scoreboard = self.enterContext(patch.object(live_games, "_get", return_value={"events": [event()]}))
         self.fetch = self.enterContext(patch.object(live_games, "_fetch_boxscore", return_value=self.boxscore))
@@ -231,9 +232,18 @@ class LiveBoxscoreTeamTests(PlayerTeamsTestCase):
         self.assertEqual([p["personId"] for p in games[0]["players"]["home"]], [1])
 
     def test_unknown_tricode_ignored(self):
-        self.scoreboard.return_value = {"events": [event(away="UTAH")]}
+        self.scoreboard.return_value = {"events": [event(away="XXX")]}
         live_games.get_todays_games(state.nba_data)
         self.assertEqual(state.nba_data[0]["TEAM"], "LAL")
+
+    def test_espn_utah_abbreviation_maps_to_uta(self):
+        # ESPN sends "UTAH"; the season data and TEAM_IDS use "UTA".
+        state.nba_data.append({"PLAYER_NAME": "Jazz Player", "PLAYER_ID": 3, "TEAM": "UTA"})
+        self.scoreboard.return_value = {"events": [event("scheduled", "pre", away="UTAH")]}
+        game = live_games.get_todays_games(state.nba_data)[0]
+        self.assertEqual(game["away"]["tricode"], "UTA")
+        self.assertEqual(game["away"]["logo"], live_games.TEAM_LOGOS["UTA"])
+        self.assertEqual([p["personId"] for p in game["players"]["away"]], [3])
 
     def test_missing_season_data_still_returns_boxscore(self):
         for players in (None, []):
