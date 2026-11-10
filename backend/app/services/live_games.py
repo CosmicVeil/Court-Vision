@@ -57,7 +57,7 @@ _UPCOMING_COLUMNS = [
 
 # ESPN sometimes uses shortened abbreviations — map them to standard tricodes
 ESPN_TO_TRICODE = {
-    "GS": "GSW", "SA": "SAS", "NO": "NOP", "NY": "NYK", "WSH": "WAS",
+    "GS": "GSW", "SA": "SAS", "NO": "NOP", "NY": "NYK", "WSH": "WAS", "UTAH": "UTA",
 }
 
 TEAM_IDS = {
