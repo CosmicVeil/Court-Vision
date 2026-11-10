@@ -316,32 +316,38 @@ const Recommendations = () => {
             )}
           </div>
 
-          <h2 className="section-heading" data-enter style={enterDelay(4)}>Basketball Insights & Trends</h2>
-          <p className="section-description" data-enter style={enterDelay(4)}>
-            Discover key insights, trends, and analysis powered by AI to help you understand the game better
-          </p>
-          <div className="recommendations-grid">
-            {insights.map((insight) => (
-              <TiltCard key={insight.id} className="recommendation-card insight-card" data-enter style={enterDelay(insight.id + 4)}>
-                <div className="card-header">
-                  <div className="insight-icon">{insight.icon}</div>
-                  <div className="category-badge">{insight.category}</div>
-                </div>
-                <div className="card-body">
-                  <h3 className="insight-title">{insight.title}</h3>
-                  <p className="recommendation-reason">{insight.description}</p>
-                  <div className="insight-details">
-                    <span className="details-text">{insight.details}</span>
-                  </div>
-                </div>
-                <div className="card-footer">
-                  <Link to={insight.link} className="view-stats-link">
-                    Explore More →
-                  </Link>
-                </div>
-              </TiltCard>
-            ))}
-          </div>
+          {/* Held back until the spotlight resolves: shown under the small loader, these cards would
+              be pushed off-screen when the four tall spotlight cards arrive (a layout shift). */}
+          {!spotlightLoading && (
+            <>
+              <h2 className="section-heading" data-enter style={enterDelay(4)}>Basketball Insights & Trends</h2>
+              <p className="section-description" data-enter style={enterDelay(4)}>
+                Discover key insights, trends, and analysis powered by AI to help you understand the game better
+              </p>
+              <div className="recommendations-grid">
+                {insights.map((insight) => (
+                  <TiltCard key={insight.id} className="recommendation-card insight-card" data-enter style={enterDelay(insight.id + 4)}>
+                    <div className="card-header">
+                      <div className="insight-icon">{insight.icon}</div>
+                      <div className="category-badge">{insight.category}</div>
+                    </div>
+                    <div className="card-body">
+                      <h3 className="insight-title">{insight.title}</h3>
+                      <p className="recommendation-reason">{insight.description}</p>
+                      <div className="insight-details">
+                        <span className="details-text">{insight.details}</span>
+                      </div>
+                    </div>
+                    <div className="card-footer">
+                      <Link to={insight.link} className="view-stats-link">
+                        Explore More →
+                      </Link>
+                    </div>
+                  </TiltCard>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
 

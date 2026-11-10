@@ -23,12 +23,13 @@ test('game leaders pick the top points, rebounds and assists across both teams',
   const game = {
     status: 2,
     away: { tricode: 'BKN' }, home: { tricode: 'BOS' },
-    players: { away: [player(1, 30, 4, 2), player(2, 8, 11, 1)], home: [player(3, 30, 5, 9), player(4, 12, 2, 3)] },
+    players: { away: [player(1, 30, 4, 2, { fpts: 37.8 }), player(2, 8, 11, 1)], home: [player(3, 30, 5, 9, { fpts: 49.5 }), player(4, 12, 2, 3)] },
   };
   assert.deepEqual(detail.getGameLeaders(game), [
     { key: 'pts', label: 'Points', value: 30, player: game.players.away[0], side: 'away', tricode: 'BKN' },
     { key: 'reb', label: 'Rebounds', value: 11, player: game.players.away[1], side: 'away', tricode: 'BKN' },
     { key: 'ast', label: 'Assists', value: 9, player: game.players.home[0], side: 'home', tricode: 'BOS' },
+    { key: 'fpts', label: 'Fantasy Points', value: 49.5, player: game.players.home[0], side: 'home', tricode: 'BOS' },
   ], 'ties keep the first player found (away before home)');
   assert.deepEqual(detail.getGameLeaders({ ...game, players: { away: [], home: [] } }), []);
   assert.deepEqual(detail.getGameLeaders({ ...game, players: undefined }), []);
@@ -64,8 +65,8 @@ test('period breakdown pairs scores, scales bars and names the winner', () => {
 test('column leaders mark the best value per stat, ignoring zeros', () => {
   assert.equal(typeof detail.getColumnLeaders, 'function');
   const players = [player(1, 20, 3, 0, { stl: 2 }), player(2, 25, 3, 0), player(3, 5, 1, 0)];
-  assert.deepEqual(detail.getColumnLeaders(players), { pts: 25, reb: 3, ast: null, stl: 2, blk: null });
-  assert.deepEqual(detail.getColumnLeaders([]), { pts: null, reb: null, ast: null, stl: null, blk: null });
+  assert.deepEqual(detail.getColumnLeaders(players), { pts: 25, reb: 3, ast: null, stl: 2, blk: null, fpts: null });
+  assert.deepEqual(detail.getColumnLeaders([]), { pts: null, reb: null, ast: null, stl: null, blk: null, fpts: null });
 });
 
 test('the detail page adopts the scoreboard, leaders, momentum and live dock', () => {
@@ -151,4 +152,11 @@ test('upcoming-game box scores show season fantasy points next to the season ave
   const box = read('src/components/GameBoxScore.jsx');
   assert.match(box, /\['season_fpts', 'S·FPTS'\]/);
   assert.match(box, /<td className="season-stat">\{player\.season_fpts \?\? '–'\}<\/td>/);
+});
+
+test('live and final box scores show each player fantasy points for the game', () => {
+  const box = read('src/components/GameBoxScore.jsx');
+  assert.match(box, /const GAME_COLUMNS = \[\['fpts', 'FPTS'\]/);
+  assert.match(box, /<td className=\{lead\('fpts'\)\}>\{player\.fpts \?\? '–'\}<\/td>/, 'DNP (null) shows a dash');
+  assert.ok(detail.BOX_SCORE_LEADER_KEYS.includes('fpts'), 'the team-best FPTS gets the leader marker');
 });

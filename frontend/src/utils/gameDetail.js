@@ -4,6 +4,7 @@ const GAME_LEADERS = [
   { key: 'pts', label: 'Points' },
   { key: 'reb', label: 'Rebounds' },
   { key: 'ast', label: 'Assists' },
+  { key: 'fpts', label: 'Fantasy Points' },
 ];
 
 // Before tip-off there are no game stats, so the leaders come from season averages.
@@ -14,7 +15,7 @@ const SEASON_LEADERS = [
   { key: 'season_fpts', label: 'Season FPTS' },
 ];
 
-export const BOX_SCORE_LEADER_KEYS = ['pts', 'reb', 'ast', 'stl', 'blk'];
+export const BOX_SCORE_LEADER_KEYS = ['pts', 'reb', 'ast', 'stl', 'blk', 'fpts'];
 
 const numeric = value => (value === null || value === undefined || value === '' ? null : Number(value));
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import PillNav from './PillNav';
+import { FPTS_TITLE } from '../utils/fantasy';
 import { getColumnLeaders, nextSort, sortPlayers } from '../utils/gameDetail';
 import { formatGameTime, formatPeriod, STATUS_FINAL, STATUS_LIVE, STATUS_SCHEDULED } from '../utils/liveGames';
 
@@ -106,6 +107,7 @@ function PlayerRow({ player, onClick, isFuture, leaders = {}, index = 0 }) {
         </>
       ) : (
         <>
+          <td className={lead('fpts')}>{player.fpts ?? '–'}</td>
           <td>{player.fgm}/{player.fga}</td><td>{player.fg3m}/{player.fg3a}</td><td>{player.ftm}/{player.fta}</td>
           <td className={player.plusMinus > 0 ? 'plus' : player.plusMinus < 0 ? 'minus' : ''}>
             {player.plusMinus > 0 ? `+${player.plusMinus}` : player.plusMinus}
@@ -117,7 +119,7 @@ function PlayerRow({ player, onClick, isFuture, leaders = {}, index = 0 }) {
 }
 
 const STAT_COLUMNS = [['min', 'MIN'], ['pts', 'PTS'], ['reb', 'REB'], ['ast', 'AST'], ['stl', 'STL'], ['blk', 'BLK']];
-const GAME_COLUMNS = [['fg', 'FG'], ['fg3', '3P'], ['ft', 'FT'], ['plusMinus', '+/-']];
+const GAME_COLUMNS = [['fpts', 'FPTS'], ['fg', 'FG'], ['fg3', '3P'], ['ft', 'FT'], ['plusMinus', '+/-']];
 const SEASON_COLUMNS = [['season_ppg', 'S·PPG'], ['season_rpg', 'S·RPG'], ['season_apg', 'S·APG'], ['season_fpts', 'S·FPTS']];
 
 export function BoxScore({ game, onPlayerClick }) {
@@ -140,6 +142,7 @@ export function BoxScore({ game, onPlayerClick }) {
     const active = sort?.key === key;
     return (
       <th key={key} className={key.startsWith('season_') ? 'season-header' : undefined}
+        title={key.endsWith('fpts') ? FPTS_TITLE : undefined}
         aria-sort={active ? (sort.dir === 'desc' ? 'descending' : 'ascending') : undefined}>
         <button type="button" className="sort-btn" data-active={active ? '' : undefined}
           onClick={() => setSort(current => nextSort(current, key))}>

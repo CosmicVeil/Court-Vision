@@ -253,7 +253,7 @@ def _fetch_boxscore(game_id: str, home_tri: str, away_tri: str) -> Dict[str, Lis
                         pm_val = _int_val(stats, pm_label)
                         break
 
-                team_players.append({
+                box_player = {
                     "personId":  player_id_for(ath.get("displayName", "")),
                     "espnId":    int(ath.get("id", 0) or 0),
                     "name":      ath.get("displayName", ""),
@@ -272,7 +272,10 @@ def _fetch_boxscore(game_id: str, home_tri: str, away_tri: str) -> Dict[str, Lis
                     "tov":       _int_val(stats, "TO"),
                     "min":       _val(stats, "MIN"),
                     "plusMinus": pm_val,
-                })
+                }
+                # Scored from this game's box score; None for DNP, like the archived game log.
+                box_player["fpts"] = None if did_not_play else fantasy_points(box_player)
+                team_players.append(box_player)
 
             if is_home:
                 home_players = team_players

@@ -97,3 +97,10 @@ test("recommendations include the biggest predicted fantasy points jump", () => 
   assert.match(chart, /Current \{statLabel\}/);
   assert.match(chart, /\{fantasy && stat !== 'FANTASY' && \(/, "no duplicate FPTS row on the fantasy list");
 });
+
+test("the insight cards wait for the spotlight so its cards don't push them off-screen", () => {
+  const held = radar.indexOf("{!spotlightLoading && (");
+  assert.ok(held > radar.indexOf('className="spotlight-section"'), "gate sits after the spotlight section");
+  assert.ok(held < radar.indexOf("Basketball Insights & Trends"), "insight heading is inside the gate");
+  assert.ok(held < radar.indexOf("insights.map("), "insight cards are inside the gate");
+});
