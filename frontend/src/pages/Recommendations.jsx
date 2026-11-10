@@ -209,7 +209,7 @@ const Recommendations = () => {
           BREAKOUT <span className="text-ember">RECOMMENDATIONS</span>
         </h1>
         <p className="recommendations-subtitle">
-          Players our XGBoost model projects to make the biggest per-game jumps next season, measured against their current numbers
+          Players our model expects to improve the most per game next season, compared with their current averages
         </p>
       </header>
 

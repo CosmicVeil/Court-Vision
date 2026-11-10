@@ -161,7 +161,7 @@ function TrendingSection({ onPlayerClick, onSettled }) {
         </div>
         <div className="trend-empty-info">
           <h3>NO LIVE GAMES TODAY</h3>
-          <p className="featured-time">Next-season XGBoost projections and full season stats are still a click away</p>
+          <p className="featured-time">Our model's projections for next season and full season stats are still a click away</p>
           <Link to="/games" className="cta-button primary trend-empty-cta">VIEW GAME SCHEDULE →</Link>
         </div>
       </div>
@@ -241,7 +241,7 @@ function ModelAccuracy() {
 
 const STEPS = [
   { number: "01", title: "CREATE YOUR ACCOUNT", text: "Sign up in seconds and personalize your analytics feed with your favorite NBA franchises and players." },
-  { number: "02", title: "EXPLORE & ANALYZE", text: "Dig into live box scores, multi-season player stats, and XGBoost projections for this season." },
+  { number: "02", title: "EXPLORE & ANALYZE", text: "Dig into live box scores, multi-season player stats, and our projections for this season." },
   { number: "03", title: "STAY AHEAD", text: "Receive daily value recommendations, automated injury adjustments, and real-time game probabilities." },
 ];
 
@@ -852,10 +852,10 @@ const Home = () => {
         <div className="ai-content">
           <SectionHead
             id="home-leaders-title"
-            eyebrow="XGBOOST FORECASTING"
+            eyebrow="OUR MODEL"
             title="PROJECTED"
             accent="LEADERS"
-            lead="XGBoost models trained on past seasons project this season's top scorers, playmakers, rebounders and breakout players"
+            lead="We use past seasons' stats to predict this season's top scorers, playmakers, rebounders and breakout players."
           />
           <ModelAccuracy />
           <div data-reveal style={revealDelay(1)}>
@@ -871,7 +871,7 @@ const Home = () => {
           eyebrow="GET STARTED"
           title="ELEVATE YOUR"
           accent="COURT VISION"
-          lead="Live box scores, multi-season player stats and XGBoost projections for this season, all in one place."
+          lead="Live box scores, multi-season player stats and our projections for this season, all in one place."
         />
         <div className="home-cta-actions" data-reveal style={revealDelay(1)}>
           <Link to="/stats" className="cta-button primary large">START ANALYZING</Link>
