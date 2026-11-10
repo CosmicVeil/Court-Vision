@@ -146,7 +146,8 @@ class StartupArchiveTeamsTests(PlayerTeamsTestCase):
     def test_initialize_applies_teams_after_db_init(self):
         self.enterContext(patch.object(game_archive, "auto_archive_enabled", False))
         self.enterContext(patch.object(state, "ai_available", False))
-        for name in ("load_nba_data", "load_multi_season_data", "assign_player_ids", "load_ai", "load_current_season"):
+        for name in ("load_nba_data", "load_multi_season_data", "assign_player_ids", "load_ai", "load_current_season",
+                     "start_prediction_accuracy"):
             self.enterContext(patch.object(state, name))
         self.enterContext(patch.object(game_archive, "schedule_catch_up"))
         init_db = self.enterContext(patch.object(db, "init_db"))

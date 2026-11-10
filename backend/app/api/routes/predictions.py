@@ -178,6 +178,12 @@ def get_all_predictions_paginated():
         return jsonify({'error': str(e)}), 500
 
 
+@bp.route('/predictions/accuracy', methods=['GET'])
+def get_prediction_accuracy():
+    """How this season's predictions compare with the games played so far (public)."""
+    return jsonify({'accuracy': state.prediction_accuracy})
+
+
 @bp.route('/player-prediction/<string:player_name>', methods=['GET'])
 @require_auth
 def get_player_prediction_api(player_name):

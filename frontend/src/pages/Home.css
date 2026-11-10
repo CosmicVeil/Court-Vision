@@ -1053,6 +1053,54 @@ html[data-motion-ready] :is(.featured-card, .step-item)[data-reveal] {
 
 .ai-content { max-width: 1200px; margin: 0 auto; }
 
+/* Season-so-far accuracy strip above the projected leaders (only rendered when the model is beating
+   the "same as last season" baseline). */
+.model-accuracy-block { max-width: 880px; margin: 0 auto calc(var(--space) * 10); }
+.model-accuracy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--spacing-24);
+  padding: var(--spacing-24);
+  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
+  border: 1px solid rgba(255, 100, 54, 0.18);
+  border-radius: var(--radius-xl);
+  text-align: left;
+}
+.model-accuracy-copy { flex: 1 1 320px; }
+.model-accuracy-eyebrow { font-size: 11px; font-weight: 700; font-family: var(--font-mono); letter-spacing: 1.5px; color: var(--color-ember-orange); }
+.model-accuracy-claim { margin: 8px 0 6px; font-size: 17px; line-height: 1.45; color: var(--color-pure-white); }
+.model-accuracy-claim strong { color: var(--color-ember-orange); }
+.model-accuracy-meta { margin: 0; font-size: 11px; color: var(--color-stone); font-family: var(--font-mono); letter-spacing: 0.5px; }
+.model-accuracy-stats { display: flex; gap: var(--spacing-24); margin: 0; }
+.model-accuracy-stat { display: flex; flex-direction: column; text-align: center; }
+.model-accuracy-stat dd { margin: 0; color: var(--color-pure-white); }
+
+/* "Called it": the players the model projected most closely, under the accuracy strip. */
+.called-it-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--spacing-24);
+  margin: var(--spacing-24) 0 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+.called-it-card {
+  padding: var(--spacing-24);
+  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-xl);
+}
+.called-it-name { margin: 8px 0 4px; font-family: var(--font-heading); font-size: 17px; font-weight: 800; text-transform: uppercase; color: var(--color-pure-white); }
+.called-it-table { width: 100%; margin-top: 14px; border-collapse: collapse; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.called-it-table th { font-size: 10px; font-weight: 400; letter-spacing: 1.5px; text-transform: uppercase; color: var(--color-stone); }
+.called-it-table thead th, .called-it-table td { text-align: right; }
+.called-it-table tbody th { text-align: left; }
+.called-it-table td { padding: 4px 0; font-size: 15px; font-weight: 700; color: var(--color-pure-white); }
+.called-it-table td:last-child { color: var(--color-ember-orange); }
+
 .predictions-tabs,
 .ai-section .predictions-tabs {
   display: flex !important;

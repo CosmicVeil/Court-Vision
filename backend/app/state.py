@@ -5,7 +5,7 @@ import pickle
 from datetime import date
 
 from app import config, db
-from app.services import game_archive
+from app.services import game_archive, prediction_accuracy as accuracy_tracker
 from app.utils import player_ids
 from app.utils.player_names import fix_mojibake, normalize_player_name
 
@@ -13,6 +13,7 @@ is_render = False
 ai_available = False
 ai = None  # app.ml.nba_ai_system, loaded only outside low-memory mode
 predictions_cache = None
+prediction_accuracy = None  # latest accuracy snapshot (see app.services.prediction_accuracy)
 
 nba_data = None
 current_season_data = []
@@ -223,6 +224,7 @@ def load_current_season(conn=None):
         players = game_archive.season_player_averages(conn, year)
         current_season_year = year
         current_season_data = players
+        accuracy_tracker.record(conn)  # the actuals just changed, so re-score the predictions
         return len(players)
     except Exception as e:
         print(f"Could not load current season from game archive ({e}); keeping previous data.")
@@ -268,3 +270,20 @@ def initialize():
             print("AI system initialized and predictions cached")
         except Exception as e:
             print(f"AI initialization failed (non-fatal): {e}")
+
+    start_prediction_accuracy()
+
+
+def start_prediction_accuracy():
+    """Take the first accuracy snapshot now that the predictions and the season so far are loaded."""
+    conn = None
+    try:
+        if os.environ.get('DATABASE_URL'):
+            conn = db.get_db()
+    except Exception as e:
+        print(f"Prediction accuracy will not be stored ({e}).")
+    try:
+        accuracy_tracker.start(conn)
+    finally:
+        if conn:
+            conn.close()
