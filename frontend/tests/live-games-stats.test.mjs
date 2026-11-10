@@ -36,3 +36,11 @@ test('stat strip normalizes missing and malformed count data without inventing a
   const date = new Date('2026-10-27T12:00:00Z');
   assert.equal(getLiveGamesStats({ lastUpdated: date })[3].value, date.toLocaleTimeString());
 });
+
+test('stat strip shows today\'s counts while the upcoming schedule is still loading', () => {
+  assert.equal(typeof getLiveGamesStats, 'function');
+  const date = new Date('2026-10-27T12:00:00Z');
+  assert.deepEqual(getLiveGamesStats({ loading: false, upcomingLoading: true, todayGames: [{ status: 2 }, { status: 3 }],
+    upcomingTotalGames: 0, lastUpdated: date, formatTime: () => '12:00:00',
+  }).map(stat => stat.value), [1, 2, '—', '12:00:00']);
+});

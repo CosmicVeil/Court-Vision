@@ -4,7 +4,7 @@ from flask import Blueprint, jsonify, request
 
 from app import state
 from app.services.game_archive import archive_finished_games
-from app.services.live_games import get_todays_games, get_upcoming_games
+from app.services.live_games import attach_rosters, get_todays_games, get_upcoming_games
 
 bp = Blueprint('games', __name__, url_prefix='/api/games')
 
@@ -26,7 +26,8 @@ def get_today_games():
 def get_upcoming():
     try:
         days = int(request.args.get('days', 365))
-        games = get_upcoming_games(days=days, nba_data=state.nba_data)
+        # Schedule only: rosters are built for the one page returned, not the whole season.
+        games = get_upcoming_games(days=days)
 
         page = request.args.get('page', 1, type=int)
         page = max(1, page)
@@ -35,7 +36,7 @@ def get_upcoming():
         start = (page - 1) * per_page
         end = start + per_page
 
-        paginated_games = games[start:end]
+        paginated_games = attach_rosters(games[start:end], state.nba_data)
 
         total_pages = math.ceil(len(games) / per_page)
 
@@ -51,8 +52,10 @@ def get_game_detail(game_id):
         games = get_todays_games(nba_data=state.nba_data)
         game = next((g for g in games if str(g.get('gameId')) == game_id), None)
         if not game:
-            upcoming_games = get_upcoming_games(nba_data=state.nba_data)
+            upcoming_games = get_upcoming_games()
             game = next((g for g in upcoming_games if str(g.get('gameId')) == game_id), None)
+            if game:
+                attach_rosters([game], state.nba_data)
         if not game:
             return jsonify({'error': 'Game not found'}), 404
         return jsonify(game), 200
