@@ -309,6 +309,47 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(build_report([], 'ppg', top=1), 'No players to score yet.')
 
 
+class PlayerTableTests(unittest.TestCase):
+    def setUp(self):
+        self.errors = accuracy.score(
+            [prediction(1, 20.0, 24.0, predicted_rpg=5.0), prediction(2, 10.0, 9.0, predicted_rpg=9.0),
+             prediction(3, 15.0, 15.5, predicted_rpg=4.0)],
+            [actual(1, 22.0, RPG_LAST=5.0), actual(2, 11.0, RPG_LAST=3.0), actual(3, 15.0, RPG_LAST=5.0)],
+        )
+
+    def test_ranks_every_player_by_one_stat_or_by_the_scaled_overall_miss(self):
+        from scripts.accuracy_report import format_table, player_table
+
+        self.assertEqual([p['player_name'] for p in player_table(self.errors, 'ppg')],
+                         ['Player 3', 'Player 2', 'Player 1'])
+        overall = player_table(self.errors)
+        # Player 2 is close on points but six rebounds off: scaling each stat by its typical
+        # miss (ppg 1.0, rpg 7/3) puts them last overall.
+        self.assertEqual([p['player_name'] for p in overall], ['Player 3', 'Player 1', 'Player 2'])
+        self.assertAlmostEqual(overall[1]['score'], (2.0 / 1.0 + 0.0) / 2)  # stats nobody missed on are left out
+        self.assertEqual(overall[0]['stats']['ppg'], {'predicted': 15.0, 'actual': 15.0, 'error': 0.0})
+        lines = format_table(overall).splitlines()
+        self.assertEqual(len(lines), 5)
+        self.assertIn('15.0/15.0', lines[2])
+        self.assertTrue(lines[2].startswith('   1  Player 3'))
+
+    def test_csv_has_predicted_actual_and_error_for_every_stat(self):
+        import csv
+        import os
+        import tempfile
+        from scripts.accuracy_report import player_table, write_csv
+
+        with tempfile.TemporaryDirectory() as folder:
+            path = os.path.join(folder, 'accuracy.csv')
+            write_csv(player_table(self.errors, 'ppg'), path)
+            with open(path, newline='', encoding='utf-8') as f:
+                rows = list(csv.DictReader(f))
+        self.assertEqual(len(rows), 3)
+        self.assertEqual(len(rows[0]), 5 + 7 * 3)
+        self.assertEqual((rows[2]['player'], rows[2]['ppg_predicted'], rows[2]['ppg_actual'], rows[2]['ppg_error']),
+                         ('Player 1', '20.0', '22.0', '-2.0'))
+
+
 class AccuracyRouteTests(unittest.TestCase):
     def setUp(self):
         self.client = create_app(load_data=False).test_client()
