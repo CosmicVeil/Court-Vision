@@ -261,10 +261,10 @@ const Predictions = () => {
       {/* New cards arrive with each fetch, so the reveal rescans when the list changes. */}
       <ScrollReveal scanKey={predictions} />
       <PageHero
-        eyebrow="XGBOOST FORECASTING"
+        eyebrow="OUR MODEL"
         title="NEXT SEASON"
         accent="PREDICTIONS"
-        lead="Gradient-boosted (XGBoost) models trained on past seasons project every player's per-game stats for this season"
+        lead="Our model uses past seasons' stats to predict each player's per-game averages for this season."
         stats={getPredictionsHeroStats({
           ready: !error && (!loading || predictions.length > 0),
           total: totalPlayers, sort: sortBy, order: sortOrder, page: currentPage, totalPages,

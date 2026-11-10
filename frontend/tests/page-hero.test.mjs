@@ -83,18 +83,18 @@ test('box-score sort buttons are scoped, so they do not restyle the Stats sort b
   assert.match(css, /\.boxscore \.sort-btn \{/);
 });
 
-test('Predictions copy describes the model it actually uses (XGBoost, this season\'s averages)', () => {
+test('Predictions copy explains this season’s projections in plain language', () => {
   const page = readSource('Predictions.jsx');
   assert.doesNotMatch(page, /neural/i, 'the model is gradient-boosted trees, not a neural network');
-  assert.match(page, /XGBoost/);
+  assert.doesNotMatch(page, /xgboost|gradient.boosted/i);
+  assert.match(page, /our model/i);
   assert.match(page, /this season/i);
 });
 
-test('Home, Contact and Recommendations describe the XGBoost model, not neural networks or inputs it does not use', () => {
+test('Home, Contact and Recommendations describe projections in plain language', () => {
   for (const file of ['Home.jsx', 'Contact.jsx', 'Recommendations.jsx']) {
     const page = readSource(file);
-    assert.doesNotMatch(page, /neural|deep.learning/i, file);
-    assert.match(page, /XGBoost/, file);
+    assert.doesNotMatch(page, /xgboost|neural|deep.learning/i, file);
   }
   // The model only sees each player's own season stats: no pace, ratings or opponent matchups.
   assert.doesNotMatch(readSource('Home.jsx'), /team pace|offensive rating|matchup efficiency|possession metrics/i);

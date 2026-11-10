@@ -20,7 +20,7 @@ function Contact() {
           eyebrow="DEVELOPMENT INTEL"
           title="THE ARCHITECTS BEHIND"
           accent="COURT VISION"
-          lead="Turning NBA box-score data into XGBoost forecasts and live game insights. Meet the engineers building the platform."
+          lead="We use NBA box scores to make player predictions and help you follow live games. Meet the engineers building the platform."
         />
 
         <article className="contact-project-card" data-enter style={enterDelay(1)}>
@@ -57,7 +57,7 @@ function Contact() {
                 <ul className="contact-team-skills" aria-label="Mohan's focus areas">
                   <li>Python</li>
                   <li>PyTorch</li>
-                  <li>XGBoost</li>
+                  <li>Player Projections</li>
                 </ul>
               </div>
               <a
