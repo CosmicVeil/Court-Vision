@@ -1058,7 +1058,7 @@
   margin: calc(var(--space) * 8) auto 0;
 }
 
-/* Before tip-off the strip has a fourth leader (Season FPTS): keep the leaders on one row. */
+/* The strip has a fourth leader (Fantasy Points, or Season FPTS before tip-off): keep the leaders on one row. */
 .lg-detail-page .detail-leaders:has(> :nth-child(4)) {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   max-width: 60rem;

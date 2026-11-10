@@ -95,6 +95,24 @@ class UpcomingRosterFantasyTests(unittest.TestCase):
         self.assertEqual(roster[0]['season_fpts'], 37.6)
 
 
+class LiveBoxScoreFantasyTests(unittest.TestCase):
+    def _summary(self, *athletes):
+        labels = ['MIN', 'PTS', 'FG', '3PT', 'FT', 'REB', 'AST', 'TO', 'STL', 'BLK', '+/-']
+        return {'boxscore': {'players': [{
+            'team': {'abbreviation': 'LAL'},
+            'statistics': [{'labels': labels, 'athletes': list(athletes)}],
+        }]}}
+
+    def test_live_box_score_players_carry_game_fpts(self):
+        # 25 + 1.2*10 + 1.5*5 + 3*2 + 3*1 - 3 = 50.5
+        played = {'athlete': {'displayName': 'Test Player', 'id': '1'},
+                  'stats': ['34', '25', '9-18', '2-5', '5-6', '10', '5', '3', '2', '1', '+8']}
+        benched = {'athlete': {'displayName': 'Bench Player', 'id': '2'}, 'didNotPlay': True, 'stats': []}
+        with patch.object(live_games, '_get', return_value=self._summary(played, benched)):
+            box = live_games._fetch_boxscore('1', 'LAL', 'BOS')
+        self.assertEqual([p['fpts'] for p in box['home']], [50.5, None])
+
+
 class FantasyRecommendationTests(unittest.TestCase):
     def _frame(self):
         def row(name, last, predicted):
