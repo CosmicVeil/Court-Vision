@@ -206,7 +206,8 @@ class InitDbTests(unittest.TestCase):
         conn = MagicMock()
         with patch.dict(os.environ, {'DATABASE_URL': 'postgresql://unused/test'}), \
              patch('app.db.get_db', return_value=conn), \
-             patch('app.services.game_archive.init_archive_tables') as archive:
+             patch('app.services.game_archive.init_archive_tables') as archive, \
+             patch('app.services.prediction_accuracy.init_tables') as accuracy:
             init_db()
 
         statements = [' '.join(args.args[0].split()) for args in conn.execute.call_args_list]
@@ -218,6 +219,7 @@ class InitDbTests(unittest.TestCase):
                          'user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, '
                          'expires_at TIMESTAMP NOT NULL )')
         archive.assert_called_once_with(conn)
+        accuracy.assert_called_once_with(conn)
         conn.commit.assert_called_once_with()
         conn.close.assert_called_once_with()
 

@@ -8,6 +8,7 @@ import { isAuthenticated } from "../utils/auth";
 import { buildApiUrl } from "../config/api";
 import { samePlayerName } from "../utils/playerNames";
 import { extractWeeklyPraPlayer, formatPraGameDate } from "../utils/weeklyPra";
+import { getAccuracyHighlights } from "../utils/predictionAccuracy";
 import { enterDelay, getRevealDelay } from "../utils/scrollReveal";
 
 // Inline style placing a data-reveal element at `index` in its section's stagger.
@@ -173,6 +174,69 @@ function TrendingSection({ onPlayerClick, onSettled }) {
   );
 
   return <div className="featured-grid" data-defer>{cards}</div>;
+}
+
+// How this season's projections are holding up against the games played so far. Renders nothing
+// until the API reports a snapshot the backend rated as good.
+function ModelAccuracy() {
+  const [highlights, setHighlights] = useState(null);
+
+  useEffect(() => {
+    fetch(buildApiUrl('predictions/accuracy'))
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => setHighlights(getAccuracyHighlights(data)))
+      .catch(e => console.error("Prediction accuracy fetch failed", e));
+  }, []);
+
+  if (!highlights) return null;
+  return (
+    <aside className="model-accuracy-block" aria-label={`Projection accuracy, ${highlights.season} season so far`}>
+    <div className="model-accuracy">
+      <div className="model-accuracy-copy">
+        <span className="model-accuracy-eyebrow">{highlights.season} REPORT CARD</span>
+        <p className="model-accuracy-claim">
+          <strong>{highlights.edgePct}% closer</strong> on scoring than assuming every player repeats last season
+        </p>
+        <p className="model-accuracy-meta">
+          {highlights.players} players with {highlights.minGames}+ games · updated {formatPraGameDate(highlights.asOf)}
+        </p>
+      </div>
+      <dl className="model-accuracy-stats">
+        {highlights.stats.map(stat => (
+          <div key={stat.key} className="model-accuracy-stat">
+            <dd className="pra-val">±{stat.miss}</dd>
+            <dt className="pra-lbl">{stat.label} avg miss</dt>
+          </div>
+        ))}
+      </dl>
+    </div>
+    {highlights.bestCalls.length > 0 && (
+      <ul className="called-it-grid" aria-label="Closest projections so far">
+        {highlights.bestCalls.map(call => (
+          <li key={call.id} className="called-it-card">
+            <span className="model-accuracy-eyebrow">CALLED IT</span>
+            <h3 className="called-it-name">{call.name}</h3>
+            <p className="model-accuracy-meta">{call.meta}</p>
+            <table className="called-it-table">
+              <thead>
+                <tr><td /><th scope="col">Projected</th><th scope="col">Actual</th></tr>
+              </thead>
+              <tbody>
+                {call.stats.map(stat => (
+                  <tr key={stat.key}>
+                    <th scope="row">{stat.label}</th>
+                    <td>{stat.predicted}</td>
+                    <td>{stat.actual}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </li>
+        ))}
+      </ul>
+    )}
+    </aside>
+  );
 }
 
 const STEPS = [
@@ -793,6 +857,7 @@ const Home = () => {
             accent="LEADERS"
             lead="XGBoost models trained on past seasons project this season's top scorers, playmakers, rebounders and breakout players"
           />
+          <ModelAccuracy />
           <div data-reveal style={revealDelay(1)}>
             <AIPredictions onPlayerClick={handlePlayerClick} onContentChange={setLeadersContent} />
           </div>

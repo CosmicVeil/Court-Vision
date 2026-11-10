@@ -55,6 +55,8 @@ def init_db(app=None):
         ''')
         from app.services.game_archive import init_archive_tables
         init_archive_tables(conn)
+        from app.services.prediction_accuracy import init_tables as init_accuracy_tables
+        init_accuracy_tables(conn)
         conn.commit()
         conn.close()
         print("PostgreSQL database initialized")
