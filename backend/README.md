@@ -139,7 +139,7 @@ Run from `backend/`:
 ```
 
 - `--fast` uses a small model (about a minute). Use it for quick iteration.
-- With no flags it uses the production settings. With 10,000 trees this takes about an hour.
+- With no flags it uses the production settings (every setting in `_build_xgboost_model`, including the objective and regularization). This takes about 20 seconds.
 - `--n-estimators`, `--max-depth`, `--learning-rate`, `--subsample` and `--colsample-bytree` try other settings without editing code. They can be combined with `--fast`.
 - `--seasons N` changes how many recent seasons are scored.
 - `--data PATH` and `--output PATH` point at a different dataset or report location.

@@ -64,6 +64,7 @@ backend/data/model_evaluation_report.json
 
 # Local backups of pre-enrichment data/model (too large for GitHub, not LFS-tracked)
 backend/data/*.pre_enrich.pkl
+backend/data/*.pre_tuning.*
 
 # Backups written by backend/scripts/repair_player_names.py
 backend/data/*.bak

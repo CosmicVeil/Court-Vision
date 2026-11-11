@@ -74,12 +74,12 @@ class WalkForwardTests(unittest.TestCase):
         }
         result = evaluate(data, seasons=1, model_factory=MeanModel)
         ppg = result["folds"][0]["stats"]["ppg"]
-        self.assertAlmostEqual(ppg["mae"], 5.0)
-        self.assertAlmostEqual(ppg["rmse"], np.sqrt(29))
-        self.assertAlmostEqual(ppg["r2"], -0.16)
+        self.assertAlmostEqual(ppg["mae"], 0.0)
+        self.assertAlmostEqual(ppg["rmse"], 0.0)
+        self.assertAlmostEqual(ppg["r2"], 1.0)
         self.assertAlmostEqual(ppg["naive_mae"], 2.0)
-        self.assertAlmostEqual(ppg["ratio"], 2.5)
-        self.assertAlmostEqual(ppg["improvement_pct"], -150.0)
+        self.assertAlmostEqual(ppg["ratio"], 0.0)
+        self.assertAlmostEqual(ppg["improvement_pct"], 100.0)
         fg = result["folds"][0]["stats"]["fg_pct"]
         self.assertAlmostEqual(fg["mae"], 5.0)  # percentage points, not 0.05
         self.assertAlmostEqual(fg["naive_mae"], 5.0)
@@ -121,6 +121,17 @@ class ConfigurationTests(unittest.TestCase):
         for key, value in FAST_OVERRIDES.items():
             self.assertEqual(fast[key], value)
         self.assertEqual(make_model_factory(params)().estimator.get_params()["n_estimators"], 17)
+
+    def test_default_evaluation_model_matches_production_builder(self):
+        # Guards against drift: every setting in the production builder (objective,
+        # regularization, ...) must reach the model the evaluator scores.
+        production = nba_module._build_xgboost_model().estimator.get_params()
+        evaluated = make_model_factory(resolve_params(parse_args([])))().estimator.get_params()
+        self.assertEqual(
+            {name: value for name, value in evaluated.items() if name != "missing"},
+            {name: value for name, value in production.items() if name != "missing"},
+        )
+        json.dumps(production_params(), allow_nan=False)  # report-safe
 
     def test_main_writes_json_to_requested_path(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -176,7 +187,17 @@ class QualityAndTrainingTests(unittest.TestCase):
         with patch.object(nba_module, "_build_xgboost_model", return_value=fitted):
             self.assertTrue(system.train_model(combined))
         np.testing.assert_array_equal(fitted.seen_X, expected_X)
-        np.testing.assert_array_equal(fitted.seen_y, expected_y)
+        expected_changes = expected_y.copy()
+        raw = system.scaler.inverse_transform(expected_X)
+        expected_changes[:, 0] -= np.nan_to_num(raw[:, FEATURE_COLUMNS.index("PPG_LAST")], nan=0.0)
+        np.testing.assert_allclose(fitted.seen_y, expected_changes)
+        levels = fitted.predict(expected_X)
+        levels[:, 0] += np.nan_to_num(raw[:, FEATURE_COLUMNS.index("PPG_LAST")], nan=0.0)
+        self.assertAlmostEqual(system.validation_metrics["ppg"]["train_mae"],
+                               np.mean(np.abs(levels[:, 0] - expected_y[:, 0])))
+        self.assertAlmostEqual(system.validation_metrics["ppg"]["train_r2"],
+                               1 - np.sum((levels[:, 0] - expected_y[:, 0]) ** 2)
+                               / np.sum((expected_y[:, 0] - expected_y[:, 0].mean()) ** 2))
         self.assertEqual(len(fitted.seen_X), len(expected_X))
         for metrics in system.validation_metrics.values():
             self.assertEqual(set(metrics), {"train_mae", "train_r2"})

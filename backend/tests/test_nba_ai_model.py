@@ -252,7 +252,21 @@ class ClampAndPredictTests(unittest.TestCase):
     def test_predict_without_model_returns_none(self):
         self.assertIsNone(self.system.predict(np.zeros((1, len(FEATURE_COLUMNS)))))
 
+    def test_predict_adds_raw_baseline_only_for_change_targets(self):
+        raw = np.zeros((3, len(FEATURE_COLUMNS)))
+        raw[:, FEATURE_COLUMNS.index("PPG_LAST")] = [30, 10, np.nan]
+        raw[:, FEATURE_COLUMNS.index("APG_LAST")] = [8, 4, 2]
+        self.system.scaler.fit(raw[:2])
+        scaled = self.system.scaler.transform(raw)
+        self.system.model = Mock()
+        self.system.model.predict.return_value = np.tile(
+            [-2, 3, 5, 1, .5, 2, 30, .5, .4, .8], (3, 1))
+        result = self.system.predict(scaled)
+        np.testing.assert_allclose(result[:, 0], [28, 8, 0])
+        np.testing.assert_allclose(result[:, 1:], self.system.model.predict.return_value[:, 1:])
+
     def test_predict_clamps_model_output(self):
+        self.system.scaler.fit(np.zeros((1, len(FEATURE_COLUMNS))))
         self.system.model = Mock()
         self.system.model.predict.return_value = np.array([[-3, 1, 1, 1, 1, 1, 55, 1.5, 0.3, 0.9]])
         out = self.system.predict(np.zeros((1, len(FEATURE_COLUMNS))))
@@ -350,7 +364,7 @@ class PredictionsFrameTests(unittest.TestCase):
         ]}
         self.system.model = Mock()
         self.system.model.predict.return_value = np.array([
-            [12, 5, 5, 1, 0.5, 1.5, 25, 0.45, 0.35, 0.8],
+            [2, 5, 5, 1, 0.5, 1.5, 25, 0.45, 0.35, 0.8],
             [3, 1, 2, 1, 0.5, 1.5, 25, 0.30, 0.35, 0.8],
         ], dtype=float)
         self.system.scaler.fit(np.zeros((2, len(FEATURE_COLUMNS))))

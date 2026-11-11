@@ -18,14 +18,13 @@ from app.ml.nba_ai_system import (
     TARGET_SPECS,
     NBAAISystem,
     _build_xgboost_model,
+    target_baseline,
 )
 
 DATA_PATH = config.data_path(config.MULTI_SEASON_DATA_FILE)
 REPORT_PATH = config.data_path(config.MODEL_EVALUATION_REPORT_FILE)
-PARAM_NAMES = (
-    "n_estimators", "max_depth", "learning_rate", "subsample",
-    "colsample_bytree", "random_state", "n_jobs",
-)
+# Estimator defaults that carry no tuning information (and NaN can't go in the JSON report).
+UNREPORTED_PARAMS = ("missing", "enable_categorical")
 FAST_OVERRIDES = {"n_estimators": 200, "max_depth": 4, "learning_rate": 0.1}
 
 
@@ -36,9 +35,16 @@ def load_data(path=DATA_PATH):
 
 
 def production_params():
-    """Read the production estimator settings from its canonical builder."""
+    """Read every setting the canonical production builder sets.
+
+    Taking all of them (not a fixed list) keeps the evaluated model identical to
+    the one that ships, even when a new setting is added to the builder.
+    """
     params = _build_xgboost_model().estimator.get_params()
-    return {name: params[name] for name in PARAM_NAMES}
+    return {
+        name: value for name, value in params.items()
+        if value is not None and name not in UNREPORTED_PARAMS
+    }
 
 
 def make_model_factory(params):
@@ -133,8 +139,10 @@ def evaluate(data, seasons=3, model_factory=_build_xgboost_model):
         X_train_scaled = scaler.fit_transform(X_train)
         X_test_scaled = scaler.transform(X_test)
         model = model_factory()
-        model.fit(X_train_scaled, y_train)
-        predictions = system._clamp_predictions(model.predict(X_test_scaled))
+        model.fit(X_train_scaled, y_train - target_baseline(X_train))
+        predictions = system._clamp_predictions(
+            model.predict(X_test_scaled) + target_baseline(X_test)
+        )
 
         stats = {}
         for index, spec in enumerate(TARGET_SPECS):
