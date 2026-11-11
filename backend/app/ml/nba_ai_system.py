@@ -20,7 +20,7 @@ from app import config
 DATA_DIR = str(config.DATA_DIR)
 
 STAT_SCALE = 1.0
-MODEL_SCHEMA_VERSION = 4
+MODEL_SCHEMA_VERSION = 5
 SCRAPE_SCRIPT = "scripts/scrape_training_data.py"
 
 
@@ -63,23 +63,38 @@ FEATURE_COLUMNS = (
 )
 
 TARGET_SPECS = (
-    {'key': 'ppg', 'last_column': 'PPG_LAST', 'target_column': 'PPG_NEXT', 'predicted_column': 'PREDICTED_PPG', 'kind': 'rate', 'minimum': 0.0, 'maximum': None},
-    {'key': 'apg', 'last_column': 'APG_LAST', 'target_column': 'APG_NEXT', 'predicted_column': 'PREDICTED_APG', 'kind': 'rate', 'minimum': 0.0, 'maximum': None},
-    {'key': 'rpg', 'last_column': 'RPG_LAST', 'target_column': 'RPG_NEXT', 'predicted_column': 'PREDICTED_RPG', 'kind': 'rate', 'minimum': 0.0, 'maximum': None},
-    {'key': 'spg', 'last_column': 'SPG_LAST', 'target_column': 'SPG_NEXT', 'predicted_column': 'PREDICTED_SPG', 'kind': 'rate', 'minimum': 0.0, 'maximum': None},
-    {'key': 'bpg', 'last_column': 'BPG_LAST', 'target_column': 'BPG_NEXT', 'predicted_column': 'PREDICTED_BPG', 'kind': 'rate', 'minimum': 0.0, 'maximum': None},
-    {'key': 'tov', 'last_column': 'TOV_LAST', 'target_column': 'TOV_NEXT', 'predicted_column': 'PREDICTED_TOV', 'kind': 'rate', 'minimum': 0.0, 'maximum': None},
-    {'key': 'mpg', 'last_column': 'MIN_LAST', 'target_column': 'MIN_NEXT', 'predicted_column': 'PREDICTED_MPG', 'kind': 'minutes', 'minimum': 0.0, 'maximum': 48.0},
-    {'key': 'fg_pct', 'last_column': 'FG_PCT_LAST', 'target_column': 'FG_PCT_NEXT', 'predicted_column': 'PREDICTED_FG_PCT', 'kind': 'percentage', 'minimum': 0.0, 'maximum': 1.0},
-    {'key': 'fg3_pct', 'last_column': 'FG3_PCT_LAST', 'target_column': 'FG3_PCT_NEXT', 'predicted_column': 'PREDICTED_FG3_PCT', 'kind': 'percentage', 'minimum': 0.0, 'maximum': 1.0},
-    {'key': 'ft_pct', 'last_column': 'FT_PCT_LAST', 'target_column': 'FT_PCT_NEXT', 'predicted_column': 'PREDICTED_FT_PCT', 'kind': 'percentage', 'minimum': 0.0, 'maximum': 1.0},
+    {'key': 'ppg', 'last_column': 'PPG_LAST', 'target_column': 'PPG_NEXT', 'predicted_column': 'PREDICTED_PPG', 'kind': 'rate', 'change_target': True, 'minimum': 0.0, 'maximum': None},
+    {'key': 'apg', 'last_column': 'APG_LAST', 'target_column': 'APG_NEXT', 'predicted_column': 'PREDICTED_APG', 'kind': 'rate', 'change_target': False, 'minimum': 0.0, 'maximum': None},
+    {'key': 'rpg', 'last_column': 'RPG_LAST', 'target_column': 'RPG_NEXT', 'predicted_column': 'PREDICTED_RPG', 'kind': 'rate', 'change_target': False, 'minimum': 0.0, 'maximum': None},
+    {'key': 'spg', 'last_column': 'SPG_LAST', 'target_column': 'SPG_NEXT', 'predicted_column': 'PREDICTED_SPG', 'kind': 'rate', 'change_target': False, 'minimum': 0.0, 'maximum': None},
+    {'key': 'bpg', 'last_column': 'BPG_LAST', 'target_column': 'BPG_NEXT', 'predicted_column': 'PREDICTED_BPG', 'kind': 'rate', 'change_target': False, 'minimum': 0.0, 'maximum': None},
+    {'key': 'tov', 'last_column': 'TOV_LAST', 'target_column': 'TOV_NEXT', 'predicted_column': 'PREDICTED_TOV', 'kind': 'rate', 'change_target': False, 'minimum': 0.0, 'maximum': None},
+    {'key': 'mpg', 'last_column': 'MIN_LAST', 'target_column': 'MIN_NEXT', 'predicted_column': 'PREDICTED_MPG', 'kind': 'minutes', 'change_target': False, 'minimum': 0.0, 'maximum': 48.0},
+    {'key': 'fg_pct', 'last_column': 'FG_PCT_LAST', 'target_column': 'FG_PCT_NEXT', 'predicted_column': 'PREDICTED_FG_PCT', 'kind': 'percentage', 'change_target': False, 'minimum': 0.0, 'maximum': 1.0},
+    {'key': 'fg3_pct', 'last_column': 'FG3_PCT_LAST', 'target_column': 'FG3_PCT_NEXT', 'predicted_column': 'PREDICTED_FG3_PCT', 'kind': 'percentage', 'change_target': False, 'minimum': 0.0, 'maximum': 1.0},
+    {'key': 'ft_pct', 'last_column': 'FT_PCT_LAST', 'target_column': 'FT_PCT_NEXT', 'predicted_column': 'PREDICTED_FT_PCT', 'kind': 'percentage', 'change_target': False, 'minimum': 0.0, 'maximum': 1.0},
 )
+
+def target_baseline(X_raw):
+    """Return raw last-season levels for change targets, zero for level targets.
+
+    Missing baselines are zero in both training and inference. Feature NaNs
+    themselves remain untouched so XGBoost can handle missing inputs.
+    """
+    X_raw = np.asarray(X_raw, dtype=float)
+    baseline = np.zeros((len(X_raw), len(TARGET_SPECS)), dtype=float)
+    for index, spec in enumerate(TARGET_SPECS):
+        if spec['change_target']:
+            values = X_raw[:, FEATURE_COLUMNS.index(spec['last_column'])]
+            baseline[:, index] = np.where(np.isnan(values), 0.0, values)
+    return baseline
+
 
 def _build_xgboost_model():
     return MultiOutputRegressor(XGBRegressor(
-        n_estimators=750,
-        max_depth=9,
-        learning_rate=0.03,
+        n_estimators=300,
+        max_depth=4,
+        learning_rate=0.05,
         subsample=0.8,
         colsample_bytree=0.8,
         random_state=42,
@@ -500,9 +515,11 @@ class NBAAISystem:
 
         print("Training XGBoost model...")
         self.model = _build_xgboost_model()
-        self.model.fit(X, y)
+        baseline = target_baseline(self.scaler.inverse_transform(X))
+        self.model.fit(X, y - baseline)
 
-        train_pred = self.model.predict(X)
+        # Report level-space metrics even when the model learns changes.
+        train_pred = self.model.predict(X) + baseline
 
         self.validation_metrics = {}
         print(
@@ -535,7 +552,8 @@ class NBAAISystem:
         if self.model is None:
             print("Model not trained!")
             return None
-        return self._clamp_predictions(self.model.predict(X))
+        baseline = target_baseline(self.scaler.inverse_transform(X))
+        return self._clamp_predictions(self.model.predict(X) + baseline)
 
     def get_top_performers(self, top_n=10):
         results = self.build_predictions_df()

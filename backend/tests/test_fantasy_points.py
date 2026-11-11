@@ -52,7 +52,7 @@ class UnroundedSourceTests(unittest.TestCase):
         system.scaler.fit(np.zeros((1, len(FEATURE_COLUMNS))))
         # Order of TARGET_SPECS: ppg, apg, rpg, spg, bpg, tov, mpg, fg%, 3p%, ft%.
         system.model = Mock()
-        system.model.predict.return_value = np.array([[12.04, 3.04, 5.04, 1.04, 0.54, 2.0, 27, 0.48, 0.37, 0.82]])
+        system.model.predict.return_value = np.array([[2.0, 3.04, 5.04, 1.04, 0.54, 2.0, 27, 0.48, 0.37, 0.82]])
         return system
 
     def test_predictions_frame_has_raw_fantasy_columns(self):
@@ -70,7 +70,9 @@ class UnroundedSourceTests(unittest.TestCase):
     def test_player_prediction_scores_raw_values(self):
         system = self._system()
         system.prepare_data = Mock(return_value=(np.zeros((1, len(FEATURE_COLUMNS))), None, None))
-        system.predict = Mock(return_value=system.model.predict.return_value)
+        levels = system.model.predict.return_value.copy()
+        levels[:, 0] += 10.04
+        system.predict = Mock(return_value=levels)
         payload = system.get_player_prediction('Test Player')
         self.assertEqual(payload['current_stats']['fantasy'], 21.2)
         self.assertEqual(payload['predicted_stats']['fantasy'], 25.4)
