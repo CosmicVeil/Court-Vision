@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getFavorites, normalizeFavoritePlayer, removeFavorite } from '../utils/favorites';
+import { applyFavoriteTeams, getFavorites, normalizeFavoritePlayer, removeFavorite } from '../utils/favorites';
 import { isAuthenticated } from '../utils/auth';
 import { buildApiUrl } from '../config/api';
 import PageHero from '../components/PageHero';
@@ -18,6 +18,7 @@ const Favourites = () => {
   const [loading, setLoading] = useState(true);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [loadingPlayer, setLoadingPlayer] = useState(false);
+  const authenticated = isAuthenticated();
 
   // Dismiss modal on Escape
   useEffect(() => {
@@ -68,30 +69,40 @@ const Favourites = () => {
   };
 
   useEffect(() => {
-    loadFavorites();
-  }, []);
+    if (!authenticated) return;
+    const saved = getFavorites().map(normalizeFavoritePlayer);
+    setFavorites(saved);
+    setLoading(false);
+    if (saved.length === 0) return;
 
-  const loadFavorites = () => {
-    try {
-      const favList = getFavorites();
-      setFavorites(favList.map(normalizeFavoritePlayer));
-    } catch (error) {
-      console.error('Error loading favorites:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const controller = new AbortController();
+    fetch(buildApiUrl('players/teams'), { signal: controller.signal })
+      .then(response => {
+        if (!response.ok) throw new Error('Unable to load current player teams');
+        return response.json();
+      })
+      .then(({ teams_by_player_id }) => {
+        if (!controller.signal.aborted) {
+          setFavorites(current => applyFavoriteTeams(current, teams_by_player_id));
+        }
+      })
+      .catch(error => {
+        if (!controller.signal.aborted) console.error('Error refreshing favourite teams:', error);
+      });
+    return () => controller.abort();
+  }, [authenticated]);
 
   const handleRemoveFavorite = (playerId) => {
-    removeFavorite(playerId);
-    loadFavorites();
+    if (removeFavorite(playerId)) {
+      setFavorites(current => current.filter(player => player.id !== playerId));
+    }
   };
 
   const hero = (lead, stats) => (
     <PageHero eyebrow="PLAYER ROSTER" title="SAVED" accent="FAVOURITES" lead={lead} stats={stats} />
   );
 
-  if (!isAuthenticated()) {
+  if (!authenticated) {
     return (
       <div className="favourites-wrapper">
         {hero('Track and manage your personalized player watchlist')}

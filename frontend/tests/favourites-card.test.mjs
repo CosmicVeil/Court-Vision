@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { normalizeFavoritePlayer } from '../src/utils/favorites.js';
+import { applyFavoriteTeams, normalizeFavoritePlayer } from '../src/utils/favorites.js';
 import { getFavouritesHeroStats } from '../src/utils/pageHero.js';
 import { getFavouriteCardStats } from '../src/utils/playerCard.js';
 
@@ -50,6 +50,19 @@ test('favourite hero stats count players and teams and find the top scorer', () 
     [['saved', '3'], ['teams', '1'], ['ppg', '25.0'], ['top', 'B']]);
   assert.deepEqual(getFavouritesHeroStats({ ready: true, favorites: [] }).map(stat => stat.value), ['0', '0', '—', '—']);
   assert.ok(getFavouritesHeroStats({ ready: false, favorites: players }).every(stat => stat.value === '—'));
+});
+
+test('favourite badges and team count use current teams while keeping saved card data', () => {
+  const saved = [
+    normalizeFavoritePlayer({ player_id: 1642363, name: 'Nique Clifford', team: 'SAC', ppg_last: 8 }),
+    normalizeFavoritePlayer({ id: 2, name: 'Player on OKC', team: 'OKC' }),
+    normalizeFavoritePlayer({ id: 3, name: 'Former Player', team: 'BOS' }),
+  ];
+  const updated = applyFavoriteTeams(saved, { 1642363: 'OKC', 2: 'UNK' });
+  assert.deepEqual(updated.map(player => player.team), ['OKC', 'OKC', 'BOS']);
+  assert.equal(updated[0].stats.ppg_last, 8);
+  assert.equal(saved[0].team, 'SAC');
+  assert.equal(getFavouritesHeroStats({ ready: true, favorites: updated })[1].value, '2');
 });
 
 test('favourite card stats leave out values the saved player does not have, but keep zeros', () => {

@@ -20,7 +20,7 @@ import requests
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone, timedelta
+from datetime import date, datetime, timezone, timedelta
 from typing import Dict, List, Optional, Any
 from zoneinfo import ZoneInfo
 
@@ -263,8 +263,8 @@ def _fetch_boxscore(game_id: str, home_tri: str, away_tri: str) -> Dict[str, Lis
             team_players = []
             for ath_obj in athletes:
                 ath         = ath_obj.get("athlete", {})
-                did_not_play = ath_obj.get("didNotPlay", False)
-                stats       = ath_obj.get("stats", [])
+                stats       = ath_obj.get("stats") or []
+                did_not_play = ath_obj.get("didNotPlay", False) or not stats
 
                 fgm, fga   = _split_made_att(_val(stats, "FG"))
                 fg3m, fg3a = _split_made_att(_val(stats, "3PT"))
@@ -316,22 +316,42 @@ def _fetch_boxscore(game_id: str, home_tri: str, away_tri: str) -> Dict[str, Lis
     return {"home": home_players, "away": away_players}
 
 
-def _apply_boxscore_teams(players: Dict[str, List], home_tri: str, away_tri: str,
-                         nba_data: Optional[List[Dict]]) -> None:
-    """Apply observed teams to shared season players without rewriting unchanged teams."""
-    if not nba_data:
+def observe_player_team(player: Dict, team: str, game_date: date, tipoff: Optional[datetime]) -> bool:
+    """Apply a team from a game, ignoring older observations from either feed."""
+    observation = (game_date, tipoff or datetime.min.replace(tzinfo=timezone.utc))
+    with _team_lock:
+        previous = player.get("_TEAM_OBSERVATION")
+        if previous is not None and observation <= previous[0]:
+            return False
+        player["_TEAM_OBSERVATION"] = (observation, team)
+        if player.get("TEAM") == team:
+            return False
+        player["TEAM"] = team
+        return True
+
+
+def _apply_boxscore_teams(players: Dict[str, List], game: Dict,
+                         by_id: Dict[int, Dict], extra_team_rows: Optional[Dict[int, Dict]]) -> None:
+    if not by_id and extra_team_rows is None:
         return
-    by_id = {p.get("PLAYER_ID"): p for p in nba_data}
-    for side, tricode in (("home", home_tri), ("away", away_tri)):
+    try:
+        tipoff = datetime.fromisoformat((game.get("gameTime") or "").replace("Z", "+00:00"))
+    except ValueError:
+        return
+    game_date = tipoff.astimezone(_ET).date()
+    for side in ("home", "away"):
+        tricode = game[side]["tricode"]
         if tricode not in TEAM_IDS:
             continue
         for box_player in players[side]:
             person_id = box_player.get("personId")
-            player = by_id.get(person_id) if person_id else None
-            if player is not None and player.get("TEAM") != tricode:
-                with _team_lock:
-                    if player.get("TEAM") != tricode:
-                        player["TEAM"] = tricode
+            if not person_id or box_player.get("status") == "DNP":
+                continue
+            player = by_id.get(person_id)
+            if player is None and extra_team_rows is not None:
+                player = extra_team_rows.setdefault(person_id, {"PLAYER_ID": person_id})
+            if player is not None:
+                observe_player_team(player, tricode, game_date, tipoff)
 
 
 def _roster_from_pkl(tricode: str, nba_data: Optional[List[Dict]]) -> List[Dict]:
@@ -589,7 +609,8 @@ def _late_games() -> List[Dict]:
     return [game for game in games if game["gameId"] in _late_game_ids]
 
 
-def get_todays_games(nba_data: Optional[List[Dict]] = None) -> List[Dict]:
+def get_todays_games(nba_data: Optional[List[Dict]] = None,
+                     extra_team_rows: Optional[Dict[int, Dict]] = None) -> List[Dict]:
     """Return today's games with live scores and player stats where available."""
     date_key = _todays_date_str()
     data = _get(_SCOREBOARD, params={"dates": date_key})
@@ -607,12 +628,13 @@ def get_todays_games(nba_data: Optional[List[Dict]] = None) -> List[Dict]:
         with ThreadPoolExecutor(max_workers=min(BOXSCORE_WORKERS, len(started))) as pool:
             boxscores = dict(zip((game["gameId"] for game in started), pool.map(_todays_boxscore, started)))
 
+    by_id = {p.get("PLAYER_ID"): p for p in nba_data or []}
     for game in games:
         home_tri = game["home"]["tricode"]
         away_tri = game["away"]["tricode"]
         players = boxscores.get(game["gameId"])
         if players and (players["home"] or players["away"]):
-            _apply_boxscore_teams(players, home_tri, away_tri, nba_data)
+            _apply_boxscore_teams(players, game, by_id, extra_team_rows)
             game["players"] = players
         else:
             # Scheduled later today, or the box score is empty — show season rosters

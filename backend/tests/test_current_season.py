@@ -486,6 +486,7 @@ class CurrentSeasonStateTests(unittest.TestCase):
         self.enterContext(patch.object(db, 'init_db', side_effect=lambda: events.append('init_db')))
         schedule = self.enterContext(patch.object(game_archive, 'schedule_catch_up'))
         daily = self.enterContext(patch.object(game_archive, 'start_daily_catch_up', create=True))
+        self.enterContext(patch.object(state, 'start_live_refresh'))
         state.initialize()
         self.assertLess(events.index('assign_player_ids'), events.index('load_current_season'))
         self.assertLess(events.index('init_db'), events.index('load_current_season'))
@@ -536,6 +537,7 @@ class BackfillStartTests(unittest.TestCase):
         self.enterContext(patch.object(state, 'ai_available', False))
         self.enterContext(patch.object(game_archive, 'auto_archive_enabled', False))
         self.enterContext(patch.object(game_archive, 'start_daily_catch_up'))
+        self.enterContext(patch.object(state, 'start_live_refresh'))
         schedule = self.enterContext(patch.object(game_archive, 'schedule_catch_up'))
         self.enterContext(patch.dict(os.environ, {'DATABASE_URL': 'postgresql://test.invalid/test',
                                                   'ARCHIVE_BACKFILL_START': '2026-10-01'}))
@@ -600,8 +602,8 @@ class PlayersRouteTests(SeasonRouteTestCase):
         self.assertEqual(result['players'], [])
         self.assertEqual(result['pagination']['total'], 1)
 
-    def test_teams_positions_and_missing_pickle_behavior_unchanged(self):
-        self.assertEqual(self.get_json('/api/teams'), {'teams': ['LAL']})
+    def test_teams_use_current_data_and_positions_use_pickle(self):
+        self.assertEqual(self.get_json('/api/teams'), {'teams': ['DAL']})
         self.assertEqual(self.get_json('/api/positions'), {'positions': ['F']})
         state.nba_data = None
         self.assertEqual(self.client.get('/api/players').status_code, 500)
@@ -691,11 +693,11 @@ class ArchiveOnlySearchTests(SeasonRouteTestCase):
         response = self.client.get('/api/players', query_string={'sort_by': 'age'})
         self.assertEqual(response.status_code, 200)
 
-    def test_pkl_player_result_unchanged(self):
+    def test_pkl_player_result_uses_current_team_and_preserves_history(self):
         players = self.get_json('/api/players/search-all?query=Test')['players']
         self.assertEqual(len(players), 1)
         original = players[0]
-        self.assertEqual(original['team'], 'LAL')
+        self.assertEqual(original['team'], 'DAL')
         self.assertEqual(original['history'], {
             '2026': _season_line(self.pickle),
             '2027': {**_season_line(self.current), 'in_progress': True},
@@ -787,7 +789,7 @@ class SearchAllSnapshotTests(SeasonRouteTestCase):
                 'games_played': 3, 'minutes': 31.0, 'in_progress': True,
             }},
         }, {
-            'id': 1, 'name': 'Test Player', 'team': 'LAL', 'position': 'F', 'age': 31,
+            'id': 1, 'name': 'Test Player', 'team': 'DAL', 'position': 'F', 'age': 31,
             'current_stats': {
                 'ppg': 24.1, 'apg': 8.0, 'rpg': 7.2, 'spg': 1.0, 'bpg': 0.5,
                 'tov': 3.1, 'mpg': 32.5, 'fg_pct': 50.0, 'fg3_pct': 30.0,
@@ -889,7 +891,7 @@ class PlayerByIdTests(SeasonRouteTestCase):
         })
         self.assertTrue(player['history']['2027']['in_progress'])
         self.assertEqual(player['current_stats']['ppg'], 24.1)
-        self.assertEqual(player['team'], 'LAL')
+        self.assertEqual(player['team'], 'DAL')
 
     def test_older_season_lookup_prefers_newest_then_nba_data(self):
         older = season_player(PLAYER_ID=7, PLAYER_NAME='Older Player', TEAM='BOS')
@@ -988,7 +990,8 @@ class PredictionsSoFarTests(SeasonRouteTestCase):
              'ppg_last': 15.0, 'predicted_ppg': 18.0},
         ]
         self.named_rows = [
-            {'PLAYER_NAME': 'Tést Player', 'PPG_LAST': 20.0, 'PREDICTED_PPG': 23.0, 'PPG_IMPROVEMENT': 15.0},
+            {'PLAYER_NAME': 'Tést Player', 'TEAM': 'LAL', 'PPG_LAST': 20.0,
+             'PREDICTED_PPG': 23.0, 'PPG_IMPROVEMENT': 15.0},
             {'PLAYER_NAME': 'Without Games', 'PPG_LAST': 15.0, 'PREDICTED_PPG': 18.0},
         ]
         state.predictions_cache = {
@@ -1006,7 +1009,10 @@ class PredictionsSoFarTests(SeasonRouteTestCase):
              'so_far_fg3_pct': 30.0, 'so_far_ft_pct': 80.0, 'so_far_fantasy': 46.3, 'so_far_gp': 4},
             {key: None for key in SO_FAR_ROW_KEYS},
         ]
-        self.assertEqual(rows, [{**original, **extra} for original, extra in zip(originals, expected)])
+        rows_with_stats = [{**original, **extra} for original, extra in zip(originals, expected)]
+        team_key = 'TEAM' if 'PLAYER_NAME' in originals[0] else 'team'
+        rows_with_stats[0][team_key] = 'DAL'
+        self.assertEqual(rows, rows_with_stats)
         self.assertEqual(state.predictions_cache, self.cache_before)
 
     def test_paginated_cache_enriches_without_mutation(self):

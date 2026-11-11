@@ -24,11 +24,12 @@ def get_stat_leaders():
     ppg_leaders = sorted(nba_data, key=lambda x: x['PPG_LAST'], reverse=True)[:10]
     apg_leaders = sorted(nba_data, key=lambda x: x['APG_LAST'], reverse=True)[:10]
     rpg_leaders = sorted(nba_data, key=lambda x: x['RPG_LAST'], reverse=True)[:10]
+    teams = state.current_player_teams()
 
     def format_leaders(leaders, stat_key, stat_name):
         return [{
             'name': player['PLAYER_NAME'],
-            'team': player['TEAM'],
+            'team': teams.get(player.get('PLAYER_ID'), player['TEAM']),
             'value': round(player[stat_key], 1),
             'stat_name': stat_name
         } for player in leaders]

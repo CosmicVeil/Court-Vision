@@ -35,6 +35,25 @@ def _with_so_far(row, lookup):
     return {**row, **{f'so_far_{key}': stats.get(key) for key in SO_FAR_KEYS}}
 
 
+def _with_current_team(row, teams):
+    player_id = row.get('id') or row.get('PLAYER_ID')
+    team = teams.get(player_id)
+    if team is None:
+        name = row.get('name') or row.get('PLAYER_NAME')
+        if name:
+            player = state.nba_name_index.get(normalize_player_name(name), {})
+            team = teams.get(player.get('PLAYER_ID') or player_id_for(name))
+    if team is None:
+        return row
+
+    key = 'TEAM' if 'PLAYER_NAME' in row else 'team'
+    updated = dict(row, **{key: team})
+    other_key = 'team' if key == 'TEAM' else 'TEAM'
+    if other_key in updated:
+        updated[other_key] = team
+    return updated
+
+
 @bp.route('/ai-predictions', methods=['GET'])
 def get_ai_predictions():
     if not state.ai_available:
@@ -48,8 +67,12 @@ def get_ai_predictions():
             predictions = state.ai.get_ai_predictions_bundle(10)
 
         lookup = _so_far_lookup()
-        predictions = {key: [_with_so_far(row, lookup) for row in rows]
-                       for key, rows in predictions.items()}
+        teams = state.current_player_teams()
+        predictions = {
+            key: [_with_so_far(_with_current_team(row, teams), lookup)
+                  for row in rows]
+            for key, rows in predictions.items()
+        }
         return jsonify({
             'predictions': predictions,
             'ai_available': True
@@ -120,9 +143,9 @@ def get_all_predictions_paginated():
         sort_by = request.args.get('sort_by', 'name')
         sort_order = request.args.get('sort_order', 'asc')
 
-        # A copy: the sort below would otherwise reorder the shared cached list in place (and
-        # CPython empties a list while sorting it, so a concurrent request could read it empty).
-        filtered = list(results)
+        # Use the current team before filtering or sorting the predictions.
+        current_teams = state.current_player_teams()
+        filtered = [_with_current_team(row, current_teams) for row in results]
         if search:
             filtered = [p for p in filtered if search in p['name'].lower()]
         if team:
@@ -201,6 +224,8 @@ def get_player_prediction_api(player_name):
                 return jsonify({'error': 'Player not found in cache'}), 404
         else:
             prediction = state.ai.get_player_prediction(player_name_clean)
+        if prediction:
+            prediction = _with_current_team(prediction, state.current_player_teams())
         return jsonify({
             'prediction': prediction,
             'ai_available': True
@@ -242,7 +267,8 @@ def recommendations(stat):
         else:
             data = get_top_performers(stat_clean)
         lookup = _so_far_lookup()
-        data = [_with_so_far(row, lookup) for row in data]
+        teams = state.current_player_teams()
+        data = [_with_so_far(_with_current_team(row, teams), lookup) for row in data]
         return jsonify(data), 200
     except Exception as e:
         print(f"Error in recommendations: {e}")

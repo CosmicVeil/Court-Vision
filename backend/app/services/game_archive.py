@@ -562,13 +562,14 @@ def season_player_averages(conn, season_year: int) -> List[Dict]:
     return averages
 
 
-def latest_player_teams(conn) -> Dict[int, str]:
-    """Return each player's team from their latest archived game with an NBA team."""
+def latest_player_teams(conn) -> Dict[int, Tuple[str, date, Optional[datetime]]]:
+    """Return each player's team and tip-off from their latest archived NBA game."""
     rows = conn.execute("""
         SELECT DISTINCT ON (p.nba_player_id)
             p.nba_player_id, p.team, p.game_date, g.tipoff
         FROM player_game_stats p JOIN games g USING (game_id)
         WHERE p.nba_player_id IS NOT NULL
+            AND p.did_not_play IS NOT TRUE
             AND p.team = ANY(%s)
         ORDER BY p.nba_player_id, p.game_date DESC, g.tipoff DESC NULLS LAST
     """, (list(TEAM_IDS),)).fetchall()
@@ -579,8 +580,9 @@ def latest_player_teams(conn) -> Dict[int, str]:
         player_id = int(row["nba_player_id"])
         recency = (row["game_date"], row["tipoff"] or datetime.min.replace(tzinfo=timezone.utc))
         if player_id not in latest or recency > latest[player_id][0]:
-            latest[player_id] = (recency, row["team"])
-    return {player_id: team for player_id, (_, team) in latest.items()}
+            latest[player_id] = (recency, row)
+    return {player_id: (row["team"], row["game_date"], row["tipoff"])
+            for player_id, (_, row) in latest.items()}
 
 
 _LOG_FIELDS = ("starter", "did_not_play", "dnp_reason", "minutes", "pts", "reb", "oreb", "dreb", "ast",
@@ -1248,6 +1250,8 @@ def _catch_up_in_background(start: Optional[date] = None) -> None:
             print(f"[game_archive] fetched {bios} player bios")
         if counts['archived'] > 0 or linked > 0 or bios > 0:
             from app import state
+            if counts['archived'] > 0 or linked > 0:
+                state.apply_archive_teams(conn)
             state.load_current_season(conn)
     except Exception as exc:
         print(f"[game_archive] background catch-up failed: {exc}")
@@ -1264,6 +1268,7 @@ def _archive_in_background(game_id: str) -> None:
             return
         if archive_game(conn, game_id):
             from app import state
+            state.apply_archive_teams(conn)
             state.load_current_season(conn)
             return
     except Exception as exc:

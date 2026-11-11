@@ -48,13 +48,20 @@ export const normalizeFavoritePlayer = (player = {}) => {
 
 export const getFavorites = () => {
   try {
-    const favorites = localStorage.getItem(FAVORITES_KEY);
-    return favorites ? JSON.parse(favorites) : [];
+    const favorites = JSON.parse(localStorage.getItem(FAVORITES_KEY));
+    return Array.isArray(favorites) ? favorites.filter(player => player && typeof player === 'object') : [];
   } catch (error) {
     console.error('Error getting favorites:', error);
     return [];
   }
 };
+
+export const applyFavoriteTeams = (favorites, teamsByPlayerId) => favorites.map(player => {
+  const team = teamsByPlayerId?.[player.id];
+  return typeof team === 'string' && team && team !== 'UNK' && team !== player.team
+    ? { ...player, team }
+    : player;
+});
 
 export const addFavorite = (player) => {
   try {
@@ -75,7 +82,7 @@ export const addFavorite = (player) => {
 export const removeFavorite = (playerId) => {
   try {
     const favorites = getFavorites();
-    const updated = favorites.filter(fav => fav.id !== playerId);
+    const updated = favorites.filter(fav => (fav.id ?? fav.personId ?? fav.player_id) !== playerId);
     localStorage.setItem(FAVORITES_KEY, JSON.stringify(updated));
     return true;
   } catch (error) {
