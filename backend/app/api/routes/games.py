@@ -2,13 +2,29 @@ import math
 
 from flask import Blueprint, jsonify, request
 
-from app import state
+from app import db, state
+from app.services import game_archive
 from app.services.game_archive import archive_finished_games
 from app.services.live_games import attach_rosters, get_todays_games, get_upcoming_games
 
 bp = Blueprint('games', __name__, url_prefix='/api/games')
 
 UPCOMING_GAMES_PER_PAGE = 20
+PAST_GAMES_PER_PAGE = 20
+
+
+def _archived_game(game_id):
+    """A finished game from the Postgres archive, or None (also when the database is unavailable)."""
+    conn = None
+    try:
+        conn = db.get_db()
+        return game_archive.archived_game(conn, game_id)
+    except Exception as e:
+        print(f"Error loading archived game {game_id}: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
 
 
 @bp.route('/today', methods=['GET'])
@@ -46,6 +62,25 @@ def get_upcoming():
         return jsonify({'error': 'Failed to fetch upcoming games', 'games': []}), 500
 
 
+@bp.route('/past', methods=['GET'])
+def get_past():
+    """Finished games from before today, newest first, read from the game archive."""
+    page = max(1, request.args.get('page', 1, type=int))
+    per_page = PAST_GAMES_PER_PAGE
+    conn = None
+    try:
+        conn = db.get_db()
+        # The database pages the list (LIMIT/OFFSET), so only one page of rows is ever loaded.
+        games, total = game_archive.past_games(conn, limit=per_page, offset=(page - 1) * per_page)
+        return jsonify({'games': games, 'count': total, 'total_pages': math.ceil(total / per_page), 'page': page}), 200
+    except Exception as e:
+        print(f"Error fetching past games: {e}")
+        return jsonify({'error': 'Past games unavailable', 'games': []}), 503
+    finally:
+        if conn:
+            conn.close()
+
+
 @bp.route('/<string:game_id>', methods=['GET'])
 def get_game_detail(game_id):
     try:
@@ -56,6 +91,9 @@ def get_game_detail(game_id):
             game = next((g for g in upcoming_games if str(g.get('gameId')) == game_id), None)
             if game:
                 attach_rosters([game], state.nba_data)
+        if not game:
+            # Not on today's slate or the schedule: it may be a finished game from an earlier day.
+            game = _archived_game(game_id)
         if not game:
             return jsonify({'error': 'Game not found'}), 404
         return jsonify(game), 200

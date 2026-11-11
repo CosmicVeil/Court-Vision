@@ -1,5 +1,5 @@
 import unittest
-from datetime import date
+from datetime import date, datetime, timezone
 from unittest.mock import MagicMock, Mock, call, patch
 
 import app.services.game_archive as game_archive
@@ -196,6 +196,108 @@ class GameLogFantasyTests(unittest.TestCase):
         # 20 + 6 + 7.5 + 3 - 2 = 34.5
         self.assertEqual(result["games"][0]["fpts"], 34.5)
         self.assertNotIn("fpts", espn_game)
+
+
+class PastGamesTests(unittest.TestCase):
+    """Archived games are rebuilt in the live-games shape, so the Games page renders both alike."""
+
+    @staticmethod
+    def game_row(**overrides):
+        return {"game_id": "401", "game_date": date(2026, 3, 9), "tipoff": datetime(2026, 3, 10, 2, 30, tzinfo=timezone.utc),
+                "home_team": "LAL", "away_team": "GSW", "home_score": 120, "away_score": 110,
+                "home_periods": [30, 30, 30, 30], "away_periods": [25, 25, 25, 35], "num_periods": 4,
+                "venue": "Crypto.com Arena", "home_record": "40-25", "away_record": "33-31", **overrides}
+
+    @staticmethod
+    def player_row(name, is_home, **overrides):
+        stats = dict.fromkeys(("pts", "reb", "ast", "stl", "blk", "fgm", "fga", "fg3m", "fg3a", "ftm", "fta", "tov"), 0)
+        return {"espn_player_id": 9, "nba_player_id": 201939, "player_name": name, "jersey": "30", "position": "G",
+                "is_home": is_home, "did_not_play": False, "minutes": 36.5, "plus_minus": -8, **stats, **overrides}
+
+    class Connection:
+        """Answers each query from a list, in order, and records what was asked."""
+
+        def __init__(self, *results):
+            self.results = list(results)
+            self.queries = []
+
+        def execute(self, sql, params=()):
+            self.queries.append((sql, params))
+            return self
+
+        def fetchone(self):
+            return self.results.pop(0)
+
+        fetchall = fetchone
+
+    def test_card_matches_the_live_game_shape(self):
+        card = game_archive._game_card(self.game_row())
+        self.assertEqual((card["gameId"], card["status"], card["gameDate"]), ("401", 3, "20260309"))
+        self.assertEqual(card["statusText"], "Final · Mar 9, 2026")
+        self.assertEqual(card["arena"], "Crypto.com Arena")
+        self.assertEqual(card["players"], {"home": [], "away": []})
+        home = card["home"]
+        self.assertEqual((home["tricode"], home["city"], home["name"], home["score"], home["record"]),
+                         ("LAL", "Los Angeles", "Lakers", 120, "40-25"))
+        self.assertIn("1610612747", home["logo"])
+        self.assertEqual(card["away"]["quarters"][3], {"q": 4, "score": 35})
+
+    def test_overtime_shows_in_the_status(self):
+        for periods, expected in ((4, "Final"), (5, "Final/OT"), (6, "Final/2OT"), (None, "Final")):
+            with self.subTest(periods=periods):
+                text = game_archive._game_card(self.game_row(num_periods=periods))["statusText"]
+                self.assertEqual(text.split(" · ")[0], expected)
+
+    def test_unknown_team_and_missing_values_do_not_break_the_card(self):
+        card = game_archive._game_card(self.game_row(home_team="SEA", home_score=None, home_periods=None,
+                                                     home_record=None, venue=None, tipoff=None))
+        self.assertEqual(card["home"], {"tricode": "SEA", "name": "SEA", "city": "", "score": 0, "logo": "",
+                                        "quarters": [], "record": ""})
+        self.assertEqual((card["arena"], card["gameTime"]), ("", ""))
+
+    def test_past_games_pages_through_games_before_the_given_day(self):
+        conn = self.Connection({"total": 45}, [self.game_row(), self.game_row(game_id="400")])
+        games, total = game_archive.past_games(conn, limit=20, offset=40, before=date(2026, 3, 10))
+        self.assertEqual(([g["gameId"] for g in games], total), (["401", "400"], 45))
+        count_sql, count_params = conn.queries[0]
+        page_sql, page_params = conn.queries[1]
+        # Both queries exclude the given day itself: today's finals belong to the live slate.
+        self.assertIn("game_date < %s", count_sql)
+        self.assertEqual(count_params, (date(2026, 3, 10),))
+        self.assertIn("ORDER BY game_date DESC", page_sql)
+        self.assertEqual(page_params, (date(2026, 3, 10), 20, 40))
+
+    def test_past_games_default_to_before_today_eastern(self):
+        conn = self.Connection({"total": 0}, [])
+        with patch.object(game_archive, "datetime") as clock:
+            clock.now.return_value = datetime(2026, 3, 10, 0, 30, tzinfo=game_archive._ET)
+            self.assertEqual(game_archive.past_games(conn, limit=20), ([], 0))
+        clock.now.assert_called_once_with(game_archive._ET)
+        self.assertEqual(conn.queries[0][1], (date(2026, 3, 10),))
+
+    def test_archived_game_splits_the_box_score_by_side(self):
+        rows = [
+            # 30 + 1.2*5 + 1.5*6 + 3*1 - 3 = 45.0
+            self.player_row("Stephen Curry", False, pts=30, reb=5, ast=6, stl=1, tov=3, fgm=10, fga=20),
+            self.player_row("Bench Guy", True, espn_player_id=2, nba_player_id=None, did_not_play=True,
+                            minutes=None, plus_minus=None, pts=None, reb=None),
+        ]
+        with patch.object(game_archive, "player_id_for", return_value=900000001) as fallback:
+            game = game_archive.archived_game(self.Connection(self.game_row(), rows), 401)
+        curry = game["players"]["away"][0]
+        self.assertEqual({k: curry[k] for k in ("personId", "espnId", "name", "jerseyNum", "status", "min", "pts", "fga", "plusMinus", "fpts")},
+                         {"personId": 201939, "espnId": 9, "name": "Stephen Curry", "jerseyNum": "30", "status": "ACTIVE",
+                          "min": "36", "pts": 30, "fga": 20, "plusMinus": -8, "fpts": 45.0})
+        bench = game["players"]["home"][0]
+        # No NBA.com ID stored: falls back to the app-wide lookup. A DNP has zeros and no fantasy points.
+        fallback.assert_called_once_with("Bench Guy")
+        self.assertEqual({k: bench[k] for k in ("personId", "status", "min", "pts", "reb", "plusMinus", "fpts")},
+                         {"personId": 900000001, "status": "DNP", "min": "0", "pts": 0, "reb": 0, "plusMinus": 0, "fpts": None})
+
+    def test_archived_game_is_none_when_it_was_never_stored(self):
+        conn = self.Connection(None)
+        self.assertIsNone(game_archive.archived_game(conn, "999"))
+        self.assertEqual(len(conn.queries), 1)
 
 
 class EspnSeasonAbsenceTests(unittest.TestCase):

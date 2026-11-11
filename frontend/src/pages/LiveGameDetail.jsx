@@ -185,7 +185,7 @@ export default function LiveGameDetail() {
         {loading ? (
           <div className="lg-loading"><div className="spinner" /><p>LOADING GAME...</p></div>
         ) : notFound ? (
-          <div className="no-games"><h2>GAME NOT FOUND</h2><p>This game is not in today's or upcoming schedule.</p><Link to="/games" className="expand-btn">BACK TO GAMES</Link></div>
+          <div className="no-games"><h2>GAME NOT FOUND</h2><p>This game is not in today's slate, the upcoming schedule or the past results.</p><Link to="/games" className="expand-btn">BACK TO GAMES</Link></div>
         ) : error ? (
           <div className="no-games"><h2>UNABLE TO LOAD GAME</h2><p>{error}</p><button className="expand-btn" onClick={() => requestGame(false)}>TRY AGAIN</button></div>
         ) : game && (

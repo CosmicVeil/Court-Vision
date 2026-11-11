@@ -187,6 +187,7 @@ class LiveBoxscoreTeamTests(PlayerTeamsTestCase):
         super().setUp()
         self.enterContext(patch.object(live_games, "_cache", {}))
         self.enterContext(patch.object(live_games, "_WEEK_BOX_CACHE", {}))
+        self.enterContext(patch.object(live_games, "_late_night_date_str", return_value=None))
         self.boxscore = {"home": [], "away": [{"personId": 1, "name": "Traded Player"}]}
         self.scoreboard = self.enterContext(patch.object(live_games, "_get", return_value={"events": [event()]}))
         self.fetch = self.enterContext(patch.object(live_games, "_fetch_boxscore", return_value=self.boxscore))

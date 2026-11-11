@@ -8,6 +8,8 @@ Each completed game is fetched once from ESPN's summary endpoint and written to:
   game_raw_summaries the trimmed ESPN JSON (box score, header, odds, play-by-play), so new
                      features can be extracted later without re-downloading
 
+The Games page reads finished games back from here (past_games, archived_game).
+
 The view player_game_features adds leakage-free context for training (rest days,
 back-to-backs, rolling averages over *previous* games only).
 
@@ -29,9 +31,9 @@ import requests
 from psycopg.types.json import Jsonb
 
 from app import db
-from app.services.live_games import TEAM_IDS
+from app.services.live_games import TEAM_IDS, TEAM_LOGOS, TEAM_NAMES
 from app.utils.fantasy import FANTASY_WEIGHTS, fantasy_points
-from app.utils.player_ids import nba_player_id
+from app.utils.player_ids import nba_player_id, player_id_for
 from app.utils.player_names import normalize_player_name
 
 _ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba"
@@ -1009,6 +1011,96 @@ def player_game_log(conn, player_id: int, limit: int = 10, season: Optional[str]
             "season": _averages(counted),
         },
     }
+
+
+# ---------------------------------------------------------------------------
+# Reads for the Games page (past games)
+# ---------------------------------------------------------------------------
+
+_GAME_CARD_COLUMNS = ("game_id, game_date, tipoff, home_team, away_team, home_score, away_score, "
+                      "home_periods, away_periods, num_periods, venue, home_record, away_record")
+
+
+def _game_card(row: Dict) -> Dict:
+    """An archived game in the shape live_games builds, so the Games page renders both alike."""
+    def team(side: str) -> Dict:
+        tricode = row[f"{side}_team"]
+        city, name = TEAM_NAMES.get(tricode, ("", tricode))
+        return {
+            "tricode": tricode, "name": name, "city": city,
+            "score": row[f"{side}_score"] or 0,
+            "logo": TEAM_LOGOS.get(tricode, ""),
+            "quarters": [{"q": i + 1, "score": score} for i, score in enumerate(row[f"{side}_periods"] or [])],
+            "record": row[f"{side}_record"] or "",
+        }
+
+    day = row["game_date"]
+    overtimes = (row["num_periods"] or 4) - 4
+    final = "Final" if overtimes <= 0 else "Final/OT" if overtimes == 1 else f"Final/{overtimes}OT"
+    return {
+        "gameId": row["game_id"],
+        "status": 3,
+        # Every past game is final, so the date is what tells the cards apart.
+        "statusText": f"{final} · {day:%b} {day.day}, {day.year}",
+        "gameTime": row["tipoff"].isoformat() if row["tipoff"] else "",
+        "gameDate": day.strftime("%Y%m%d"),
+        "arena": row["venue"] or "",
+        "home": team("home"),
+        "away": team("away"),
+        "period": row["num_periods"] or 4,
+        "gameClock": "",
+        "players": {"home": [], "away": []},
+    }
+
+
+def past_games(conn, limit: int, offset: int = 0, before: Optional[date] = None) -> Tuple[List[Dict], int]:
+    """One page of archived games played before `before` (default: today, US Eastern), newest
+    first, without box scores. Returns (games, total). Today's finals are left to the live slate."""
+    before = before or datetime.now(_ET).date()
+    total = conn.execute("SELECT COUNT(*) AS total FROM games WHERE game_date < %s", (before,)).fetchone()["total"]
+    rows = conn.execute(
+        f"SELECT {_GAME_CARD_COLUMNS} FROM games WHERE game_date < %s "
+        "ORDER BY game_date DESC, tipoff DESC, game_id DESC LIMIT %s OFFSET %s",
+        (before, limit, offset),
+    ).fetchall()
+    return [_game_card(row) for row in rows], total
+
+
+def _box_player(row: Dict) -> Dict:
+    """A player_game_stats row as a live box score line (see live_games._fetch_boxscore)."""
+    dnp = bool(row["did_not_play"])
+    player = {
+        "personId": row["nba_player_id"] or player_id_for(row["player_name"]),
+        "espnId": row["espn_player_id"],
+        "name": row["player_name"],
+        "jerseyNum": row["jersey"] or "",
+        "position": row["position"] or "",
+        "status": "DNP" if dnp else "ACTIVE",
+        "oncourt": False,
+        "min": "0" if dnp or row["minutes"] is None else f"{row['minutes']:.0f}",
+        "plusMinus": row["plus_minus"] or 0,
+    }
+    for stat in ("pts", "reb", "ast", "stl", "blk", "fgm", "fga", "fg3m", "fg3a", "ftm", "fta", "tov"):
+        player[stat] = row[stat] or 0
+    player["fpts"] = None if dnp else fantasy_points(player)
+    return player
+
+
+def archived_game(conn, game_id: str) -> Optional[Dict]:
+    """One archived game with its box score, or None if it was never archived."""
+    row = conn.execute(f"SELECT {_GAME_CARD_COLUMNS} FROM games WHERE game_id = %s", (str(game_id),)).fetchone()
+    if not row:
+        return None
+    game = _game_card(row)
+    # Starters first: the box score treats the first five players of each team as the starters.
+    players = conn.execute(
+        "SELECT * FROM player_game_stats WHERE game_id = %s "
+        "ORDER BY starter DESC NULLS LAST, did_not_play NULLS LAST, minutes DESC NULLS LAST, player_name",
+        (str(game_id),),
+    ).fetchall()
+    for player in players:
+        game["players"]["home" if player["is_home"] else "away"].append(_box_player(player))
+    return game
 
 
 # ---------------------------------------------------------------------------
