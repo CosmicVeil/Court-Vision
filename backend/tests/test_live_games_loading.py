@@ -1,6 +1,7 @@
 """Loading behaviour of the Live Games endpoints (issue 95). Offline: ESPN is mocked."""
 import threading
 import unittest
+from datetime import datetime
 from unittest.mock import patch
 
 import requests
@@ -34,6 +35,8 @@ class TodaysGamesLoadingTests(unittest.TestCase):
         self.enterContext(patch.object(live_games, "_WEEK_BOX_CACHE", {}))
         self.enterContext(patch.object(live_games, "_last_today", {"date": None, "games": []}))
         self.enterContext(patch.object(live_games, "_todays_date_str", return_value="20261109"))
+        # Daytime by default, so results don't depend on the hour the tests run at.
+        self.enterContext(patch.object(live_games, "_late_night_date_str", return_value=None))
         self.events = [event("a"), event("b"), event("c")]
         self.scoreboard = self.enterContext(
             patch.object(live_games, "_get", side_effect=lambda url, params=None: {"events": self.events}))
@@ -124,6 +127,62 @@ class TodaysGamesLoadingTests(unittest.TestCase):
     def test_scoreboard_failure_with_no_earlier_slate_returns_empty(self):
         self.scoreboard.side_effect = lambda url, params=None: None
         self.assertEqual(live_games.get_todays_games(), [])
+
+
+class LateGamesTests(unittest.TestCase):
+    """A game still being played after midnight Eastern stays on the slate (ESPN files it under yesterday)."""
+
+    def setUp(self):
+        self.enterContext(patch.object(live_games, "_cache", {}))
+        self.enterContext(patch.object(live_games, "_WEEK_BOX_CACHE", {}))
+        self.enterContext(patch.object(live_games, "_last_today", {"date": None, "games": []}))
+        self.enterContext(patch.object(live_games, "_late_game_ids", set()))
+        self.enterContext(patch.object(live_games, "_todays_date_str", return_value="20261110"))
+        self.late_night = self.enterContext(
+            patch.object(live_games, "_late_night_date_str", return_value="20261109"))
+        self.slates = {
+            "20261109": [event("early", "post"), event("late", "in")],
+            "20261110": [event("tonight", "pre")],
+        }
+        self.enterContext(patch.object(
+            live_games, "_get", side_effect=lambda url, params=None: self.slates.get(params["dates"])
+            and {"events": self.slates[params["dates"]]}))
+        self.enterContext(patch.object(live_games, "_fetch_boxscore", side_effect=lambda game_id, home, away: box(game_id)))
+
+    def slate(self):
+        return [(g["gameId"], g["status"]) for g in live_games.get_todays_games()]
+
+    def test_yesterdays_live_game_joins_todays_slate_with_its_box_score(self):
+        games = live_games.get_todays_games()
+        # Yesterday's finished game is not brought back; only the one still in progress.
+        self.assertEqual([(g["gameId"], g["status"]) for g in games], [("late", 2), ("tonight", 1)])
+        self.assertEqual(games[0]["players"], box("late"))
+
+    def test_late_game_that_ends_stays_as_a_final_until_the_morning(self):
+        self.slate()
+        self.slates["20261109"] = [event("early", "post"), event("late", "post")]
+        self.assertEqual(self.slate(), [("late", 3), ("tonight", 1)])
+
+        # Past the cutoff hour yesterday's scoreboard is no longer checked, and nothing is remembered.
+        self.late_night.return_value = None
+        self.assertEqual(self.slate(), [("tonight", 1)])
+        self.assertEqual(live_games._late_game_ids, set())
+
+    def test_failed_fetch_of_yesterdays_scoreboard_still_shows_today(self):
+        del self.slates["20261109"]
+        self.assertEqual(self.slate(), [("tonight", 1)])
+
+
+class LateNightWindowTests(unittest.TestCase):
+    def test_yesterday_is_only_checked_before_the_cutoff_hour(self):
+        eastern = live_games._ET
+        for now, expected in ((datetime(2026, 11, 10, 0, 30, tzinfo=eastern), "20261109"),
+                              (datetime(2026, 11, 10, 5, 59, tzinfo=eastern), "20261109"),
+                              (datetime(2026, 11, 10, 6, 0, tzinfo=eastern), None),
+                              (datetime(2026, 11, 10, 22, 0, tzinfo=eastern), None)):
+            with self.subTest(now=now), patch.object(live_games, "datetime") as clock:
+                clock.now.return_value = now
+                self.assertEqual(live_games._late_night_date_str(), expected)
 
 
 class RequestTimeoutTests(unittest.TestCase):

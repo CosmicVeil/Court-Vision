@@ -2,7 +2,7 @@
 export const NAV_LINKS = [
   { to: '/stats', label: 'STATS' },
   { to: '/standings', label: 'STANDINGS' },
-  { to: '/games', label: 'LIVE GAMES' },
+  { to: '/games', label: 'GAMES' },
   { to: '/predictions', label: 'PREDICTIONS' },
   { to: '/recommendations', label: 'RECOMMENDATIONS' },
   { to: '/favourites', label: 'FAVOURITES' },

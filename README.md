@@ -22,7 +22,7 @@ Court-Vision is a premium, high-fidelity sports analytics web application design
    * **AI Predictions**: ML-predicted metrics highlighting estimated performance leaps and percent-change improvements.
    * **Career History (2020–2026)**: Tabular year-by-year historical trends loaded dynamically from local datasets.
 3. **Responsive Stats Grid & Season Filter**: View complete league-wide stats in an auto-aligning grid. Includes sorting controls and a custom Season selector querying historical averages.
-4. **Live Games & Boxscores**: View daily schedules, boxscores, quarterly breakdowns, and active rosters in real-time.
+4. **Games & Boxscores**: View today's live slate, the upcoming schedule and past results, each with boxscores, quarterly breakdowns, and rosters.
 5. **AI Radar Breakouts & Spotlight Charts**: Spot upcoming scoring, playmaking, and glass-dominance breakout candidates projected by ML.
 
 ---

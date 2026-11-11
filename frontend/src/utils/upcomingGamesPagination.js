@@ -9,6 +9,11 @@ export const buildUpcomingGamesEndpoint = (page) => (
   `games/upcoming?page=${positiveInteger(page)}`
 );
 
+// Past games come back in the same paged shape, so normalizeUpcomingGamesPage reads both.
+export const buildPastGamesEndpoint = (page) => (
+  `games/past?page=${positiveInteger(page)}`
+);
+
 export const normalizeUpcomingGamesPage = (payload = {}) => {
   const totalGames = Math.max(0, Number.parseInt(payload.count, 10) || 0);
   const totalPages = Math.max(1, positiveInteger(payload.total_pages));

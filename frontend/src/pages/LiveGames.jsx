@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { buildApiUrl } from '../config/api';
 import { GameMatchup } from '../components/GameBoxScore';
 import { LIVE_GAMES_REFRESH_MS, STATUS_LIVE, getGameDetailPath } from '../utils/liveGames';
-import { buildUpcomingGamesEndpoint, normalizeUpcomingGamesPage, UPCOMING_GAMES_PAGE_SIZE } from '../utils/upcomingGamesPagination';
+import { buildPastGamesEndpoint, buildUpcomingGamesEndpoint, normalizeUpcomingGamesPage, UPCOMING_GAMES_PAGE_SIZE } from '../utils/upcomingGamesPagination';
 import HeroOrbit from '../components/HeroOrbit';
 import LiveTicker from '../components/LiveTicker';
 import Pagination from '../components/Pagination';
@@ -17,6 +17,11 @@ import { getRevealDelay } from '../utils/scrollReveal';
 import './LiveGames.css';
 
 const GAME_STATUS_ORDER = { 2: 0, 1: 1, 3: 2 };
+const TAB_TEXT = {
+  today: { loading: 'LOADING REAL-TIME SLATE...', empty: 'NO LIVE GAMES SCHEDULED TODAY' },
+  upcoming: { loading: 'LOADING UPCOMING SCHEDULE...', empty: 'NO UPCOMING GAMES FOUND' },
+  past: { loading: 'LOADING PAST GAMES...', empty: 'NO PAST GAMES FOUND' },
+};
 
 function GameCard({ game, index, scoreChanges }) {
   const isLive = Number(game.status) === STATUS_LIVE;
@@ -50,6 +55,10 @@ export default function LiveGames() {
   const [upcomingTotalGames, setUpcomingTotalGames] = useState(0);
   const [upcomingLoading, setUpcomingLoading] = useState(false);
   const [upcomingReady, setUpcomingReady] = useState(false);
+  const [past, setPast] = useState({ games: [], totalGames: 0, totalPages: 1 });
+  const [pastPage, setPastPage] = useState(1);
+  const [pastLoading, setPastLoading] = useState(false);
+  const [pastReady, setPastReady] = useState(false);
   const [scoreChanges, setScoreChanges] = useState({});
   const previousTodayRef = useRef([]);
   const heroRef = useRef(null);
@@ -92,13 +101,37 @@ export default function LiveGames() {
 
   useEffect(() => { fetchGames(); const interval = setInterval(fetchGames, LIVE_GAMES_REFRESH_MS); return () => clearInterval(interval); }, [fetchGames]);
 
+  // Past games are finished, so they load once per page instead of joining the 30-second refresh.
+  useEffect(() => {
+    // A response for a page the user has already left is dropped.
+    let stale = false;
+    const fetchPast = async () => {
+      setPastLoading(true);
+      try {
+        const response = await fetch(buildApiUrl(buildPastGamesEndpoint(pastPage)));
+        if (!response.ok) throw new Error('Unable to load past games');
+        const page = normalizeUpcomingGamesPage(await response.json());
+        if (stale) return;
+        setPast(page);
+        if (page.page !== pastPage) setPastPage(page.page);
+      } catch (error) {
+        console.error('Failed to fetch past games', error);
+      }
+      if (stale) return;
+      setPastReady(true);
+      setPastLoading(false);
+    };
+    fetchPast();
+    return () => { stale = true; };
+  }, [pastPage]);
+
   const liveGames = todayGames.filter(game => Number(game.status) === STATUS_LIVE);
   const displayToday = [...todayGames].sort(
     (a, b) => (GAME_STATUS_ORDER[a.status] ?? 3) - (GAME_STATUS_ORDER[b.status] ?? 3),
   );
-  const games = tab === 'today' ? displayToday : upcomingGames;
+  const games = tab === 'today' ? displayToday : tab === 'upcoming' ? upcomingGames : past.games;
   // Each tab waits only for its own first response.
-  const panelLoading = tab === 'today' ? loading : !upcomingReady;
+  const panelLoading = tab === 'today' ? loading : tab === 'upcoming' ? !upcomingReady : !pastReady;
   const stats = getLiveGamesStats({ todayGames, upcomingTotalGames, lastUpdated, loading, upcomingLoading: !upcomingReady });
   const revealKey = `${tab}:${upcomingPage}:${loading}:${panelLoading}:${games.map(g => g.gameId).join(',')}`;
 
@@ -111,13 +144,12 @@ export default function LiveGames() {
         <h1 className="lg-title" data-slot="display-heading">
           <span className="lg-title-word" style={{ '--word': 0 }}>NBA</span>{' '}
           <span className="text-ember">
-            <span className="lg-title-word" style={{ '--word': 1 }}>LIVE</span>{' '}
-            <span className="lg-title-word" style={{ '--word': 2 }}>SLATE</span>
+            <span className="lg-title-word" style={{ '--word': 1 }}>GAMES</span>
           </span>
         </h1>
         <HeroOrbit games={todayGames} />
       </div>
-      <p className="lg-subtitle" data-slot="lead">Live game scores, active box scores &amp; possession stats</p>
+      <p className="lg-subtitle" data-slot="lead">Live scores, past results, the upcoming schedule &amp; full box scores</p>
       <dl className="lg-stat-strip" data-slot="stat-strip">
         {/* Keyed by value so a changed number remounts and ticks in. */}
         {stats.map(({ key, label, value }) => <div key={key}><dt>{label}</dt><dd data-numeric><span className="stat-tick" key={value}>{value}</span></dd></div>)}
@@ -135,15 +167,16 @@ export default function LiveGames() {
       items={[
         { id: 'today', label: <><span className="lg-tab-label">TODAY'S SLATE</span>{liveGames.length > 0 && <span data-numeric className="live-badge">{liveGames.length} LIVE</span>}</> },
         { id: 'upcoming', label: <><span className="lg-tab-label">UPCOMING GAMES</span>{upcomingTotalGames > 0 && <span data-numeric className="count-badge">{upcomingTotalGames}</span>}</> },
+        { id: 'past', label: <><span className="lg-tab-label">PAST GAMES</span>{past.totalGames > 0 && <span data-numeric className="count-badge">{past.totalGames}</span>}</> },
       ]} />
     {!loading && tab === 'today' && <LiveTicker games={displayToday} />}
     <div className="lg-content" id="lg-panel" role="tabpanel" aria-labelledby={`lg-tab-${tab}`}>
       {panelLoading ? (
-        <div className="lg-loading"><div className="spinner" /><p>{tab === 'today' ? 'LOADING REAL-TIME SLATE...' : 'LOADING UPCOMING SCHEDULE...'}</p></div>
+        <div className="lg-loading"><div className="spinner" /><p>{TAB_TEXT[tab].loading}</p></div>
       ) : games.length === 0 ? (
         <div className="no-games">
           {tab === 'today' && <div className="trend-empty-radar" data-defer style={{ margin: '0 auto 1.5rem' }}><div className="trend-empty-dot" /></div>}
-          <h3>{tab === 'today' ? 'NO LIVE GAMES SCHEDULED TODAY' : 'NO UPCOMING GAMES FOUND'}</h3>
+          <h3>{TAB_TEXT[tab].empty}</h3>
           {tab === 'today' && (
             <>
               <p>Check the Upcoming Games tab for the next NBA slate</p>
@@ -163,6 +196,17 @@ export default function LiveGames() {
               itemLabel="games"
               loading={upcomingLoading}
               onPageChange={setUpcomingPage}
+            />
+          )}
+          {tab === 'past' && (
+            <Pagination
+              page={pastPage}
+              totalPages={past.totalPages}
+              totalItems={past.totalGames}
+              pageSize={UPCOMING_GAMES_PAGE_SIZE}
+              itemLabel="games"
+              loading={pastLoading}
+              onPageChange={setPastPage}
             />
           )}
         </>

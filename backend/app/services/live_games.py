@@ -76,6 +76,20 @@ TEAM_LOGOS = {
     for t, tid in TEAM_IDS.items()
 }
 
+# (city, name) as ESPN's scoreboard gives them, for games rebuilt from the archive.
+TEAM_NAMES = {
+    "ATL": ("Atlanta", "Hawks"), "BOS": ("Boston", "Celtics"), "BKN": ("Brooklyn", "Nets"),
+    "CHA": ("Charlotte", "Hornets"), "CHI": ("Chicago", "Bulls"), "CLE": ("Cleveland", "Cavaliers"),
+    "DAL": ("Dallas", "Mavericks"), "DEN": ("Denver", "Nuggets"), "DET": ("Detroit", "Pistons"),
+    "GSW": ("Golden State", "Warriors"), "HOU": ("Houston", "Rockets"), "IND": ("Indiana", "Pacers"),
+    "LAC": ("LA", "Clippers"), "LAL": ("Los Angeles", "Lakers"), "MEM": ("Memphis", "Grizzlies"),
+    "MIA": ("Miami", "Heat"), "MIL": ("Milwaukee", "Bucks"), "MIN": ("Minnesota", "Timberwolves"),
+    "NOP": ("New Orleans", "Pelicans"), "NYK": ("New York", "Knicks"), "OKC": ("Oklahoma City", "Thunder"),
+    "ORL": ("Orlando", "Magic"), "PHI": ("Philadelphia", "76ers"), "PHX": ("Phoenix", "Suns"),
+    "POR": ("Portland", "Trail Blazers"), "SAC": ("Sacramento", "Kings"), "SAS": ("San Antonio", "Spurs"),
+    "TOR": ("Toronto", "Raptors"), "UTA": ("Utah", "Jazz"), "WAS": ("Washington", "Wizards"),
+}
+
 # ---------------------------------------------------------------------------
 # Simple TTL cache
 # ---------------------------------------------------------------------------
@@ -93,6 +107,11 @@ _WEEK_DAY_CACHE: Dict[str, Dict] = {}
 _team_lock = threading.Lock()
 # The last slate get_todays_games() built, served again if ESPN's scoreboard fails.
 _last_today: Dict[str, Any] = {"date": None, "games": []}
+# A late tip-off runs past midnight Eastern, when "today" becomes a new date. Until this
+# hour, yesterday's scoreboard is still checked for games that have not finished.
+LATE_GAMES_UNTIL_HOUR = 6
+# Yesterday's games seen in progress after midnight; kept so one that ends stays on the slate.
+_late_game_ids: set = set()
 
 
 def _get(url: str, params: Optional[Dict] = None) -> Optional[Any]:
@@ -348,6 +367,14 @@ def _todays_date_str() -> str:
     return datetime.now(_ET).strftime("%Y%m%d")
 
 
+def _late_night_date_str() -> Optional[str]:
+    """Yesterday's date (YYYYMMDD) while its late games may still be running, else None."""
+    now = datetime.now(_ET)
+    if now.hour >= LATE_GAMES_UNTIL_HOUR:
+        return None
+    return (now - timedelta(days=1)).strftime("%Y%m%d")
+
+
 def _current_season() -> str:
     """Return the current NBA season string, e.g. '2024-25'."""
     now  = datetime.now()
@@ -545,6 +572,23 @@ def _todays_boxscore(game: Dict) -> Dict[str, List]:
         return {"home": [], "away": []}
 
 
+def _late_games() -> List[Dict]:
+    """Yesterday's games still being played after midnight Eastern.
+
+    ESPN lists a game under the date it tipped off, so these are missing from today's
+    scoreboard. One that ends stays (as a final) until the morning cutoff, rather than
+    vanishing at the buzzer.
+    """
+    date_key = _late_night_date_str()
+    if not date_key:
+        _late_game_ids.clear()
+        return []
+    data = _get(_SCOREBOARD, params={"dates": date_key}) or {}
+    games = [game for game in map(_parse_espn_game, data.get("events", [])) if game]
+    _late_game_ids.update(game["gameId"] for game in games if game["status"] == 2)
+    return [game for game in games if game["gameId"] in _late_game_ids]
+
+
 def get_todays_games(nba_data: Optional[List[Dict]] = None) -> List[Dict]:
     """Return today's games with live scores and player stats where available."""
     date_key = _todays_date_str()
@@ -553,7 +597,7 @@ def get_todays_games(nba_data: Optional[List[Dict]] = None) -> List[Dict]:
         # ESPN is down or slow: show the last slate built today rather than nothing.
         return _last_today["games"] if _last_today["date"] == date_key else []
 
-    games = [game for game in map(_parse_espn_game, data.get("events", [])) if game]
+    games = _late_games() + [game for game in map(_parse_espn_game, data.get("events", [])) if game]
 
     # Live or final — fetch the real box scores side by side. The requests spend their
     # time waiting on ESPN, so threads overlap that waiting; map() keeps scoreboard order.

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  buildPastGamesEndpoint,
   buildUpcomingGamesEndpoint,
   normalizeUpcomingGamesPage,
   UPCOMING_GAMES_PAGE_SIZE,
@@ -87,9 +88,37 @@ test("Today's slate stops loading when its own request settles, without waiting 
   assert.match(fetchToday, /catch \(error\) \{[^}]*\}[\s\S]*setLoading\(false\);\s*\};\s*$/);
   assert.equal(liveGamesSource.match(/setLoading\(false\)/g).length, 1, "nothing after Promise.all clears it");
   // Each tab shows its own spinner; the upcoming tab's is tied to the first upcoming response.
-  assert.match(liveGamesSource, /const panelLoading = tab === 'today' \? loading : !upcomingReady;/);
+  assert.match(liveGamesSource, /const panelLoading = tab === 'today' \? loading : tab === 'upcoming' \? !upcomingReady : !pastReady;/);
   assert.match(liveGamesSource, /\{panelLoading \? \(/);
   assert.match(liveGamesSource, /setUpcomingReady\(true\);/);
+});
+
+test("past games endpoint requests the selected positive page", () => {
+  assert.equal(buildPastGamesEndpoint(4), "games/past?page=4");
+  assert.equal(buildPastGamesEndpoint(-2), "games/past?page=1");
+  assert.equal(buildPastGamesEndpoint("abc"), "games/past?page=1");
+});
+
+test("Past Games is a third tab with its own page, pager and spinner, outside the live refresh", () => {
+  assert.match(liveGamesSource, /\{ id: 'past', label: <><span className="lg-tab-label">PAST GAMES<\/span>/);
+  assert.match(liveGamesSource, /count-badge">\{past\.totalGames\}/);
+  assert.match(liveGamesSource, /tab === 'past' && \(\s*<Pagination\b[^>]*page=\{pastPage\}[^>]*loading=\{pastLoading\}[^>]*onPageChange=\{setPastPage\}/);
+  // Finished games never change: they are fetched per page, not by the 30-second fetchGames.
+  const fetchGames = liveGamesSource.slice(
+    liveGamesSource.indexOf("const fetchGames = useCallback"),
+    liveGamesSource.indexOf("}, [upcomingPage]);"),
+  );
+  assert.doesNotMatch(fetchGames, /buildPastGamesEndpoint/);
+  assert.match(liveGamesSource, /buildApiUrl\(buildPastGamesEndpoint\(pastPage\)\)[\s\S]*\}, \[pastPage\]\);/);
+  // A slow response for a page the user already left must not overwrite the current one.
+  assert.match(liveGamesSource, /if \(stale\) return;\s*setPast\(page\);/);
+  assert.match(liveGamesSource, /return \(\) => \{ stale = true; \};/);
+});
+
+test("the site calls the page Games now that it also holds past results", async () => {
+  const { NAV_LINKS } = await import("../src/utils/siteNav.js");
+  assert.deepEqual(NAV_LINKS.find(link => link.to === "/games"), { to: "/games", label: "GAMES" });
+  assert.match(liveGamesSource, /<span className="lg-title-word" style=\{\{ '--word': 1 \}\}>GAMES<\/span>/);
 });
 
 test("Live Games leaves pagination to the shared pager and styles the roster button with site controls", () => {
