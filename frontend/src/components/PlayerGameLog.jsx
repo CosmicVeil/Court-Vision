@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { buildApiUrl } from '../config/api';
-import { FPTS_TITLE } from '../utils/fantasy';
+import { getScoring } from '../utils/auth';
+import { fptsTitle } from '../utils/fantasy';
 import { currentSeasonLabel, defaultSeason, formatAbsence, formatSeasonTeams, playerSeasons } from '../utils/gameLog';
 import './PlayerGameLog.css';
 
@@ -57,6 +58,8 @@ export default function PlayerGameLog({ playerId, history }) {
   const seasonDisplay = result.data?.season || selectedSeason;
   const seasonTeams = isLoading ? '' : formatSeasonTeams(result.data?.teams);
   const absenceMessage = isLoading ? '' : formatAbsence(result.data?.absence, selectedSeason, result.data?.teams);
+  // The API scored fpts with the user's Profile preset (sent as a header), so the tooltip names it.
+  const fptsHeader = fptsTitle(getScoring());
 
   return (
     <div className="game-log">
@@ -103,7 +106,7 @@ export default function PlayerGameLog({ playerId, history }) {
           <h3 className="secondary-stats-title">Recent Form · {seasonDisplay}</h3>
           <div className="stats-history-scroll-box">
             <table className="stats-history-table game-log-averages">
-              <thead><tr><th>Span</th><th>GP</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>FG%</th><th>3P%</th><th title={FPTS_TITLE}>FPTS</th></tr></thead>
+              <thead><tr><th>Span</th><th>GP</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>FG%</th><th>3P%</th><th title={fptsHeader}>FPTS</th></tr></thead>
               <tbody>
                 {AVERAGE_ROWS.filter(([key]) => averages[key]).map(([key, label]) => {
                   const avg = averages[key];
@@ -123,7 +126,7 @@ export default function PlayerGameLog({ playerId, history }) {
           <h3 className="secondary-stats-title game-log-title">All Games ({games.length})</h3>
           <div className="stats-history-scroll-box game-log-scroll" tabIndex={0} role="region" aria-label="Season game log">
             <table className="stats-history-table">
-              <thead><tr><th>Date</th><th>Team</th><th>Opp</th><th>Result</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>TOV</th><th>FG</th><th>3PT</th><th>FT</th><th>+/-</th><th title={FPTS_TITLE}>FPTS</th></tr></thead>
+              <thead><tr><th>Date</th><th>Team</th><th>Opp</th><th>Result</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>TOV</th><th>FG</th><th>3PT</th><th>FT</th><th>+/-</th><th title={fptsHeader}>FPTS</th></tr></thead>
               <tbody>
                 {games.map(game => (
                   <tr key={game.game_id}>

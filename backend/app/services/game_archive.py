@@ -593,7 +593,7 @@ def _pct(made: int, attempted: int) -> Optional[float]:
     return round(100 * made / attempted, 1) if attempted else None
 
 
-def _averages(games: List[Dict]) -> Optional[Dict]:
+def _averages(games: List[Dict], weights: Optional[Dict] = None) -> Optional[Dict]:
     if not games:
         return None
     total = lambda key: sum(g[key] or 0 for g in games)
@@ -601,7 +601,7 @@ def _averages(games: List[Dict]) -> Optional[Dict]:
     for key in ("minutes", "pts", "reb", "ast", "stl", "blk", "tov", "fg3m"):
         averages[key] = round(total(key) / len(games), 1)
     # Fantasy points are linear, so the average of per-game FPTS is FPTS of the raw averages.
-    averages["fpts"] = fantasy_points({key: total(key) / len(games) for key in FANTASY_WEIGHTS})
+    averages["fpts"] = fantasy_points({key: total(key) / len(games) for key in FANTASY_WEIGHTS}, weights=weights)
     averages["fg_pct"] = _pct(total("fgm"), total("fga"))
     averages["fg3_pct"] = _pct(total("fg3m"), total("fg3a"))
     averages["ft_pct"] = _pct(total("ftm"), total("fta"))
@@ -943,7 +943,8 @@ def _season_teams(games: List[Dict]) -> List[str]:
     return teams
 
 
-def player_game_log(conn, player_id: int, limit: int = 10, season: Optional[str] = None) -> Dict:
+def player_game_log(conn, player_id: int, limit: int = 10, season: Optional[str] = None,
+                    weights: Optional[Dict] = None) -> Dict:
     """Games for an NBA.com player ID and season, newest first, with averages."""
     is_mock = getattr(conn, "_is_mock", False) or "Mock" in conn.__class__.__name__
 
@@ -997,7 +998,7 @@ def player_game_log(conn, player_id: int, limit: int = 10, season: Optional[str]
                 teams, absence = _fetch_espn_season_absence(espn_id, target_year)
 
     # Copies, because ESPN games are shared entries in _espn_athlete_cache. DNP games score nothing.
-    games = [{**g, "fpts": None if g.get("did_not_play") else fantasy_points(g)} for g in games]
+    games = [{**g, "fpts": None if g.get("did_not_play") else fantasy_points(g, weights=weights)} for g in games]
     played = [g for g in games if not g.get("did_not_play")]
     counted = [g for g in played if g.get("season_type") != 1] or played
     return {
@@ -1008,9 +1009,9 @@ def player_game_log(conn, player_id: int, limit: int = 10, season: Optional[str]
         "available_seasons": available_seasons(),
         "games": games[:limit],
         "averages": {
-            "last5": _averages(counted[:5]),
-            "last10": _averages(counted[:10]),
-            "season": _averages(counted),
+            "last5": _averages(counted[:5], weights),
+            "last10": _averages(counted[:10], weights),
+            "season": _averages(counted, weights),
         },
     }
 

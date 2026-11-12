@@ -78,6 +78,7 @@ export function getSeasonCardStats(player) {
       stat('spg', 'SPG'),
       stat('bpg', 'BPG'),
       ...SHOOTING.map(({ key, label }) => stat(key, label, percent)),
+      stat('fantasy', 'FPTS'),
       { key: 'games', label: 'GP', value: formatStat(stats.games_played, { digits: 0 }) },
     ],
   };

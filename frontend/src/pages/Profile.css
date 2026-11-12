@@ -1,0 +1,178 @@
+/* ============================================================
+   COURT VISION — PROFILE (account settings)
+   Same glass cards as the Privacy page
+   ============================================================ */
+
+.profile-page {
+  min-height: 100vh;
+  background: var(--bg-main, #08080a);
+  color: var(--text-primary, #ffffff);
+  padding: calc(var(--header-height) + var(--space) * 10) var(--gutter) calc(var(--space) * 18);
+  position: relative;
+  z-index: 2;
+  font-family: var(--font-body, 'Inter', sans-serif);
+}
+
+.profile-shell {
+  width: min(calc(100% - 2rem), 1160px);
+  margin: 0 auto;
+}
+
+.profile-shell .page-hero { margin-bottom: calc(var(--space) * 8); }
+
+.profile-card {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 32px;
+  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
+  border: 1px solid rgba(255, 100, 54, 0.18);
+  border-radius: var(--radius-xl, 20px);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+}
+
+.profile-card h2 {
+  font-family: var(--font-heading, 'Inter', sans-serif);
+  font-size: clamp(1.25rem, 2.5vw, 1.6rem);
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+
+.profile-eyebrow {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-ember-orange, #ff6436);
+  letter-spacing: 1.5px;
+  margin-bottom: 6px;
+}
+
+.profile-note,
+.profile-signin p {
+  color: var(--color-silver-mist, #dcd9e0);
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+
+.profile-presets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.profile-preset {
+  display: grid;
+  gap: 6px;
+  text-align: left;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md, 12px);
+  color: inherit;
+  cursor: pointer;
+  transition: border-color var(--duration-fast) ease, background var(--duration-fast) ease;
+}
+
+.profile-preset:hover { border-color: rgba(255, 100, 54, 0.45); }
+
+.profile-preset.active {
+  border-color: var(--color-ember-orange, #ff6436);
+  background: rgba(255, 100, 54, 0.1);
+}
+
+.profile-preset-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.profile-preset-formula {
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  color: var(--color-stone, #9a96a0);
+}
+
+.profile-badge {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--color-stone, #9a96a0);
+}
+
+.profile-weights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 12px;
+  border: 0;
+  padding: 0;
+  margin: 0 0 16px;
+}
+
+.profile-weights legend {
+  font-size: var(--text-sm);
+  color: var(--color-stone, #9a96a0);
+  margin-bottom: 10px;
+}
+
+.profile-weight {
+  display: grid;
+  gap: 4px;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.profile-weight input {
+  width: 100%;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm, 6px);
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
+}
+
+.profile-weight input:focus-visible {
+  outline: 2px solid var(--color-ember-orange, #ff6436);
+  outline-offset: 1px;
+}
+
+.profile-formula {
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  color: var(--color-silver-mist, #dcd9e0);
+  margin-bottom: 20px;
+}
+
+.profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.profile-button {
+  display: inline-block;
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-ember-orange, #ff6436);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.profile-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.profile-status { font-size: var(--text-sm); color: var(--color-stone, #9a96a0); }
+.profile-status.saved { color: #6fdc8c; }
+.profile-status.error { color: #ff7a7a; }

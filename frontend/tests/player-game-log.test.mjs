@@ -49,9 +49,10 @@ test("games show the player's team before the opponent with an unknown placehold
   assert.match(gameLog, /colSpan=\{12\}/);
 });
 
-test("games and averages show FanDuel fantasy points from the API's fpts field", () => {
-  assert.match(gameLog, /<th>\+\/-<\/th><th title=\{FPTS_TITLE\}>FPTS<\/th><\/tr>/);
-  assert.match(gameLog, /<th>3P%<\/th><th title=\{FPTS_TITLE\}>FPTS<\/th><\/tr>/);
+test("games and averages show fantasy points from the API's fpts field, titled with the user's scoring", () => {
+  assert.match(gameLog, /const fptsHeader = fptsTitle\(getScoring\(\)\);/);
+  assert.match(gameLog, /<th>\+\/-<\/th><th title=\{fptsHeader\}>FPTS<\/th><\/tr>/);
+  assert.match(gameLog, /<th>3P%<\/th><th title=\{fptsHeader\}>FPTS<\/th><\/tr>/);
   assert.match(gameLog, /<td>\{fpts\(game\.fpts\)\}<\/td>/);
   assert.match(gameLog, /<td>\{fpts\(avg\.fpts\)\}<\/td>/);
 });

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import PillNav from './PillNav';
-import { FPTS_TITLE } from '../utils/fantasy';
+import { getScoring } from '../utils/auth';
+import { fptsTitle } from '../utils/fantasy';
 import { getColumnLeaders, nextSort, sortPlayers } from '../utils/gameDetail';
 import { formatGameTime, formatPeriod, STATUS_FINAL, STATUS_LIVE, STATUS_SCHEDULED } from '../utils/liveGames';
 
@@ -142,7 +143,7 @@ export function BoxScore({ game, onPlayerClick }) {
     const active = sort?.key === key;
     return (
       <th key={key} className={key.startsWith('season_') ? 'season-header' : undefined}
-        title={key.endsWith('fpts') ? FPTS_TITLE : undefined}
+        title={key.endsWith('fpts') ? fptsTitle(getScoring()) : undefined}
         aria-sort={active ? (sort.dir === 'desc' ? 'descending' : 'ascending') : undefined}>
         <button type="button" className="sort-btn" data-active={active ? '' : undefined}
           onClick={() => setSort(current => nextSort(current, key))}>

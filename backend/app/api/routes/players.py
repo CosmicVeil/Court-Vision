@@ -1,7 +1,10 @@
 from flask import Blueprint, jsonify, request
 
 from app import db, state
-from app.api.helpers import SORT_KEY_MAP, get_player_stats_summary, sanitize_string, so_far_stats, validate_pagination
+from app.api.helpers import (
+    SORT_KEY_MAP, get_player_stats_summary, request_weights, rescore_prediction, sanitize_string, season_fantasy,
+    so_far_stats, validate_pagination,
+)
 from app.auth import optional_auth
 from app.services import game_archive
 from app.utils.player_ids import player_id_for
@@ -48,10 +51,14 @@ def get_all_players():
     if position:
         filtered_players = [p for p in filtered_players if p['POSITION'] == position]
 
+    weights = request_weights()
     raw_key, cast = SORT_KEY_MAP.get(sort_by, ('PLAYER_NAME', str))
     reverse = (sort_order == 'desc')
     try:
-        if cast is str:
+        if sort_by == 'fantasy':
+            # League-wide ranking by actual FPTS under the caller's scoring, from unrounded averages.
+            filtered_players.sort(key=lambda p: season_fantasy(p, weights, digits=None), reverse=reverse)
+        elif cast is str:
             filtered_players.sort(key=lambda p: (p.get(raw_key) or '').lower(), reverse=reverse)
         else:
             filtered_players.sort(key=lambda p: cast(p.get(raw_key) or 0), reverse=reverse)
@@ -62,7 +69,7 @@ def get_all_players():
     end_idx = start_idx + limit
     page_players = filtered_players[start_idx:end_idx]
 
-    players_summary = [get_player_stats_summary(player) for player in page_players]
+    players_summary = [get_player_stats_summary(player, weights) for player in page_players]
 
     return jsonify({
         'players': players_summary,
@@ -122,7 +129,8 @@ def get_player_games(player_id):
     conn = None
     try:
         conn = db.get_db()
-        return jsonify(game_archive.player_game_log(conn, player_id, limit, season=season))
+        return jsonify(game_archive.player_game_log(conn, player_id, limit, season=season,
+                                                    weights=request_weights()))
     except Exception as e:
         print(f"Error loading game log for {player_id}: {e}")
         return jsonify({'error': 'Game log unavailable', 'games': []}), 503
@@ -176,9 +184,11 @@ def _player_result(name, curr_player, archive_only, current_season, current_team
             else:
                 pred = state.ai.get_player_prediction(name)
             if pred:
+                weights = request_weights()
+                pred = rescore_prediction(pred, weights)
                 ml_stats = {
                     # This season so far, to compare the predictions against (None before any games).
-                    'so_far_stats': so_far_stats(archive_player) if archive_player else None,
+                    'so_far_stats': so_far_stats(archive_player, weights) if archive_player else None,
                     'predicted_stats': pred.get('predicted_stats'),
                     'improvements': pred.get('improvements')
                 }

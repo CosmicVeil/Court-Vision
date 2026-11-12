@@ -1,11 +1,13 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { isApiRequest } from './config/api'
-import { getAuthToken } from './utils/auth'
+import { getAuthToken, getScoring } from './utils/auth'
+import { SCORING_HEADER, scoringHeaderValue } from './utils/fantasy'
 
 // Prefix relative API requests with the configured API URL in production, and send the
 // session token with every request to our own API so account-gated data (full predictions,
-// per-player projections, recommendations) loads for signed-in users on every page.
+// per-player projections, recommendations) loads for signed-in users on every page. The user's
+// fantasy scoring goes along the same way, so every FPTS the API returns uses their preset.
 const originalFetch = window.fetch;
 window.fetch = function (input, init) {
   const isApi = isApiRequest(input);
@@ -22,9 +24,11 @@ window.fetch = function (input, init) {
     }
   }
   const token = isApi ? getAuthToken() : null;
-  if (token) {
+  const scoring = isApi ? scoringHeaderValue(getScoring()) : null;
+  if (token || scoring) {
     const headers = new Headers(init?.headers || {});
-    if (!headers.has('Authorization')) headers.set('Authorization', `Bearer ${token}`);
+    if (token && !headers.has('Authorization')) headers.set('Authorization', `Bearer ${token}`);
+    if (scoring && !headers.has(SCORING_HEADER)) headers.set(SCORING_HEADER, scoring);
     init = { ...init, headers };
   }
   return originalFetch(input, init);

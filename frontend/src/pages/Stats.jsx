@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { isFavorite, toggleFavorite, getFavorites } from '../utils/favorites';
-import { isAuthenticated } from '../utils/auth';
+import { getScoring, isAuthenticated } from '../utils/auth';
+import { fptsTitle } from '../utils/fantasy';
 import { buildApiUrl } from '../config/api';
 import { scrollToIfAbove } from '../utils/scroll';
 import { samePlayerName } from '../utils/playerNames';
@@ -20,7 +21,7 @@ import './Stats.css';
 // Everything the URL may carry for this list, with its default (only non-defaults show up).
 const LIST_DEFAULTS = { q: '', team: '', position: '', season: '', sort: 'name', order: 'asc', page: 1, view: 'table' };
 const LIST_ALLOWED = {
-  sort: ['name', 'team', 'position', 'ppg', 'apg', 'rpg', 'spg', 'bpg', 'fg_pct', 'fg3_pct', 'ft_pct', 'games'],
+  sort: ['name', 'team', 'position', 'ppg', 'apg', 'rpg', 'spg', 'bpg', 'fg_pct', 'fg3_pct', 'ft_pct', 'fantasy', 'games'],
   order: ['asc', 'desc'],
   season: ['2020', '2021', '2022', '2023', '2024', '2025', '2026', '2027'],
   view: ['table', 'cards'],
@@ -358,6 +359,14 @@ const Stats = () => {
           >
             FG% {sortBy === 'fg_pct' && (sortOrder === 'asc' ? '↑' : '↓')}
           </button>
+          {/* League-wide ranking by actual fantasy points, scored with the user's Profile preset. */}
+          <button
+            className={`sort-btn ${sortBy === 'fantasy' ? 'active' : ''}`}
+            onClick={() => handleSort('fantasy')}
+            title={fptsTitle(getScoring())}
+          >
+            FPTS {sortBy === 'fantasy' && (sortOrder === 'asc' ? '↑' : '↓')}
+          </button>
           <button 
             className={`sort-btn ${sortBy === 'games' ? 'active' : ''}`}
             onClick={() => handleSort('games')}
@@ -412,6 +421,9 @@ const Stats = () => {
                   <th onClick={() => handleSort('ft_pct')} className="sortable">
                     FT% {sortBy === 'ft_pct' && (sortOrder === 'asc' ? '↑' : '↓')}
                   </th>
+                  <th onClick={() => handleSort('fantasy')} className="sortable" title={fptsTitle(getScoring())}>
+                    FPTS {sortBy === 'fantasy' && (sortOrder === 'asc' ? '↑' : '↓')}
+                  </th>
                   <th onClick={() => handleSort('games')} className="sortable">
                     Games {sortBy === 'games' && (sortOrder === 'asc' ? '↑' : '↓')}
                   </th>
@@ -439,6 +451,7 @@ const Stats = () => {
                     <td className="stat-cell">{player.stats?.fg_pct_last?.toFixed(1) || '0.0'}%</td>
                     <td className="stat-cell">{player.stats?.fg3_pct_last?.toFixed(1) || '0.0'}%</td>
                     <td className="stat-cell">{player.stats?.ft_pct_last?.toFixed(1) || '0.0'}%</td>
+                    <td className="stat-cell">{player.stats?.fantasy_last?.toFixed(1) ?? '—'}</td>
                     <td className="stat-cell">{player.stats?.games_played || 0}</td>
                     <td className="favorite-cell">
                       <button

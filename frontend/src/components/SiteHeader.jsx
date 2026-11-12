@@ -94,6 +94,7 @@ export default function SiteHeader() {
                     <div className="dropdown-user-email">{dropdownUser.email}</div>
                   </div>
                   <div className="dropdown-divider" />
+                  <Link to="/profile" className="dropdown-item" onClick={closeAll}>Profile & Scoring</Link>
                   <Link to="/favourites" className="dropdown-item" onClick={closeAll}>My Favourites</Link>
                   <Link to="/recommendations" className="dropdown-item" onClick={closeAll}>Recommendations</Link>
                   <div className="dropdown-divider" />

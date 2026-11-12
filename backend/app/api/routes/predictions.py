@@ -3,7 +3,10 @@ import traceback
 from flask import Blueprint, jsonify, request
 
 from app import state
-from app.api.helpers import SO_FAR_KEYS, sanitize_string, so_far_stats, validate_pagination
+from app.api.helpers import (
+    SO_FAR_KEYS, request_weights, rescore_prediction, rescore_prediction_row, sanitize_string, so_far_stats,
+    validate_pagination,
+)
 from app.auth import optional_auth, require_auth
 from app.services.recommendations import get_top_performers
 from app.utils.player_ids import player_id_for
@@ -26,12 +29,12 @@ def _so_far_lookup():
     )
 
 
-def _with_so_far(row, lookup):
+def _with_so_far(row, lookup, weights=None):
     by_id, by_name = lookup
     player = by_id.get(row.get('id') or row.get('PLAYER_ID'))
     if player is None:
         player = by_name.get(normalize_player_name(row.get('name') or row.get('PLAYER_NAME')))
-    stats = so_far_stats(player) if player else {}
+    stats = so_far_stats(player, weights) if player else {}
     return {**row, **{f'so_far_{key}': stats.get(key) for key in SO_FAR_KEYS}}
 
 
@@ -66,10 +69,10 @@ def get_ai_predictions():
             state.ai.initialize_nba_ai()
             predictions = state.ai.get_ai_predictions_bundle(10)
 
-        lookup = _so_far_lookup()
+        lookup, weights = _so_far_lookup(), request_weights()
         teams = state.current_player_teams()
         predictions = {
-            key: [_with_so_far(_with_current_team(row, teams), lookup)
+            key: [_with_so_far(_with_current_team(rescore_prediction_row(row, weights), teams), lookup, weights)
                   for row in rows]
             for key, rows in predictions.items()
         }
@@ -143,9 +146,10 @@ def get_all_predictions_paginated():
         sort_by = request.args.get('sort_by', 'name')
         sort_order = request.args.get('sort_order', 'asc')
 
-        # Use the current team before filtering or sorting the predictions.
+        # Use the current team and scoring before filtering or sorting the cached predictions.
+        weights = request_weights()
         current_teams = state.current_player_teams()
-        filtered = [_with_current_team(row, current_teams) for row in results]
+        filtered = [_with_current_team(rescore_prediction_row(row, weights), current_teams) for row in results]
         if search:
             filtered = [p for p in filtered if search in p['name'].lower()]
         if team:
@@ -184,7 +188,7 @@ def get_all_predictions_paginated():
         end_idx = start_idx + limit
         page_results = filtered[start_idx:end_idx]
         lookup = _so_far_lookup()
-        page_results = [_with_so_far(row, lookup) for row in page_results]
+        page_results = [_with_so_far(row, lookup, weights) for row in page_results]
 
         return jsonify({
             'predictions': page_results,
@@ -224,6 +228,7 @@ def get_player_prediction_api(player_name):
                 return jsonify({'error': 'Player not found in cache'}), 404
         else:
             prediction = state.ai.get_player_prediction(player_name_clean)
+        prediction = rescore_prediction(prediction, request_weights())
         if prediction:
             prediction = _with_current_team(prediction, state.current_player_teams())
         return jsonify({
@@ -266,6 +271,8 @@ def recommendations(stat):
             data = cached_data
         else:
             data = get_top_performers(stat_clean)
+        # Recommendations stay FanDuel: the cache holds only each stat's top 20, ranked by FanDuel
+        # improvement, so rescoring the rows would show numbers that disagree with their order.
         lookup = _so_far_lookup()
         teams = state.current_player_teams()
         data = [_with_so_far(_with_current_team(row, teams), lookup) for row in data]

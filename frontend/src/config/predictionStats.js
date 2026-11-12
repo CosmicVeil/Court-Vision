@@ -25,9 +25,9 @@ export const PREDICTION_GROUPS = [
     id: 'fantasy',
     label: 'Fantasy',
     stats: [
-      // FanDuel scoring (PTS + 1.2 REB + 1.5 AST + 3 STL + 3 BLK − TOV). derived: the backend computes it
+      // Scored with the user's Profile preset (FanDuel by default). derived: the backend computes it
       // from the other predictions, so it is not one of the model's own forecasts.
-      { key: 'fantasy', label: 'Fantasy Points (FanDuel)', unit: 'FPTS', changeUnit: '%', currentField: 'fantasy_last', predictedField: 'predicted_fantasy', derived: true },
+      { key: 'fantasy', label: 'Fantasy Points', unit: 'FPTS', changeUnit: '%', currentField: 'fantasy_last', predictedField: 'predicted_fantasy', derived: true },
     ],
   },
 ];

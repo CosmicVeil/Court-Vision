@@ -12,6 +12,7 @@ import RecommendationChart from "./pages/RecommendationChart.jsx";
 import Predictions from "./pages/Predictions.jsx";
 import Contact from "./pages/Contact.jsx";
 import Privacy from "./pages/Privacy.jsx";
+import Profile from "./pages/Profile.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import AppShell from "./components/AppShell.jsx";
 
@@ -34,6 +35,7 @@ function App() {
           <Route path="/predictions" element={<Predictions />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/profile" element={<Profile />} />
           <Route
             path="/recommendations/:stat"
             element={<RecommendationChart />}

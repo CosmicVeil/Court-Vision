@@ -2,8 +2,14 @@ from flask import Blueprint, jsonify, request
 
 from app.auth import create_token, invalidate_token, require_auth
 from app.db import authenticate_user_from_json, create_user_from_json, get_user_by_id
+from app.utils.fantasy import describe_setting
 
 bp = Blueprint('auth', __name__, url_prefix='/api/auth')
+
+
+def _public_user(user):
+    """The user as sent to the browser, with their fantasy scoring spelled out (label + weights)."""
+    return {**user, 'fantasy_scoring': describe_setting(user.get('fantasy_scoring'))}
 
 
 @bp.route('/signup', methods=['POST'])
@@ -12,7 +18,7 @@ def signup():
         success, user, message = create_user_from_json()
         if success:
             token = create_token(user['id'])
-            return jsonify({'success': True, 'user': user, 'token': token, 'message': message}), 201
+            return jsonify({'success': True, 'user': _public_user(user), 'token': token, 'message': message}), 201
         return jsonify({'success': False, 'message': message}), 400
     except Exception as e:
         print(f"Signup error: {e}")
@@ -25,7 +31,7 @@ def login():
         success, user, message = authenticate_user_from_json()
         if success:
             token = create_token(user['id'])
-            return jsonify({'success': True, 'user': user, 'token': token, 'message': message}), 200
+            return jsonify({'success': True, 'user': _public_user(user), 'token': token, 'message': message}), 200
         return jsonify({'success': False, 'message': message}), 401
     except Exception as e:
         print(f"Login error: {e}")
@@ -47,5 +53,5 @@ def logout():
 def verify():
     user = get_user_by_id(request.user_id)
     if user:
-        return jsonify({'authenticated': True, 'user': user}), 200
+        return jsonify({'authenticated': True, 'user': _public_user(user)}), 200
     return jsonify({'authenticated': False, 'message': 'User not found'}), 401

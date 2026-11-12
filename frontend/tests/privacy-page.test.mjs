@@ -60,7 +60,7 @@ test("Privacy page describes account storage and third-party data handling", () 
   assert.match(page, /PostgreSQL/);
   assert.match(page, /first name, last name, email/);
   assert.match(page, /salted hash \(never in plain text\)/);
-  assert.match(page, /account creation time, and the players you save/);
+  assert.match(page, /account creation time, the players you save, and your fantasy\s+scoring setting/);
   assert.match(page, /stored in our database only as a one-way hash/);
   assert.match(page, /deleted on logout or expire after 24 hours/);
   assert.doesNotMatch(page, /only in the server's memory/);

@@ -3,9 +3,12 @@ import math
 from flask import Blueprint, jsonify, request
 
 from app import db, state
+from app.api.helpers import request_weights, season_fantasy
 from app.services import game_archive
 from app.services.game_archive import archive_finished_games
 from app.services.live_games import attach_rosters, get_todays_games, get_upcoming_games
+from app.utils.fantasy import fantasy_points, is_default
+from app.utils.player_names import normalize_player_name
 
 bp = Blueprint('games', __name__, url_prefix='/api/games')
 
@@ -27,12 +30,37 @@ def _archived_game(game_id):
             conn.close()
 
 
+def _rescored_player(player, weights, season_by_id):
+    player = dict(player)
+    if player.get('fpts') is not None:
+        player['fpts'] = fantasy_points(player, weights=weights)
+    if 'season_fpts' in player:
+        # Season rosters carry rounded averages, so rescore from the unrounded season row: by
+        # person ID (the roster's own key), by name only for rows without one. A row that matches
+        # neither gets None rather than its FanDuel value under another preset's label.
+        season_row = (season_by_id.get(player.get('personId'))
+                      or state.nba_name_index.get(normalize_player_name(player.get('name'))))
+        player['season_fpts'] = season_fantasy(season_row, weights) if season_row else None
+    return player
+
+
+def _rescored(games, weights):
+    """Copies of games with box-score and roster FPTS under weights. Games come from the shared
+    live-games cache scored with FanDuel, so they are copied, never edited in place."""
+    if is_default(weights):
+        return games
+    season_by_id = {p['PLAYER_ID']: p for p in state.nba_data or [] if p.get('PLAYER_ID')}
+    return [{**game, 'players': {side: [_rescored_player(p, weights, season_by_id) for p in players]
+                                 for side, players in (game.get('players') or {}).items()}}
+            for game in games]
+
+
 @bp.route('/today', methods=['GET'])
 def get_today_games():
     try:
         games = get_todays_games(state.nba_data, state.live_team_rows)
         archive_finished_games(games)
-        return jsonify({'games': games, 'count': len(games)}), 200
+        return jsonify({'games': _rescored(games, request_weights()), 'count': len(games)}), 200
     except Exception as e:
         print(f"Error fetching today's games: {e}")
         return jsonify({'error': 'Failed to fetch games', 'games': []}), 500
@@ -56,7 +84,8 @@ def get_upcoming():
 
         total_pages = math.ceil(len(games) / per_page)
 
-        return jsonify({'games': paginated_games, 'count': len(games), 'total_pages': total_pages, 'page': page}), 200
+        return jsonify({'games': _rescored(paginated_games, request_weights()), 'count': len(games),
+                        'total_pages': total_pages, 'page': page}), 200
     except Exception as e:
         print(f"Error fetching upcoming games: {e}")
         return jsonify({'error': 'Failed to fetch upcoming games', 'games': []}), 500
@@ -96,7 +125,7 @@ def get_game_detail(game_id):
             game = _archived_game(game_id)
         if not game:
             return jsonify({'error': 'Game not found'}), 404
-        return jsonify(game), 200
+        return jsonify(_rescored([game], request_weights())[0]), 200
     except Exception as e:
         print(f"Error fetching game detail: {e}")
         return jsonify({'error': 'Failed to fetch game'}), 500
