@@ -30,7 +30,7 @@ def _archived_game(game_id):
 @bp.route('/today', methods=['GET'])
 def get_today_games():
     try:
-        games = get_todays_games(nba_data=state.nba_data)
+        games = get_todays_games(state.nba_data, state.live_team_rows)
         archive_finished_games(games)
         return jsonify({'games': games, 'count': len(games)}), 200
     except Exception as e:
@@ -84,7 +84,7 @@ def get_past():
 @bp.route('/<string:game_id>', methods=['GET'])
 def get_game_detail(game_id):
     try:
-        games = get_todays_games(nba_data=state.nba_data)
+        games = get_todays_games(state.nba_data, state.live_team_rows)
         game = next((g for g in games if str(g.get('gameId')) == game_id), None)
         if not game:
             upcoming_games = get_upcoming_games()

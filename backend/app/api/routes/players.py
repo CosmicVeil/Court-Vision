@@ -28,18 +28,16 @@ def get_all_players():
     sort_order = request.args.get('sort_order', 'asc')
     year_param = request.args.get('year', '')
 
-    filtered_players = list(state.nba_data)
-    if not year_param and state.current_season_data:
-        filtered_players = list(state.current_season_data)
-    if year_param:
-        try:
-            year_val = int(year_param)
-            if year_val == state.current_season_year and state.current_season_data:
-                filtered_players = list(state.current_season_data)
-            elif state.multi_season_data and year_val in state.multi_season_data:
-                filtered_players = list(state.multi_season_data[year_val])
-        except ValueError:
-            pass
+    year = request.args.get('year', type=int)
+    if not year_param or year == state.current_season_year:
+        current_teams = state.current_player_teams()
+        filtered_players = [
+            dict(player, TEAM=current_teams[player['PLAYER_ID']])
+            if player.get('PLAYER_ID') in current_teams else player
+            for player in state.current_season_data or state.nba_data
+        ]
+    else:
+        filtered_players = list((state.multi_season_data or {}).get(year, state.nba_data))
 
     if search:
         filtered_players = [p for p in filtered_players if search in p['PLAYER_NAME'].lower()]
@@ -112,6 +110,7 @@ def get_player_by_id(player_id):
 
     current_season = {p['PLAYER_ID']: p for p in state.current_season_data}
     return jsonify(_player_result(player.get('PLAYER_NAME'), player, archive_only, current_season,
+                                  state.current_player_teams(),
                                   include_predictions=request.user_id is not None))
 
 
@@ -150,7 +149,7 @@ def _season_line(season_player):
     }
 
 
-def _player_result(name, curr_player, archive_only, current_season, include_predictions=True):
+def _player_result(name, curr_player, archive_only, current_season, current_teams, include_predictions=True):
     """Player popup payload. Per-player predictions (ml_stats) need an account, so
     signed-out callers get ml_stats=None and predictions_locked=True."""
     name_key = normalize_player_name(name)
@@ -188,10 +187,11 @@ def _player_result(name, curr_player, archive_only, current_season, include_pred
 
     stats_player = archive_player or curr_player
     current = _season_line(stats_player)
+    player_id = curr_player.get('PLAYER_ID') or player_id_for(name)
     return {
-        'id': curr_player.get('PLAYER_ID') or player_id_for(name),
+        'id': player_id,
         'name': name,
-        'team': curr_player.get('TEAM', 'UNK'),
+        'team': current_teams.get(player_id, curr_player.get('TEAM', 'UNK')),
         'position': curr_player.get('POSITION', 'UNK'),
         'age': age,
         'current_stats': {
@@ -260,6 +260,7 @@ def search_players_all():
     matching_names = (sorted(matching_names) + sorted(older_names.values()))[:15]
 
     current_season = {p['PLAYER_ID']: p for p in state.current_season_data}
+    current_teams = state.current_player_teams()
     archive_by_name = {normalize_player_name(p.get('PLAYER_NAME')): p for p in state.current_season_data}
     results = []
     for name in matching_names:
@@ -279,10 +280,15 @@ def search_players_all():
         if not curr_player:
             continue
 
-        results.append(_player_result(name, curr_player, archive_only, current_season,
+        results.append(_player_result(name, curr_player, archive_only, current_season, current_teams,
                                       include_predictions=request.user_id is not None))
 
     return jsonify({'players': results})
+
+
+@bp.route('/players/teams', methods=['GET'])
+def get_player_teams():
+    return jsonify({'teams_by_player_id': state.current_player_teams()})
 
 
 @bp.route('/teams', methods=['GET'])
@@ -290,7 +296,7 @@ def get_teams():
     if not state.nba_data:
         return jsonify({'error': 'NBA data not loaded'}), 500
 
-    teams = list(set(player['TEAM'] for player in state.nba_data))
+    teams = list(set(state.current_player_teams().values()))
     teams.sort()
     return jsonify({'teams': teams})
 

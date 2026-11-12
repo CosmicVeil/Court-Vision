@@ -14,6 +14,11 @@ def archive_row(player_id, team, day, hour=None):
     }
 
 
+def observation(team, day, hour=None):
+    row = archive_row(None, team, day, hour)
+    return row["team"], row["game_date"], row["tipoff"]
+
+
 class LatestPlayerTeamsTests(unittest.TestCase):
     def query(self, rows):
         self.assertTrue(callable(getattr(game_archive, "latest_player_teams", None)))
@@ -26,7 +31,7 @@ class LatestPlayerTeamsTests(unittest.TestCase):
             archive_row(1, "DAL", 15), archive_row(2, "BOS", 1, 20),
             archive_row(1, "LAL", 1, 23),
         ])
-        self.assertEqual(result, {1: "DAL", 2: "BOS"})
+        self.assertEqual(result, {1: observation("DAL", 15), 2: observation("BOS", 1, 20)})
 
     def test_same_date_breaks_tie_by_tipoff(self):
         rows = [archive_row(1, "DAL", 15, 23), archive_row(1, "LAL", 15, 20),
@@ -34,14 +39,14 @@ class LatestPlayerTeamsTests(unittest.TestCase):
         for ordered_rows in (rows, list(reversed(rows))):
             with self.subTest(rows=ordered_rows):
                 result, _ = self.query(ordered_rows)
-                self.assertEqual(result, {1: "DAL"})
+                self.assertEqual(result, {1: observation("DAL", 15, 23)})
 
     def test_newest_non_nba_team_does_not_replace_latest_nba_team(self):
         result, _ = self.query([
             archive_row(1, "LAL", 1), archive_row(1, "DAL", 15),
             archive_row(1, "EAST", 20), archive_row(2, "LEB", 20),
         ])
-        self.assertEqual(result, {1: "DAL"})
+        self.assertEqual(result, {1: observation("DAL", 15)})
 
     def test_query_filters_nba_teams_before_selecting_latest_row(self):
         _, conn = self.query([])
@@ -62,6 +67,7 @@ class LatestPlayerTeamsTests(unittest.TestCase):
         self.assertIn("DISTINCT ON (p.nba_player_id)", sql)
         self.assertIn("JOIN games g USING (game_id)", sql)
         self.assertIn("WHERE p.nba_player_id IS NOT NULL", sql)
+        self.assertIn("AND p.did_not_play IS NOT TRUE", sql)
         self.assertIn("ORDER BY p.nba_player_id, p.game_date DESC, g.tipoff DESC NULLS LAST", sql)
 
 
@@ -80,6 +86,7 @@ class PlayerTeamsTestCase(unittest.TestCase):
     def setUp(self):
         self.addCleanup(setattr, state, "nba_data", state.nba_data)
         self.addCleanup(setattr, state, "nba_name_index", state.nba_name_index)
+        self.enterContext(patch.object(state, "live_team_rows", {}))
         state.nba_data = [
             {"PLAYER_ID": 1, "PLAYER_NAME": "Traded Player", "TEAM": "LAL", "POSITION": "G"},
             {"PLAYER_ID": 2, "PLAYER_NAME": "Other Player", "TEAM": "BOS", "POSITION": "F"},
@@ -147,7 +154,7 @@ class StartupArchiveTeamsTests(PlayerTeamsTestCase):
         self.enterContext(patch.object(game_archive, "auto_archive_enabled", False))
         self.enterContext(patch.object(state, "ai_available", False))
         for name in ("load_nba_data", "load_multi_season_data", "assign_player_ids", "load_ai", "load_current_season",
-                     "start_prediction_accuracy"):
+                     "start_prediction_accuracy", "start_live_refresh"):
             self.enterContext(patch.object(state, name))
         self.enterContext(patch.object(game_archive, "schedule_catch_up"))
         init_db = self.enterContext(patch.object(db, "init_db"))
@@ -181,6 +188,39 @@ class ApiReflectsTeamTests(PlayerTeamsTestCase):
         self.assertEqual(self.client.get("/api/teams").get_json()["teams"], ["BOS", "DAL"])
         self.assertEqual(self.client.get("/api/players/1").get_json()["team"], "DAL")
 
+    def test_player_team_lookup_includes_archive_only_players_and_prefers_synced_team(self):
+        self.apply_teams()
+        archive_players = [{"PLAYER_ID": 1, "TEAM": "LAL"}, {"PLAYER_ID": 3, "TEAM": "OKC"}]
+        with patch.object(state, "current_season_data", archive_players):
+            response = self.client.get("/api/players/teams")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["teams_by_player_id"], {"1": "DAL", "2": "BOS", "3": "OKC"})
+
+    def test_background_archive_updates_player_card_search_and_cached_predictions(self):
+        self.apply_teams()
+        self.conn.execute.return_value.fetchall.return_value = [archive_row(1, "OKC", 21)]
+        cached_row = {"id": 1, "name": "Traded Player", "team": "DAL", "position": "G"}
+        with patch.object(game_archive, "archived_game_ids", return_value=set()), \
+             patch.object(game_archive, "archive_game", return_value=True), \
+             patch.object(state, "load_current_season"), \
+             patch.object(state, "is_render", True), patch.object(state, "ai_available", True), \
+             patch.object(state, "predictions_cache", {"all_players_list": [cached_row]}):
+            game_archive._archive_in_background("trade-debut")
+            self.assertEqual(self.client.get("/api/players/1").get_json()["team"], "OKC")
+            search = self.client.get("/api/players/search-all?query=traded").get_json()["players"]
+            self.assertEqual(search[0]["team"], "OKC")
+            predictions = self.client.get("/api/predictions?team=OKC").get_json()["predictions"]
+            self.assertEqual(predictions[0]["team"], "OKC")
+            self.assertEqual(cached_row["team"], "DAL")
+
+    def test_background_catch_up_updates_player_card_without_a_live_request(self):
+        with patch.object(game_archive, "catch_up_recent_games", return_value={"archived": 1}), \
+             patch.object(game_archive, "relink_player_ids", return_value=0), \
+             patch.object(game_archive, "fill_missing_bios", return_value=0), \
+             patch.object(state, "load_current_season"):
+            game_archive._catch_up_in_background()
+        self.assertEqual(self.client.get("/api/players/1").get_json()["team"], "DAL")
+
 
 class LiveBoxscoreTeamTests(PlayerTeamsTestCase):
     def setUp(self):
@@ -212,6 +252,53 @@ class LiveBoxscoreTeamTests(PlayerTeamsTestCase):
         self.scoreboard.return_value = {"events": [event(status="post")]}
         live_games.get_todays_games(state.nba_data)
         self.assertEqual(state.nba_data[0]["TEAM"], "DAL")
+
+    def test_live_debut_updates_all_current_views_before_archive(self):
+        veteran = state.nba_data[0]
+        current = dict(veteran, PPG_LAST=15)
+        returning = {"PLAYER_ID": 3, "PLAYER_NAME": "Returning Player", "TEAM": "LAL", "POSITION": "G"}
+        historic = {2026: [dict(veteran), dict(returning)]}
+        prediction = {"id": 1, "name": veteran["PLAYER_NAME"], "team": "LAL", "position": "G"}
+        model_row = {"PLAYER_NAME": veteran["PLAYER_NAME"], "TEAM": "LAL", "PREDICTED_PPG": 20}
+        cache = {"all_players_list": [prediction], "bundle": {"top_scorers": [model_row]},
+                 "recommendations": {"PPG": [model_row]}}
+        self.boxscore["away"].append({"personId": 3, "name": "Returning Player"})
+        with patch.object(state, "current_season_data", [current, dict(returning)]), \
+             patch.object(state, "current_season_year", 2027), \
+             patch.object(state, "multi_season_data", historic), \
+             patch.object(state, "is_render", True), patch.object(state, "ai_available", True), \
+             patch.object(state, "predictions_cache", cache), \
+             patch("app.auth.get_db") as auth_db, \
+             patch.object(game_archive, "archive_finished_games") as archive, \
+             patch.object(state.time, "sleep", side_effect=InterruptedError):
+            auth_db.return_value.execute.return_value.fetchone.return_value = {"user_id": 7}
+            with self.assertRaises(InterruptedError):
+                state._refresh_live_games()
+            archive.assert_called_once()
+            client = create_app(load_data=False).test_client()
+            self.assertEqual(client.get("/api/players/1").get_json()["team"], "DAL")
+            self.assertEqual(client.get("/api/players/3").get_json()["team"], "DAL")
+            self.assertEqual(client.get("/api/players/teams").get_json()["teams_by_player_id"]["3"], "DAL")
+            for year in ("", "&year=2027"):
+                players = client.get("/api/players?team=DAL" + year).get_json()["players"]
+                self.assertEqual({p["id"] for p in players}, {1, 3})
+            self.assertEqual(client.get("/api/players?team=LAL").get_json()["players"], [])
+            old_rows = client.get("/api/players?team=LAL&year=2026").get_json()["players"]
+            self.assertEqual({p["id"] for p in old_rows}, {1, 3})
+            self.assertEqual(client.get("/api/predictions?team=DAL").get_json()["predictions"][0]["team"], "DAL")
+            bundle = client.get("/api/ai-predictions").get_json()["predictions"]
+            self.assertEqual(bundle["top_scorers"][0]["TEAM"], "DAL")
+            recommendations = client.get("/api/recommendations/PPG", headers={"Authorization": "Bearer valid"})
+            self.assertEqual(recommendations.status_code, 200)
+            self.assertEqual(recommendations.get_json()[0]["TEAM"], "DAL")
+            self.assertEqual(recommendations.get_json()[0]["PREDICTED_PPG"], 20)
+        self.assertEqual(current["TEAM"], "LAL")
+        self.assertEqual(model_row["TEAM"], "LAL")
+
+    def test_dnp_boxscore_does_not_change_team(self):
+        self.boxscore["away"][0]["status"] = "DNP"
+        live_games.get_todays_games(state.nba_data)
+        self.assertEqual(state.nba_data[0]["TEAM"], "LAL")
 
     def test_home_boxscore_updates_only_matching_ids(self):
         state.nba_data.append({"PLAYER_NAME": "Missing ID", "TEAM": "BOS"})
@@ -253,18 +340,24 @@ class LiveBoxscoreTeamTests(PlayerTeamsTestCase):
                 games = live_games.get_todays_games(players)
                 self.assertEqual(games[0]["players"], self.boxscore)
 
-    def test_unchanged_team_not_rewritten(self):
-        self.assertTrue(hasattr(live_games, "_team_lock"))
-
+    def test_unchanged_team_records_recency_without_rewriting_the_label(self):
         class UnchangedPlayer(dict):
             def __setitem__(self, key, value):
-                raise AssertionError("Unchanged player should not be rewritten")
+                if key == "TEAM":
+                    raise AssertionError("Unchanged team should not be rewritten")
+                super().__setitem__(key, value)
 
         state.nba_data[0] = UnchangedPlayer(state.nba_data[0], TEAM="DAL")
-        with patch.object(live_games, "_team_lock") as lock:
-            live_games.get_todays_games(state.nba_data)
+        live_games.get_todays_games(state.nba_data)
+        self.conn.execute.return_value.fetchall.return_value = [archive_row(1, "LAL", 19)]
+        self.assertEqual(self.apply_teams(), 0)
         self.assertEqual(state.nba_data[0]["TEAM"], "DAL")
-        lock.__enter__.assert_not_called()
+
+    def test_older_live_boxscore_does_not_undo_archive_update(self):
+        self.conn.execute.return_value.fetchall.return_value = [archive_row(1, "OKC", 21)]
+        self.apply_teams()
+        live_games.get_todays_games(state.nba_data)
+        self.assertEqual(state.nba_data[0]["TEAM"], "OKC")
 
     def test_team_write_holds_lock(self):
         self.assertTrue(hasattr(live_games, "_team_lock"))
@@ -279,7 +372,7 @@ class LiveBoxscoreTeamTests(PlayerTeamsTestCase):
 
         state.nba_data[0] = LockedPlayer(state.nba_data[0])
         live_games.get_todays_games(state.nba_data)
-        self.assertEqual(writes, [("TEAM", "DAL")])
+        self.assertIn(("TEAM", "DAL"), writes)
         self.assertEqual(state.nba_data[0]["TEAM"], "DAL")
         self.assertFalse(live_games._team_lock.locked())
 

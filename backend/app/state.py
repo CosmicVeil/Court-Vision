@@ -2,10 +2,12 @@
 import json
 import os
 import pickle
+import threading
+import time
 from datetime import date
 
 from app import config, db
-from app.services import game_archive, prediction_accuracy as accuracy_tracker
+from app.services import game_archive, live_games, prediction_accuracy as accuracy_tracker
 from app.utils import player_ids
 from app.utils.player_names import fix_mojibake, normalize_player_name
 
@@ -21,6 +23,9 @@ current_season_year = game_archive.current_season_year()
 multi_season_data = None
 nba_name_index = {}
 multi_season_name_indexes = {}
+live_team_rows = {}  # Live observations for players absent from the season pickle.
+LIVE_REFRESH_INTERVAL = 60
+_live_refresh_thread = None
 
 
 def _repair_names(players):
@@ -184,27 +189,62 @@ def assign_player_ids():
                 player['PLAYER_ID'] = player_ids.player_id_for(player['PLAYER_NAME'])
 
 
-def apply_archive_teams():
+def current_player_teams():
+    """Use the latest game observations, with season data as a fallback."""
+    baseline = nba_data or []
+    teams = {
+        player['PLAYER_ID']: player['TEAM']
+        for players in (baseline, current_season_data)
+        for player in players if player.get('PLAYER_ID') and player.get('TEAM') in live_games.TEAM_IDS
+    }
+    for player in [*baseline, *live_team_rows.copy().values()]:
+        observed = player.get('_TEAM_OBSERVATION')
+        if observed:
+            teams[player['PLAYER_ID']] = observed[1]
+    return teams
+
+
+def _refresh_live_games():
+    while True:
+        try:
+            games = live_games.get_todays_games(nba_data, live_team_rows)
+            game_archive.archive_finished_games(games)
+        except Exception as exc:
+            print(f"Could not refresh live games ({exc}).")
+        time.sleep(LIVE_REFRESH_INTERVAL)
+
+
+def start_live_refresh():
+    """Watch the live slate even when nobody has the Games page open."""
+    global _live_refresh_thread
+    if _live_refresh_thread is None or not _live_refresh_thread.is_alive():
+        _live_refresh_thread = threading.Thread(target=_refresh_live_games, name='live-games-refresh', daemon=True)
+        _live_refresh_thread.start()
+
+
+def apply_archive_teams(conn=None):
     """Override season teams with the latest archived teams, when the DB is available."""
-    if not nba_data or not os.environ.get('DATABASE_URL'):
+    if not nba_data or (conn is None and not os.environ.get('DATABASE_URL')):
         return 0
 
-    conn = None
+    owns_connection = conn is None
     try:
-        conn = db.get_db()
+        if owns_connection:
+            conn = db.get_db()
         teams = game_archive.latest_player_teams(conn)
     except Exception as e:
+        if conn is not None and not owns_connection:
+            conn.rollback()
         print(f"Could not load teams from game archive ({e}); keeping season teams.")
         return 0
     finally:
-        if conn:
+        if owns_connection and conn is not None:
             conn.close()
 
     changed = 0
-    for player in nba_data:
-        team = teams.get(player.get('PLAYER_ID'))
-        if team and player.get('TEAM') != team:
-            player['TEAM'] = team
+    for player in [*nba_data, *live_team_rows.copy().values()]:
+        observation = teams.get(player.get('PLAYER_ID'))
+        if observation and live_games.observe_player_team(player, *observation):
             changed += 1
     print(f"Applied {changed} team changes from game archive")
     return changed
@@ -272,6 +312,8 @@ def initialize():
             print(f"AI initialization failed (non-fatal): {e}")
 
     start_prediction_accuracy()
+    if nba_data:
+        start_live_refresh()
 
 
 def start_prediction_accuracy():
