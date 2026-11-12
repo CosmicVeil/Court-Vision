@@ -82,11 +82,11 @@ test('season cards lead with PPG/APG/RPG, then the rest of the season line', () 
   assert.equal(typeof getSeasonCardStats, 'function');
   const { main, extra } = getSeasonCardStats({
     stats: { ppg_last: 30.04, apg_last: 8, rpg_last: 9.96, spg_last: 1.4, bpg_last: 0.6,
-      fg_pct_last: 52.1, fg3_pct_last: 38, ft_pct_last: 81.56, games_played: 71 },
+      fg_pct_last: 52.1, fg3_pct_last: 38, ft_pct_last: 81.56, fantasy_last: 55.25, games_played: 71 },
   });
   assert.deepEqual(main.map(stat => [stat.label, stat.value]), [['PPG', '30.0'], ['APG', '8.0'], ['RPG', '10.0']]);
   assert.deepEqual(extra.map(stat => [stat.label, stat.value]),
-    [['SPG', '1.4'], ['BPG', '0.6'], ['FG%', '52.1%'], ['3P%', '38.0%'], ['FT%', '81.6%'], ['GP', '71']]);
+    [['SPG', '1.4'], ['BPG', '0.6'], ['FG%', '52.1%'], ['3P%', '38.0%'], ['FT%', '81.6%'], ['FPTS', '55.3'], ['GP', '71']]);
   assert.ok(main.every(stat => !stat.delta), 'season stats have nothing to compare against');
   assert.deepEqual(getSeasonCardStats({}).main.map(stat => stat.value), ['0.0', '0.0', '0.0']);
 });

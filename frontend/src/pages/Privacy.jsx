@@ -41,7 +41,7 @@ function Privacy() {
             <p>These are not cookies, but localStorage serves a similar purpose by storing information in your browser:</p>
             <ul className="privacy-list">
               <li><code>authToken</code>: a random sign-in token, valid up to 24 hours.</li>
-              <li><code>user</code>: your account's id, first name, last name and email, used to show your profile.</li>
+              <li><code>user</code>: your account's id, first name, last name and email, used to show your profile, and your fantasy scoring setting.</li>
               <li><code>nba_favorites</code>: players you favourited.</li>
             </ul>
             <p>
@@ -55,7 +55,8 @@ function Privacy() {
             <h2 id="privacy-account-title">If you create an account</h2>
             <p>
               Our PostgreSQL database stores your first name, last name, email, password stored only as a
-              salted hash (never in plain text), account creation time, and the players you save.
+              salted hash (never in plain text), account creation time, the players you save, and your fantasy
+              scoring setting.
             </p>
             <p>
               Sign-in tokens are stored in our database only as a one-way hash, and are deleted on logout or expire after 24 hours.

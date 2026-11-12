@@ -11,6 +11,9 @@ def add_security_headers(response):
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    # Fantasy points depend on the X-Fantasy-Scoring request header, so any HTTP cache must key
+    # on it too, or one user's scoring preset would be served to another.
+    response.vary.add('X-Fantasy-Scoring')
     return response
 
 
@@ -23,8 +26,8 @@ def create_app(load_data: bool = True) -> Flask:
     CORS(app, resources={
         r"/api/*": {
             "origins": "*",
-            "methods": ["GET", "POST", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"],
+            "methods": ["GET", "POST", "PUT", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization", "X-Fantasy-Scoring"],
             "supports_credentials": False
         }
     })

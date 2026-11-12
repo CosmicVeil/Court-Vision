@@ -32,6 +32,15 @@ export const setAuth = (token, user) => {
   localStorage.setItem('user', JSON.stringify(user));
 };
 
+// The signed-in user's fantasy scoring ({ preset, label, weights }), kept on the stored user so
+// every API request can send it; null when signed out (the backend then scores with FanDuel).
+export const getScoring = () => (getAuthToken() ? getUser()?.fantasy_scoring || null : null);
+
+export const setScoring = (scoring) => {
+  const user = getUser();
+  if (user) localStorage.setItem('user', JSON.stringify({ ...user, fantasy_scoring: scoring }));
+};
+
 export const clearAuth = () => {
   localStorage.removeItem('authToken');
   localStorage.removeItem('user');

@@ -1,7 +1,9 @@
 """Request parsing and response-shaping helpers shared by the routes."""
 import hashlib
 
-from app.utils.fantasy import PER_GAME_KEYS, fantasy_points
+from flask import request
+
+from app.utils.fantasy import PER_GAME_KEYS, fantasy_points, is_default, parse_scoring
 from app.utils.player_ids import player_id_for
 
 SORT_KEY_MAP = {
@@ -17,8 +19,24 @@ SORT_KEY_MAP = {
     'fg3_pct': ('FG3_PCT_LAST', float),
     'ft_pct': ('FT_PCT_LAST', float),
     'games': ('GAMES_PLAYED_LAST', float),
+    'fantasy': ('FANTASY', float),  # computed per request under the caller's scoring weights
     'age': ('AGE', float),
 }
+
+SCORING_HEADER = 'X-Fantasy-Scoring'
+
+
+def request_weights():
+    """The fantasy scoring weights this request asked for (X-Fantasy-Scoring: a preset id or
+    'custom:pts=5,...'); FanDuel when the header is missing. The frontend's fetch wrapper sends it
+    on every API call, so routes never need a query parameter for it."""
+    return parse_scoring(request.headers.get(SCORING_HEADER))
+
+
+def season_fantasy(season_player, weights=None, digits=1):
+    """FPTS of a season row ('PPG_LAST', ...) from its unrounded per-game averages."""
+    return fantasy_points(season_player, lambda stat: f'{PER_GAME_KEYS[stat].upper()}_LAST',
+                          digits=digits, weights=weights)
 
 
 # Current-season archive fields in the prediction stats' keys; shooting is stored as a 0-1 ratio.
@@ -27,12 +45,58 @@ SO_FAR_FIELDS = (('ppg', 'PPG_LAST'), ('apg', 'APG_LAST'), ('rpg', 'RPG_LAST'), 
 SO_FAR_PCT_FIELDS = (('fg_pct', 'FG_PCT_LAST'), ('fg3_pct', 'FG3_PCT_LAST'), ('ft_pct', 'FT_PCT_LAST'))
 SO_FAR_KEYS = tuple(key for key, _ in SO_FAR_FIELDS + SO_FAR_PCT_FIELDS) + ('fantasy', 'gp')
 
-def so_far_stats(season_player):
+def _improvement(predicted, last):
+    return round((predicted - last) / last * 100, 1) if last > 0 else 0
+
+
+# Predictions are stored (predictions_cache.json, prediction payloads) with each stat rounded to 0.1
+# and FanDuel FPTS precomputed from the unrounded stats. Other scoring is rescored here from the
+# rounded stats, so it can differ from an exact score by up to ~0.1 * sum(|weights|) / 2; the default
+# keeps the exact stored values. Exact non-default scores would need unrounded stats in the cache.
+
+def rescore_prediction_row(row, weights):
+    """Copy of a predictions-list row with its fantasy fields under weights. Rows come in two shapes:
+    API rows (ppg_last, predicted_ppg, fantasy_last, predicted_fantasy) and raw model rows
+    (PPG_LAST, PREDICTED_PPG, FANTASY_LAST, PREDICTED_FANTASY, FANTASY_IMPROVEMENT)."""
+    if is_default(weights):
+        return row
+    row = dict(row)
+    if 'predicted_fantasy' in row:
+        row['fantasy_last'] = fantasy_points(row, lambda stat: f'{PER_GAME_KEYS[stat]}_last', weights=weights)
+        row['predicted_fantasy'] = fantasy_points(row, lambda stat: f'predicted_{PER_GAME_KEYS[stat]}',
+                                                  weights=weights)
+        # predictions_cache.json rows also nest the player-detail shape; keep both in one scoring.
+        row = rescore_prediction(row, weights)
+    if 'PREDICTED_FANTASY' in row:
+        last = season_fantasy(row, weights, digits=None)
+        predicted = fantasy_points(row, lambda stat: f'PREDICTED_{PER_GAME_KEYS[stat].upper()}',
+                                   digits=None, weights=weights)
+        row['FANTASY_LAST'], row['PREDICTED_FANTASY'] = last, predicted
+        if 'FANTASY_IMPROVEMENT' in row:
+            row['FANTASY_IMPROVEMENT'] = _improvement(predicted, last)
+    return row
+
+
+def rescore_prediction(prediction, weights):
+    """Copy of a player prediction payload (current_stats / predicted_stats / improvements) with its
+    'fantasy' entries under weights."""
+    if is_default(weights) or not prediction or 'predicted_stats' not in prediction:
+        return prediction
+    predicted = fantasy_points(prediction['predicted_stats'], PER_GAME_KEYS.get, digits=None, weights=weights)
+    result = {**prediction, 'predicted_stats': {**prediction['predicted_stats'], 'fantasy': round(predicted, 1)}}
+    if prediction.get('current_stats'):
+        current = fantasy_points(prediction['current_stats'], PER_GAME_KEYS.get, digits=None, weights=weights)
+        result['current_stats'] = {**prediction['current_stats'], 'fantasy': round(current, 1)}
+        result['improvements'] = {**(prediction.get('improvements') or {}), 'fantasy': _improvement(predicted, current)}
+    return result
+
+
+def so_far_stats(season_player, weights=None):
     """A current-season archive row in the same keys and units as the model's predicted_stats."""
     stats = {key: round(season_player.get(field) or 0, 1) for key, field in SO_FAR_FIELDS}
     stats.update({key: round((season_player.get(field) or 0) * 100, 1) for key, field in SO_FAR_PCT_FIELDS})
     # From the unrounded averages, so it matches the game log's season FPTS.
-    stats['fantasy'] = fantasy_points(season_player, lambda stat: f'{PER_GAME_KEYS[stat].upper()}_LAST')
+    stats['fantasy'] = season_fantasy(season_player, weights)
     stats['gp'] = int(season_player.get('GAMES_PLAYED_LAST') or 0)
     return stats
 
@@ -72,7 +136,7 @@ def _deterministic_consistency(name, ppg):
     return round(min(1.0, base * 0.7 + ppg_bonus + 0.15), 2)
 
 
-def get_player_stats_summary(player_data):
+def get_player_stats_summary(player_data, weights=None):
     ppg_current = player_data.get('PPG_LAST', player_data.get('ppg_last', 0))
     apg_current = player_data.get('APG_LAST', player_data.get('apg_last', 0))
     rpg_current = player_data.get('RPG_LAST', player_data.get('rpg_last', 0))
@@ -98,7 +162,8 @@ def get_player_stats_summary(player_data):
             'fg_pct_last': round(player_data.get('FG_PCT_LAST', player_data.get('fg_pct_last', 0)) * 100, 1),
             'fg3_pct_last': round(player_data.get('FG3_PCT_LAST', player_data.get('fg3_pct_last', 0)) * 100, 1),
             'ft_pct_last': round(player_data.get('FT_PCT_LAST', player_data.get('ft_pct_last', 0)) * 100, 1),
-            'games_played': int(player_data.get('GAMES_PLAYED_LAST', player_data.get('games_played_last', 0)) or 0)
+            'games_played': int(player_data.get('GAMES_PLAYED_LAST', player_data.get('games_played_last', 0)) or 0),
+            'fantasy_last': season_fantasy(player_data, weights),
         },
 
         'trends': {

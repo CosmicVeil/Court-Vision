@@ -2,6 +2,7 @@ import os
 import psycopg
 from dotenv import load_dotenv
 from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import request
 from typing import Dict, Optional, Tuple
@@ -53,6 +54,9 @@ def init_db(app=None):
                 expires_at TIMESTAMP NOT NULL
             )
         ''')
+        # Added after launch, so existing databases get it too. JSONB: {"preset": "espn"} or
+        # {"preset": "custom", "weights": {...}}; NULL means the default (FanDuel).
+        conn.execute('ALTER TABLE users ADD COLUMN IF NOT EXISTS fantasy_scoring JSONB')
         from app.services.game_archive import init_archive_tables
         init_archive_tables(conn)
         from app.services.prediction_accuracy import init_tables as init_accuracy_tables
@@ -84,7 +88,7 @@ def get_user_by_id(user_id: int) -> Optional[Dict]:
     try:
         conn = get_db()
         user = conn.execute(
-            'SELECT id, first_name, last_name, email FROM users WHERE id = %s', (user_id,)
+            'SELECT id, first_name, last_name, email, fantasy_scoring FROM users WHERE id = %s', (user_id,)
         ).fetchone()
         return dict(user) if user else None
     except Exception as e:
@@ -122,6 +126,21 @@ def authenticate_user(email: str, password: str) -> Tuple[bool, Optional[Dict], 
         return False, None, "Incorrect password"
     user_safe = {k: v for k, v in user.items() if k != 'password'}
     return True, user_safe, "Login successful"
+
+def set_fantasy_scoring(user_id: int, setting: Dict) -> bool:
+    """Store a user's normalized fantasy scoring setting (see app.utils.fantasy.normalize_setting)."""
+    conn = None
+    try:
+        conn = get_db()
+        cursor = conn.execute('UPDATE users SET fantasy_scoring = %s WHERE id = %s', (Jsonb(setting), user_id))
+        conn.commit()
+        return cursor.rowcount == 1  # 0 when the account no longer exists
+    except Exception as e:
+        print(f"Error in set_fantasy_scoring: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
 
 # ── JSON parsers (reused by app.py routes) ──────────────────────────────────
 

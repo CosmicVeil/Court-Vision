@@ -211,13 +211,14 @@ class InitDbTests(unittest.TestCase):
             init_db()
 
         statements = [' '.join(args.args[0].split()) for args in conn.execute.call_args_list]
-        self.assertEqual(len(statements), 3)
+        self.assertEqual(len(statements), 4)
         self.assertIn('CREATE TABLE IF NOT EXISTS saved_players', statements[1])
         self.assertEqual(statements[2],
                          'CREATE TABLE IF NOT EXISTS auth_tokens ( '
                          'token_hash TEXT PRIMARY KEY, '
                          'user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, '
                          'expires_at TIMESTAMP NOT NULL )')
+        self.assertEqual(statements[3], 'ALTER TABLE users ADD COLUMN IF NOT EXISTS fantasy_scoring JSONB')
         archive.assert_called_once_with(conn)
         accuracy.assert_called_once_with(conn)
         conn.commit.assert_called_once_with()
