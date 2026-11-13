@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import PillNav from './PillNav';
 import { getScoring } from '../utils/auth';
 import { fptsTitle } from '../utils/fantasy';
 import { getColumnLeaders, nextSort, sortPlayers } from '../utils/gameDetail';
 import { formatGameTime, formatPeriod, STATUS_FINAL, STATUS_LIVE, STATUS_SCHEDULED } from '../utils/liveGames';
+import { getTeamPath } from '../utils/team';
 
 export function GameMatchup({ game, scoreChanges }) {
   const status = Number(game.status);
@@ -163,6 +165,9 @@ export function BoxScore({ game, onPlayerClick }) {
           label: <>{game[side].logo && <img src={game[side].logo} alt="" className="tab-logo" />}{game[side].city} {game[side].name}</>,
         }))} />
       {isFuture && <div className="future-note">Season averages shown &nbsp;·&nbsp; Game stats update at tip-off</div>}
+      <Link to={getTeamPath(game[tab].tricode)} className="bs-team-link">
+        {game[tab].city} {game[tab].name} roster &amp; season <span aria-hidden="true">→</span>
+      </Link>
       <div className="player-table-wrap" id="bs-panel" role="tabpanel" aria-labelledby={`bs-tab-${tab}`}>
         <table className="player-table">
           <thead>

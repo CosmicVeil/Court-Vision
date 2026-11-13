@@ -487,6 +487,7 @@ class CurrentSeasonStateTests(unittest.TestCase):
         schedule = self.enterContext(patch.object(game_archive, 'schedule_catch_up'))
         daily = self.enterContext(patch.object(game_archive, 'start_daily_catch_up', create=True))
         self.enterContext(patch.object(state, 'start_live_refresh'))
+        self.enterContext(patch.object(state, 'start_prediction_accuracy'))
         state.initialize()
         self.assertLess(events.index('assign_player_ids'), events.index('load_current_season'))
         self.assertLess(events.index('init_db'), events.index('load_current_season'))
@@ -538,6 +539,7 @@ class BackfillStartTests(unittest.TestCase):
         self.enterContext(patch.object(game_archive, 'auto_archive_enabled', False))
         self.enterContext(patch.object(game_archive, 'start_daily_catch_up'))
         self.enterContext(patch.object(state, 'start_live_refresh'))
+        self.enterContext(patch.object(state, 'start_prediction_accuracy'))
         schedule = self.enterContext(patch.object(game_archive, 'schedule_catch_up'))
         self.enterContext(patch.dict(os.environ, {'DATABASE_URL': 'postgresql://test.invalid/test',
                                                   'ARCHIVE_BACKFILL_START': '2026-10-01'}))

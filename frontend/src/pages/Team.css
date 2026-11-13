@@ -1,0 +1,529 @@
+/* ============================================================
+   COURT VISION — TEAM PAGE (/teams/:tricode)
+   A team-colour banner, team leaders, then Roster / Games tabs.
+   Classes are prefixed tp- because .team-logo, .team-name and .team-cell
+   already belong to the Standings and Games pages.
+   --team-color is set inline by Team.jsx (utils/team.js getTeamColor).
+   ============================================================ */
+
+.tp-page {
+  min-height: 100vh;
+  background: var(--bg-main);
+  color: var(--color-pure-white);
+  padding: calc(var(--header-height) + var(--space) * 6) var(--gutter) calc(var(--space) * 18);
+  position: relative;
+  z-index: 2;
+  font-family: var(--font-body);
+}
+
+.tp-shell {
+  max-width: var(--container-content);
+  margin: 0 auto;
+}
+
+/* ---------- Banner ---------- */
+.tp-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: calc(var(--space) * 6) calc(var(--space) * 10);
+  margin-bottom: calc(var(--space) * 6);
+  padding: calc(var(--space) * 6) calc(var(--space) * 8) calc(var(--space) * 8);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--team-color) 45%, transparent);
+  border-radius: var(--radius-xl);
+  /* The team colour fades into the page's own dark surface, so dark and light colours both read. */
+  background:
+    radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--team-color) 70%, transparent) 0%, transparent 65%),
+    linear-gradient(180deg, rgba(24, 24, 30, 0.9) 0%, rgba(14, 14, 18, 0.96) 100%);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+}
+
+.tp-back {
+  grid-column: 1 / -1;
+  justify-self: start;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-decoration: none;
+  transition: color var(--duration-fast) ease;
+}
+
+.tp-back:hover,
+.tp-back:focus-visible { color: var(--color-pure-white); }
+
+.tp-hero-main {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space) * 6);
+  min-width: 0;
+}
+
+.tp-logo {
+  flex-shrink: 0;
+  width: calc(var(--space) * 28);
+  height: calc(var(--space) * 28);
+  object-fit: contain;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.5));
+}
+
+.tp-identity { min-width: 0; }
+
+.tp-eyebrow {
+  display: block;
+  margin-bottom: calc(var(--space) * 2);
+  color: rgba(255, 255, 255, 0.7);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.tp-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: clamp(var(--text-2xl), 4.5vw, var(--text-display-sm));
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.tp-city { font-weight: 500; }
+
+.tp-standing {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: calc(var(--space) * 3);
+  margin: calc(var(--space) * 3) 0 0;
+  font-family: var(--font-mono);
+}
+
+.tp-record { font-size: var(--text-lg); font-weight: 800; }
+
+.tp-streak,
+.tp-form-pill,
+.tp-result { color: var(--color-stone); font-weight: 800; }
+
+.tp-streak[data-result='W'],
+.tp-form-pill[data-result='W'],
+.tp-result[data-result='W'] { color: #4ade80; }
+
+.tp-streak[data-result='L'],
+.tp-form-pill[data-result='L'],
+.tp-result[data-result='L'] { color: #f87171; }
+
+.tp-streak { font-size: var(--text-sm); }
+
+.tp-form { display: inline-flex; gap: var(--space); }
+
+.tp-form-pill {
+  display: inline-grid;
+  place-items: center;
+  width: calc(var(--space) * 6);
+  height: calc(var(--space) * 6);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.45);
+  font-size: 11px;
+}
+
+/* Shown only when the archive is missing games, so nobody reads partial numbers as the season's. */
+.tp-partial,
+.tp-games-note {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.tp-partial { max-width: 48ch; margin-top: calc(var(--space) * 3); }
+.tp-games-note { padding: calc(var(--space) * 3) calc(var(--space) * 5); border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+
+.tp-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  gap: calc(var(--space) * 8);
+  margin: 0;
+}
+
+.tp-hero-stats > div { display: flex; flex-direction: column; align-items: center; }
+
+.tp-hero-stats dt {
+  order: 2;
+  margin-top: var(--space);
+  color: rgba(255, 255, 255, 0.7);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tp-hero-stats dd {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  font-weight: 800;
+}
+
+/* ---------- Team leaders ---------- */
+.tp-leaders {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: calc(var(--space) * 4);
+  margin-bottom: calc(var(--space) * 8);
+}
+
+.tp-leader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: calc(var(--space) * 2);
+  padding: calc(var(--space) * 5) calc(var(--space) * 5) 0;
+  overflow: hidden;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--duration-base) var(--ease-brand), transform var(--duration-base) var(--ease-brand);
+}
+
+.tp-leader:focus-visible { border-color: var(--color-ember-orange); outline: none; }
+.tp-leader:active { transform: scale(0.98); }
+
+@media (hover: hover) and (pointer: fine) {
+  .tp-leader:hover { border-color: var(--color-ember-orange); transform: translateY(-2px); }
+}
+
+.tp-leader-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-bottom: calc(var(--space) * 5);
+}
+
+.tp-leader-label,
+.tp-leader-pos {
+  color: var(--color-stone);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.tp-leader-value {
+  margin: var(--space) 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-2xl);
+  font-weight: 900;
+  line-height: var(--leading-display);
+}
+
+.tp-leader-name {
+  overflow: hidden;
+  font-family: var(--font-heading);
+  font-size: var(--text-sm);
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The leader's photo is a cut-out standing on the card's bottom edge, not a circle. */
+.tp-leader .tp-leader-photo {
+  width: calc(var(--space) * 30);
+  height: calc(var(--space) * 22);
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+/* ---------- Tabs (PillNav) ---------- */
+.tp-tabs {
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  gap: var(--space);
+  margin-bottom: calc(var(--space) * 5);
+  padding: var(--space);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-full);
+  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
+}
+
+.tp-tab {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space) * 2);
+  min-height: 44px;
+  padding: calc(var(--space) * 2.5) calc(var(--space) * 6);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-stone);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: scale var(--duration-fast) var(--ease-brand);
+}
+
+.tp-tab:active { scale: 0.96; }
+.tp-tab:focus-visible { outline: 2px solid var(--color-pure-white); outline-offset: 2px; }
+.tp-tab.active,
+.tp-tab[data-indicator-target] { color: var(--color-pure-white); }
+.tp-tab.active { font-weight: 800; }
+
+.tp-tab-count {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 9px;
+}
+
+.tp-page [data-slot="pill-indicator"] {
+  background: linear-gradient(135deg, #ff6436, #e04a1c);
+  box-shadow: 0 0 20px rgba(255, 100, 54, 0.45);
+}
+
+/* ---------- Panels ---------- */
+.tp-section { width: 100%; }
+
+.tp-empty {
+  width: 100%;
+  margin: 0;
+  padding: calc(var(--space) * 10) calc(var(--space) * 6);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-xl);
+  color: var(--color-stone);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.tp-table-wrap,
+.tp-games-wrap {
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+}
+
+.tp-table-wrap { overflow-x: auto; }
+.tp-games-wrap { overflow: hidden; }
+
+/* ---------- Roster table ---------- */
+.tp-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tp-table thead,
+.tp-games-head { background: rgba(255, 100, 54, 0.08); }
+
+.tp-table th,
+.tp-games-head {
+  color: var(--color-ember-orange);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tp-table th {
+  padding: calc(var(--space) * 3);
+  border-bottom: 1px solid rgba(255, 100, 54, 0.2);
+  text-align: center;
+}
+
+.tp-table td {
+  padding: calc(var(--space) * 2.5) calc(var(--space) * 3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.tp-table tbody tr:last-child td { border-bottom: 0; }
+.tp-table .tp-left { text-align: left; }
+.tp-table tbody tr { transition: background var(--duration-fast) ease; }
+.tp-table tbody tr:hover { background: rgba(255, 100, 54, 0.08); }
+.tp-strong { color: var(--color-pure-white); font-weight: 800; }
+
+.tp-player-row { cursor: pointer; }
+
+.tp-player {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space) * 3);
+}
+
+.tp-player-name {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-pure-white);
+  font-family: var(--font-heading);
+  font-size: var(--text-sm);
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tp-player-row:hover .tp-player-name,
+.tp-player-name:focus-visible { color: var(--color-ember-orange); }
+
+/* ---------- Season games: one clickable line per game ---------- */
+.tp-games {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tp-game {
+  position: relative;
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr) 9rem 4rem 1.5rem;
+  align-items: center;
+  gap: calc(var(--space) * 3);
+  padding: calc(var(--space) * 3) calc(var(--space) * 5);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+/* The header reuses the row's grid so its labels line up with the columns below. */
+.tp-game.tp-games-head { border-bottom: 1px solid rgba(255, 100, 54, 0.2); font-size: 10px; font-weight: 700; }
+.tp-games-head .tp-game-record { color: inherit; }
+
+.tp-games .tp-game + .tp-game { border-top: 1px solid rgba(255, 255, 255, 0.04); }
+.tp-games .tp-game { transition: background var(--duration-fast) ease; }
+.tp-games .tp-game[data-linked]:hover,
+.tp-games .tp-game:focus-within { background: rgba(255, 100, 54, 0.08); }
+
+.tp-game-date { color: var(--color-silver-mist); white-space: nowrap; }
+
+.tp-tag {
+  margin-left: calc(var(--space) * 1.5);
+  padding: 1px 5px;
+  border: 1px solid rgba(255, 100, 54, 0.45);
+  border-radius: 4px;
+  color: var(--color-ember-orange);
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+
+/* The game link's ::after covers the whole line, so the line is one big link to the game. */
+.tp-game-link {
+  display: flex;
+  align-items: baseline;
+  gap: calc(var(--space) * 3);
+  color: var(--color-pure-white);
+  text-decoration: none;
+}
+
+.tp-game-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.tp-game-link:focus-visible { outline: none; }
+.tp-game-link:focus-visible::after { outline: 2px solid var(--color-ember-orange); outline-offset: -2px; }
+
+.tp-result { width: 1ch; }
+
+/* The opponent is the one other target on the line: it sits above the stretched game link. */
+.tp-opponent {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: calc(var(--space) * 2);
+  max-width: 100%;
+  color: var(--color-pure-white);
+  font-family: var(--font-heading);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.tp-opponent-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.tp-opponent:hover .tp-opponent-name,
+.tp-opponent:focus-visible .tp-opponent-name,
+.tp-opponent:hover .tp-opponent-tricode,
+.tp-opponent:focus-visible .tp-opponent-tricode { color: var(--color-ember-orange); text-decoration: underline; }
+
+.tp-venue {
+  width: 1.5em;
+  color: var(--color-stone);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.tp-opponent-logo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.tp-opponent-tricode { display: none; }
+.tp-game-record { color: var(--color-stone); text-align: right; }
+
+.tp-game-arrow {
+  color: var(--color-stone);
+  text-align: right;
+  transition: translate var(--duration-base) var(--ease-brand), color var(--duration-fast) ease;
+}
+
+.tp-game[data-linked]:hover .tp-game-arrow { color: var(--color-ember-orange); translate: 3px 0; }
+
+/* ---------- Narrow screens ---------- */
+@media (max-width: 860px) {
+  .tp-hero { grid-template-columns: minmax(0, 1fr); padding: calc(var(--space) * 5); }
+  .tp-hero-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: calc(var(--space) * 3);
+    padding-top: calc(var(--space) * 5);
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  .tp-logo { width: calc(var(--space) * 18); height: calc(var(--space) * 18); }
+  .tp-hero-main { gap: calc(var(--space) * 4); }
+}
+
+@media (max-width: 640px) {
+  .tp-leaders { grid-template-columns: minmax(0, 1fr); }
+  .tp-tabs { width: 100%; }
+  .tp-tab { flex: 1; justify-content: center; }
+  .tp-table th,
+  .tp-table td { padding-left: calc(var(--space) * 2); padding-right: calc(var(--space) * 2); }
+  .tp-player .player-headshot { --headshot-size: 34px; }
+  /* The tricode replaces the full opponent name, and the running record and arrow drop out. */
+  .tp-game { grid-template-columns: 5.5rem minmax(0, 1fr) auto; padding: calc(var(--space) * 3) calc(var(--space) * 4); }
+  .tp-game-record,
+  .tp-game-arrow,
+  .tp-games-head span:nth-child(n + 4) { display: none; }
+  .tp-opponent-name { display: none; }
+  .tp-opponent-tricode { display: inline; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tp-leader,
+  .tp-tab,
+  .tp-game-arrow { transition: none; }
+  .tp-leader:hover,
+  .tp-leader:active { transform: none; }
+}

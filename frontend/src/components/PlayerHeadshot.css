@@ -1,0 +1,42 @@
+/* PlayerHeadshot: a round photo, or a silhouette when there is none. Size it with --headshot-size. */
+.player-headshot {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: flex-end;
+  justify-content: center;
+  width: var(--headshot-size, 44px);
+  height: var(--headshot-size, 44px);
+  overflow: hidden;
+  border: 1px solid rgba(255, 100, 54, 0.25);
+  border-radius: var(--radius-full);
+  background: var(--color-graphite);
+}
+
+/* NBA headshots are 4:3 with the face in the upper middle; cover + top keeps the face in the circle. */
+.player-headshot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.player-headshot-fallback {
+  width: 100%;
+  height: 100%;
+  fill: var(--color-stone);
+  opacity: 0.6;
+}
+
+/* In the player popout's header (PlayerStatsModal), next to the name on every page that opens it. */
+.stats-modal-header--photo {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space) * 5);
+}
+
+.stats-modal-identity { min-width: 0; }
+.stats-modal-photo { --headshot-size: 88px; }
+
+@media (max-width: 560px) {
+  .stats-modal-photo { --headshot-size: 64px; }
+}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import PlayerGameLog from './PlayerGameLog';
+import PlayerHeadshot from './PlayerHeadshot';
 import PlayerPredictionGrid from './PlayerPredictionGrid';
 
 const TABS = [
@@ -55,14 +56,17 @@ export default function PlayerStatsModal({ player, loading, onClose }) {
                 <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
               </svg>
             </button>
-            <div className="stats-modal-header">
-              <div className="stats-modal-player-title-row">
-                <h2 className="stats-modal-player-name">{player.name}</h2>
-                <span className="stats-modal-player-team-badge">{player.team}</span>
+            <div className="stats-modal-header stats-modal-header--photo">
+              <PlayerHeadshot playerId={player.id} name={player.name} className="stats-modal-photo" />
+              <div className="stats-modal-identity">
+                <div className="stats-modal-player-title-row">
+                  <h2 className="stats-modal-player-name">{player.name}</h2>
+                  <span className="stats-modal-player-team-badge">{player.team}</span>
+                </div>
+                <p className="stats-modal-player-meta">
+                  <span><strong>Position:</strong> {player.position}</span><span>•</span><span><strong>Age:</strong> {player.age ?? '—'}</span>
+                </p>
               </div>
-              <p className="stats-modal-player-meta">
-                <span><strong>Position:</strong> {player.position}</span><span>•</span><span><strong>Age:</strong> {player.age ?? '—'}</span>
-              </p>
             </div>
             <div className="stats-modal-tabs">
               {TABS.map(([name, label]) => (
