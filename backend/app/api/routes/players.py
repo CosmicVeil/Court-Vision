@@ -6,7 +6,7 @@ from app.api.helpers import (
     so_far_stats, validate_pagination,
 )
 from app.auth import optional_auth
-from app.services import game_archive
+from app.services import game_archive, injuries
 from app.utils.player_ids import player_id_for
 from app.utils.player_names import normalize_player_name
 
@@ -220,6 +220,8 @@ def _player_result(name, curr_player, archive_only, current_season, current_team
         },
         'ml_stats': ml_stats,
         'predictions_locked': not include_predictions,
+        # Current status from the injury report (Out, Day-To-Day, ...), None when healthy.
+        'injury': injuries.injury_for(player_id),
         'history': history
     }
 

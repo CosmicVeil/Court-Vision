@@ -174,6 +174,8 @@ class PlayerPopupPredictionGatingTests(unittest.TestCase):
             ('predictions_cache', {'players': {'test player': prediction}}),
         ):
             self.enterContext(patch.object(state, name, value))
+        # Offline: the routes' injury report (an ESPN call) is empty in these tests.
+        self.enterContext(patch('app.services.injuries.get_injuries', return_value={}))
         self.validate = self.enterContext(patch('app.auth.validate_token', return_value=None))
         self.client = create_app(load_data=False).test_client()
 

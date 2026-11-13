@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import InjuryBadge from './InjuryBadge';
 import PlayerGameLog from './PlayerGameLog';
 import PlayerHeadshot from './PlayerHeadshot';
 import PlayerPredictionGrid from './PlayerPredictionGrid';
+import { injuryDescription, injuryReturnLabel } from '../utils/injury';
 
 const TABS = [
   ['current', 'Current Stats'],
@@ -62,10 +64,20 @@ export default function PlayerStatsModal({ player, loading, onClose }) {
                 <div className="stats-modal-player-title-row">
                   <h2 className="stats-modal-player-name">{player.name}</h2>
                   <span className="stats-modal-player-team-badge">{player.team}</span>
+                  <InjuryBadge injury={player.injury} />
                 </div>
                 <p className="stats-modal-player-meta">
                   <span><strong>Position:</strong> {player.position}</span><span>•</span><span><strong>Age:</strong> {player.age ?? '—'}</span>
                 </p>
+                {player.injury?.status && (
+                  <div className="injury-summary">
+                    <strong>{player.injury.status}</strong>
+                    {[injuryDescription(player.injury), injuryReturnLabel(player.injury)].filter(Boolean).map(part => (
+                      <span key={part}>· {part}</span>
+                    ))}
+                    {player.injury.note && <p className="injury-summary-note">{player.injury.note}</p>}
+                  </div>
+                )}
               </div>
             </div>
             <div className="stats-modal-tabs">

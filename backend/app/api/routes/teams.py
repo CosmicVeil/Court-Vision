@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify
 
 from app import db, state
 from app.api.helpers import request_weights, season_fantasy
-from app.services import game_archive, standings
+from app.services import game_archive, injuries, standings
 from app.services.live_games import TEAM_LOGOS, TEAM_NAMES
 from app.utils.player_ids import player_id_for
 
@@ -25,10 +25,13 @@ def _roster(tricode, listed=()):
     archive averages, which only cover players who have played. Membership also takes in
     `listed`: players the archive's box scores name for this team this season, even as did-not-
     play, so someone injured all season still appears. Such a player gets None stats and 0
-    games rather than last season's numbers under this season's label. Before any game is
-    archived (or without a database) the season pickle supplies both."""
+    games rather than last season's numbers under this season's label. Players on the injury
+    report for this team join the same way, which covers someone hurt since before the season
+    who no box score has named yet. Before any game is archived (or without a database) the
+    season pickle supplies both."""
     current_teams = state.current_player_teams()
     weights = request_weights()
+    report = injuries.get_injuries()
     baseline = {p['PLAYER_ID']: p for p in state.nba_data or [] if p.get('PLAYER_ID')}
     roster = {}
     for player in state.current_season_data or state.nba_data or []:
@@ -49,9 +52,13 @@ def _roster(tricode, listed=()):
             entry[key] = _pct(player.get(column))
         # Scored with the caller's own preset (X-Fantasy-Scoring), like the Stats page.
         entry['fpts'] = season_fantasy(player, weights)
+        entry['injury'] = report.get(player_id)
         roster[player_id] = entry
 
-    for row in listed:
+    # The injury report's players for this team, in the archive listing's shape.
+    injured = [{'nba_player_id': player_id, 'player_name': entry.get('name'), 'position': entry.get('position')}
+               for player_id, entry in report.items() if entry.get('team') == tricode]
+    for row in [*listed, *injured]:
         name = row.get('player_name') or ''
         player_id = int(row['nba_player_id']) if row.get('nba_player_id') else player_id_for(name)
         # A newer observation (a live game, a trade) outranks the last archived listing.
@@ -67,6 +74,7 @@ def _roster(tricode, listed=()):
             'games_played': 0,
             **{key: None for key, _ in _STAT_FIELDS + _PCT_FIELDS},
             'fpts': None,
+            'injury': report.get(player_id),
         }
     # Players without a game this season (None stats) go last.
     return sorted(roster.values(), key=lambda p: (p['ppg'] is None, -(p['ppg'] or 0), p['name']))

@@ -20,6 +20,12 @@ NAME_ALIASES = {
     "egor dmin": "egor demin",  # 'Egor Dёmin' is spelled with a Cyrillic ё in the season data
 }
 
+# NBA.com IDs for players neither nba_api's bundled list nor the season data knows yet,
+# typically fresh two-way signings. Remove an entry once nba_api lists the player.
+ID_OVERRIDES = {
+    "richie saunders": 1643563,  # Grizzlies two-way, Nov 2026 (NBA.com CommonTeamRoster)
+}
+
 FALLBACK_ID_BASE = 900_000_000
 
 _index: Optional[Dict[str, int]] = None
@@ -64,7 +70,7 @@ def nba_player_id(name: str) -> Optional[int]:
             if _index is None:
                 _index = _build_index()
     key = normalize_player_name(name)
-    return _index.get(key) or _index.get(NAME_ALIASES.get(key, ""))
+    return _index.get(key) or _index.get(NAME_ALIASES.get(key, "")) or ID_OVERRIDES.get(key)
 
 
 def player_id_for(name: str) -> int:

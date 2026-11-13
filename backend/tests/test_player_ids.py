@@ -35,6 +35,15 @@ class PlayerIdTests(unittest.TestCase):
     def test_aliases(self):
         self.assertEqual(player_ids.nba_player_id("Ron Holland"), player_ids.nba_player_id("Ronald Holland II"))
 
+    def test_id_overrides_cover_players_nobody_lists_yet(self):
+        self.assertEqual(player_ids.nba_player_id("Richie Saunders"), 1643563)
+        self.assertEqual(player_ids.player_id_for("richie  saunders"), 1643563)
+
+    def test_known_players_outrank_id_overrides(self):
+        with patch.dict(player_ids.ID_OVERRIDES, {"lebron james": 1, "two way rookie": 2}):
+            self.assertEqual(player_ids.nba_player_id("LeBron James"), 2544)
+            self.assertEqual(player_ids.nba_player_id("Two Way Rookie"), 1643999)
+
     def test_unknown_name_gets_stable_fallback_outside_nba_range(self):
         self.assertIsNone(player_ids.nba_player_id("Nobody Real"))
         fallback = player_ids.player_id_for("Nobody Real")

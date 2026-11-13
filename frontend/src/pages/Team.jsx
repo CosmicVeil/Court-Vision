@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { buildApiUrl } from '../config/api';
+import InjuryBadge from '../components/InjuryBadge';
 import PillNav from '../components/PillNav';
 import PlayerHeadshot from '../components/PlayerHeadshot';
 import PlayerStatsModal from '../components/PlayerStatsModal';
@@ -121,6 +122,7 @@ function Roster({ roster, onSelect }) {
                 <span className="tp-player">
                   <PlayerHeadshot playerId={player.id} name={player.name} />
                   <button type="button" className="tp-player-name">{player.name}</button>
+                  <InjuryBadge injury={player.injury} />
                 </span>
               </td>
               <td>{player.position}</td>
