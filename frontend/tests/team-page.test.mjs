@@ -617,7 +617,7 @@ test('team selection preserves every roster fallback stat on failed or unmatched
       id: 2544, name: 'Test Player', team: 'LAL', position: 'F', age: 25,
       current_stats: { ppg: 22.26, rpg: 5.14, apg: 6.78, spg: 1.26, bpg: 0.84,
         fg_pct: 45.67, fg3_pct: 37.84, ft_pct: 81.26, games_played: 12, tov: 0, mpg: 0 },
-      ml_stats: null, history: {},
+      ml_stats: null, injury: null, history: {},
     }, response);
     assert.equal(playerWrites[0], null);
     assert.deepEqual(loadingWrites, [true, false]);

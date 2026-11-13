@@ -18,6 +18,8 @@ export function buildPlayerFallback(player) {
       games_played: player.games_played ?? 0,
     },
     ml_stats: null,
+    // Team roster rows carry the injury report entry; box-score rows do not.
+    injury: player.injury ?? null,
     history: {},
   };
 }

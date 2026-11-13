@@ -562,6 +562,8 @@ class SeasonRouteTestCase(unittest.TestCase):
             ('ai_available', False), ('is_render', False), ('predictions_cache', None),
         ):
             self.enterContext(patch.object(state, name, value))
+        # Offline: the routes' injury report (an ESPN call) is empty in these tests.
+        self.enterContext(patch('app.services.injuries.get_injuries', return_value={}))
         # Prediction/recommendation routes are gated; treat every request as a
         # signed-in user so these tests exercise the full (non-preview) path.
         self.enterContext(patch('app.auth.validate_token', return_value=1))
@@ -785,6 +787,7 @@ class SearchAllSnapshotTests(SeasonRouteTestCase):
             },
             'ml_stats': None,
             'predictions_locked': False,
+            'injury': None,
             'history': {'2027': {
                 'ppg': 18.3, 'apg': 6.0, 'rpg': 5.0, 'spg': 1.0, 'bpg': 0.5,
                 'fg_pct': 50.0, 'fg3_pct': 30.0, 'ft_pct': 80.0,
@@ -806,6 +809,7 @@ class SearchAllSnapshotTests(SeasonRouteTestCase):
                 'predicted_stats': {'ppg': 22.0}, 'improvements': {'ppg': 10.0},
             },
             'predictions_locked': False,
+            'injury': None,
             'history': {
                 '2026': {
                     'ppg': 20.0, 'apg': 6.0, 'rpg': 5.0, 'spg': 1.0, 'bpg': 0.5,

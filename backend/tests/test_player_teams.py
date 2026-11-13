@@ -96,6 +96,8 @@ class PlayerTeamsTestCase(unittest.TestCase):
         self.conn.execute.return_value.fetchall.return_value = [archive_row(1, "DAL", 15)]
         self.enterContext(patch.dict(os.environ, {"DATABASE_URL": "postgresql://test.invalid/test"}))
         self.get_db = self.enterContext(patch.object(db, "get_db", return_value=self.conn))
+        # Offline: the routes' injury report (an ESPN call) is empty in these tests.
+        self.enterContext(patch("app.services.injuries.get_injuries", return_value={}))
 
     def apply_teams(self):
         self.assertTrue(callable(getattr(state, "apply_archive_teams", None)))

@@ -1,0 +1,38 @@
+/* InjuryBadge: a compact status pill. Red for Out, amber for Day-To-Day, grey otherwise. */
+.injury-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-full, 999px);
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  line-height: 1.5;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.injury-badge--out { color: #ff5c5c; background: rgba(255, 92, 92, 0.12); }
+.injury-badge--dtd { color: #ffb020; background: rgba(255, 176, 32, 0.12); }
+.injury-badge--other { color: var(--text-secondary, #a0a0a0); background: rgba(160, 160, 160, 0.12); }
+
+/* The player popup's injury line under the name. */
+.injury-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 8px 0 0;
+  color: var(--text-secondary, #a0a0a0);
+  font-size: 13px;
+}
+
+.injury-summary-note {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+}

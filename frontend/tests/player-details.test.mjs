@@ -32,7 +32,7 @@ test('fallback adds the id without mutating the box-score row or losing its stat
       ppg: 24, rpg: 7, apg: 8, spg: 2, bpg: 1, tov: 3, mpg: 36,
       fg_pct: 0, fg3_pct: 0, ft_pct: 0, games_played: 0,
     },
-    ml_stats: null, history: {},
+    ml_stats: null, injury: null, history: {},
   });
   assert.equal(Object.hasOwn(player, 'id'), false);
 });

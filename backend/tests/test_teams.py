@@ -186,6 +186,8 @@ class TeamStandingsTests(unittest.TestCase):
 class TeamRouteTests(unittest.TestCase):
     def setUp(self):
         self.standings_row = self.enterContext(patch("app.api.routes.teams._standings_row", return_value=None))
+        # Offline: the routes' injury report (an ESPN call) is empty in these tests.
+        self.enterContext(patch("app.services.injuries.get_injuries", return_value={}))
         self.conn = Connection()
         self.get_db = self.enterContext(patch("app.db.get_db", return_value=self.conn))
         self.enterContext(patch.object(state, "current_season_year", 2026))
@@ -214,7 +216,7 @@ class TeamRouteTests(unittest.TestCase):
                                           "age": 25, "games_played": 12, "ppg": 22.3,
                                           "rpg": 5.1, "apg": 6.8, "spg": 1.3, "bpg": 0.8,
                                           "fg_pct": 45.7, "fg3_pct": 37.8, "ft_pct": 81.3,
-                                          "fpts": 42.6}])
+                                          "fpts": 42.6, "injury": None}])
         self.assertIs(type(data["roster"][0]["age"]), int)
         self.assertEqual(data["games_missing"], 0)
         self.assertEqual(len(self.conn.calls), 2)
@@ -346,7 +348,7 @@ class TeamRouteTests(unittest.TestCase):
         roster = self.get_team()["roster"]
         self.assertEqual(roster[1], {
             "id": 99, "name": "Baseline Player", "position": "G", "age": 26, "games_played": 0,
-            **dict.fromkeys(["ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "fg3_pct", "ft_pct", "fpts"]),
+            **dict.fromkeys(["ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "fg3_pct", "ft_pct", "fpts", "injury"]),
         })
         self.assertEqual(state.nba_data, before)
 
@@ -426,7 +428,7 @@ class TeamRouteTests(unittest.TestCase):
                     "id": 1, "name": "Rookie", "position": "UNK", "age": None,
                     "games_played": 0, "ppg": 0, "rpg": 0, "apg": 0,
                     "spg": 0, "bpg": 0, "fg_pct": 0.0, "fg3_pct": 0.0,
-                    "ft_pct": 0.0, "fpts": 0.0,
+                    "ft_pct": 0.0, "fpts": 0.0, "injury": None,
                 }])
 
     def test_shooting_defaults_and_ratio_boundaries_do_not_change_fantasy_points(self):
