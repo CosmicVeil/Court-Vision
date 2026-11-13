@@ -3,6 +3,8 @@ import { samePlayerName } from './playerNames';
 
 export function buildPlayerFallback(player) {
   return {
+    // Box-score rows call the NBA.com ID personId; the popout needs it for the headshot.
+    id: player.id ?? player.personId ?? null,
     name: player.name,
     team: player.team || 'UNK',
     position: player.position || 'UNK',
@@ -10,7 +12,10 @@ export function buildPlayerFallback(player) {
     current_stats: {
       ppg: player.pts ?? 0, rpg: player.reb ?? 0, apg: player.ast ?? 0,
       spg: player.stl ?? 0, bpg: player.blk ?? 0, tov: player.tov ?? 0,
-      mpg: player.min ?? 0, fg_pct: 0, fg3_pct: 0, ft_pct: 0, games_played: 0,
+      mpg: player.min ?? 0,
+      // Season rows (the team roster) know these; box-score rows do not.
+      fg_pct: player.fg_pct ?? 0, fg3_pct: player.fg3_pct ?? 0, ft_pct: player.ft_pct ?? 0,
+      games_played: player.games_played ?? 0,
     },
     ml_stats: null,
     history: {},

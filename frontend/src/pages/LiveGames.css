@@ -996,6 +996,27 @@
   object-fit: contain;
 }
 
+/* The logo opens the team's page (roster and season). */
+.scoreboard-team-link {
+  display: flex;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  transition: transform var(--duration-base) var(--ease-brand);
+}
+
+.scoreboard-team-link:focus-visible { outline: 2px solid var(--color-ember-orange); outline-offset: 4px; }
+.scoreboard-team-link:active { transform: scale(0.96); }
+
+@media (hover: hover) and (pointer: fine) {
+  .scoreboard-team-link:hover { transform: scale(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scoreboard-team-link { transition: none; }
+  .scoreboard-team-link:hover,
+  .scoreboard-team-link:active { transform: none; }
+}
+
 .scoreboard-name {
   display: flex;
   flex-direction: column;
@@ -1329,6 +1350,22 @@ html[data-motion] .detail-momentum:not([data-revealed]) .period-bar { transform:
   font-family: var(--font-mono);
   font-size: var(--text-xs);
 }
+
+/* Under the team tabs: opens the selected team's page (roster and season results). */
+.lg-detail-page .bs-team-link {
+  display: inline-block;
+  margin-bottom: calc(var(--space) * 4);
+  color: var(--color-ember-orange);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.lg-detail-page .bs-team-link:hover,
+.lg-detail-page .bs-team-link:focus-visible { color: var(--color-pure-white); }
 
 /* The player column stays pinned while the stats scroll sideways on narrow screens. */
 .lg-detail-page .player-table th:first-child,

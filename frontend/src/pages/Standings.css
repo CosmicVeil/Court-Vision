@@ -250,6 +250,19 @@
   flex-shrink: 0;
 }
 
+/* The team's name opens its page (/teams/:tricode). min-width: 0 lets a long name still ellipsize. */
+.team-link {
+  display: flex;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.team-link:hover .team-name,
+.team-link:focus-visible .team-name,
+.team-link:hover .team-tricode,
+.team-link:focus-visible .team-tricode { color: var(--color-ember-orange, #ff6436); }
+
 .team-name {
   font-family: var(--font-heading, 'Inter', sans-serif);
   font-weight: 800;

@@ -1069,6 +1069,56 @@ def past_games(conn, limit: int, offset: int = 0, before: Optional[date] = None)
     return [_game_card(row) for row in rows], total
 
 
+# Reads for the team page
+# ---------------------------------------------------------------------------
+
+def team_listed_players(conn, team: str, season_year: int) -> List[Dict]:
+    """Players whose latest box-score listing this season (preseason aside) is with this team,
+    including ones who were listed but did not play. A box score names injured and inactive
+    players too, so this finds a player who has been out all season, which season averages
+    (played games only) never can. Rows: nba_player_id (may be None), player_name, position."""
+    return conn.execute(
+        """
+        SELECT nba_player_id, player_name, position FROM (
+            SELECT DISTINCT ON (p.espn_player_id) p.nba_player_id, p.player_name, p.position, p.team
+            FROM player_game_stats p JOIN games g USING (game_id)
+            WHERE p.season = %s AND p.season_type <> 1
+            ORDER BY p.espn_player_id, p.game_date DESC, g.tipoff DESC NULLS LAST
+        ) latest WHERE team = %s
+        """,
+        (season_year, team),
+    ).fetchall()
+
+
+def team_season_games(conn, team: str, season_year: int) -> List[Dict]:
+    """A team's finished games in one season, newest first, from that team's side (opponent,
+    W/L, its score first). Preseason is left out; play-in and playoff games carry season_type."""
+    rows = conn.execute(
+        "SELECT game_id, game_date, season_type, home_team, away_team, home_score, away_score, num_periods "
+        "FROM games WHERE season = %s AND season_type <> 1 AND (home_team = %s OR away_team = %s) "
+        "ORDER BY game_date DESC, tipoff DESC NULLS LAST, game_id DESC",
+        (season_year, team, team),
+    ).fetchall()
+    games = []
+    for row in rows:
+        is_home = row["home_team"] == team
+        opponent = row["away_team"] if is_home else row["home_team"]
+        team_score, opp_score = (row["home_score"], row["away_score"]) if is_home else \
+            (row["away_score"], row["home_score"])
+        scored = team_score is not None and opp_score is not None and team_score != opp_score
+        games.append({
+            "game_id": row["game_id"], "date": row["game_date"].isoformat(),
+            "season_type": row["season_type"], "is_home": is_home,
+            "opponent": opponent, "opponent_name": " ".join(TEAM_NAMES.get(opponent, ("", opponent))).strip(),
+            "opponent_logo": TEAM_LOGOS.get(opponent, ""),
+            # A game stored without a usable score has no result rather than a made-up loss.
+            "result": ("W" if team_score > opp_score else "L") if scored else None,
+            "score": f"{team_score}-{opp_score}" if scored else None,
+            "overtimes": max((row["num_periods"] or 4) - 4, 0),
+        })
+    return games
+
+
 def _box_player(row: Dict) -> Dict:
     """A player_game_stats row as a live box score line (see live_games._fetch_boxscore)."""
     dnp = bool(row["did_not_play"])

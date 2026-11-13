@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { buildApiUrl } from '../config/api';
 import PageHero from '../components/PageHero';
+import { getTeamPath } from '../utils/team';
 import './Standings.css';
 
 // Teams seeded 1-6 are guaranteed a playoff spot; 7-10 are in the play-in zone.
@@ -113,8 +115,10 @@ function ConferenceTable({ title, teams, sort, onSort }) {
                         }
                       }}
                     />
-                    <span className="team-name">{team.team}</span>
-                    <span className="team-tricode">{team.tricode}</span>
+                    <Link to={getTeamPath(team.tricode)} className="team-link">
+                      <span className="team-name">{team.team}</span>
+                      <span className="team-tricode">{team.tricode}</span>
+                    </Link>
                   </td>
                   <td className="align-center">{team.wins}</td>
                   <td className="align-center">{team.losses}</td>
