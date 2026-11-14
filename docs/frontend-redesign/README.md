@@ -7,30 +7,32 @@ Start with the route below. Its folder contains the existing UI brief, represent
 - [Dark direction and motion notes](dark-direction.md) describe the proposed style. [Dark prompts](dark-imagegen-prompts.md) and [light prompts](light-imagegen-prompts.md) reproduce the concept inputs.
 - [Current frontend design system](../../frontend/docs/design-system.md) documents the existing shared components and structural tokens.
 
-## Routes and shared UI
+## Design coverage by route
 
-| Route | Brief, images and source | New mockups |
-| --- | --- | --- |
-| `/predictions/games` | [Next-Game Predictions](next-game-predictions/README.md) | Dark and light concepts |
-| `/` | [Home](home/README.md) | Planned |
-| `/stats` | [Player Stats](player-stats/README.md) | Planned |
-| `/standings` | [Standings](standings/README.md) | Planned |
-| `/teams/:tricode` | [Team](team/README.md) | Planned |
-| `/games` | [NBA Games](games/README.md) | Planned |
-| `/games/:gameId` | [Game Detail](game-detail/README.md) | Planned |
-| `/predictions` | [Season Predictions](season-predictions/README.md) | Planned |
-| `/recommendations` | [Breakout Recommendations](breakout-recommendations/README.md) | Planned |
-| `/recommendations/games` | [Next-Game Picks](next-game-picks/README.md) | Planned |
-| `/recommendations/:stat` | [Recommendation chart](recommendation-chart/README.md) | Planned |
-| `/favourites` | [Favourites](favourites/README.md) | Planned |
-| `/login` | [Login](login/README.md) | Planned |
-| `/create-account` | [Create Account](create-account/README.md) | Planned |
-| `/profile` | [Profile & Scoring](profile-scoring/README.md) | Planned |
-| `/contact` | [Contact](contact/README.md) | Planned |
-| `/privacy` | [Privacy & Cookies](privacy/README.md) | Planned |
-| `Unmatched route` | [404](not-found/README.md) | Planned |
-| `All routes` | [Shared navigation and interaction](site-shell/README.md) | Planned |
-| `Shared overlay` | [Player Details modal](player-details/README.md) | Planned |
+**Every route has old UI screenshots. Next-Game Predictions is the only route with new redesign mockups.** Its four concepts cover the signed-in first viewport and are awaiting design approval. See the [mockup checklist](mockup-checklist.md) for other states.
+
+| Route | Page brief and source | Old UI screenshots | New redesign mockups |
+| --- | --- | --- | --- |
+| `/predictions/games` | [Next-Game Predictions](next-game-predictions/README.md) | [Desktop](next-game-predictions/existing/desktop.png) · [Mobile](next-game-predictions/existing/mobile.png) | **Concepts available** · [Dark desktop](next-game-predictions/mockups/dark-desktop.png) · [Dark mobile](next-game-predictions/mockups/dark-mobile.png) · [Light desktop](next-game-predictions/mockups/light-desktop.png) · [Light mobile](next-game-predictions/mockups/light-mobile.png) |
+| `/` | [Home](home/README.md) | [Desktop](home/existing/desktop.png) · [Mobile](home/existing/mobile.png) | Pending · old UI references only |
+| `/stats` | [Player Stats](player-stats/README.md) | [Desktop](player-stats/existing/desktop.png) · [Mobile](player-stats/existing/mobile.png) | Pending · old UI references only |
+| `/standings` | [Standings](standings/README.md) | [Desktop](standings/existing/desktop.png) · [Mobile](standings/existing/mobile.png) | Pending · old UI references only |
+| `/teams/:tricode` | [Team](team/README.md) | [Desktop](team/existing/desktop.png) · [Mobile](team/existing/mobile.png) | Pending · old UI references only |
+| `/games` | [NBA Games](games/README.md) | [Desktop](games/existing/desktop.png) · [Mobile](games/existing/mobile.png) | Pending · old UI references only |
+| `/games/:gameId` | [Game Detail](game-detail/README.md) | [Desktop](game-detail/existing/desktop.png) · [Mobile](game-detail/existing/mobile.png) | Pending · old UI references only |
+| `/predictions` | [Season Predictions](season-predictions/README.md) | [Desktop](season-predictions/existing/desktop.png) · [Mobile](season-predictions/existing/mobile.png) | Pending · old UI references only |
+| `/recommendations` | [Breakout Recommendations](breakout-recommendations/README.md) | [Desktop](breakout-recommendations/existing/desktop.png) · [Mobile](breakout-recommendations/existing/mobile.png) | Pending · old UI references only |
+| `/recommendations/games` | [Next-Game Picks](next-game-picks/README.md) | [Desktop](next-game-picks/existing/desktop.png) · [Mobile](next-game-picks/existing/mobile.png) | Pending · old UI references only |
+| `/recommendations/:stat` | [Recommendation chart](recommendation-chart/README.md) | [Desktop](recommendation-chart/existing/desktop.png) · [Mobile](recommendation-chart/existing/mobile.png) | Pending · old UI references only |
+| `/favourites` | [Favourites](favourites/README.md) | [Desktop](favourites/existing/desktop.png) · [Mobile](favourites/existing/mobile.png) | Pending · old UI references only |
+| `/login` | [Login](login/README.md) | [Desktop](login/existing/desktop.png) · [Mobile](login/existing/mobile.png) | Pending · old UI references only |
+| `/create-account` | [Create Account](create-account/README.md) | [Desktop](create-account/existing/desktop.png) · [Mobile](create-account/existing/mobile.png) | Pending · old UI references only |
+| `/profile` | [Profile & Scoring](profile-scoring/README.md) | [Desktop](profile-scoring/existing/desktop.png) · [Mobile](profile-scoring/existing/mobile.png) | Pending · old UI references only |
+| `/contact` | [Contact](contact/README.md) | [Desktop](contact/existing/desktop.png) · [Mobile](contact/existing/mobile.png) | Pending · old UI references only |
+| `/privacy` | [Privacy & Cookies](privacy/README.md) | [Desktop](privacy/existing/desktop.png) · [Mobile](privacy/existing/mobile.png) | Pending · old UI references only |
+| `Unmatched route` | [404](not-found/README.md) | [Desktop](not-found/existing/desktop.png) · [Mobile](not-found/existing/mobile.png) | Pending · old UI references only |
+| `All routes` | [Shared navigation and interaction](site-shell/README.md) | [Desktop](site-shell/existing/desktop.png) · [Mobile](site-shell/existing/mobile.png) | Pending · old UI references only |
+| `Shared overlay` | [Player Details modal](player-details/README.md) | [Desktop](player-details/existing/desktop.png) · [Mobile](player-details/existing/mobile.png) | Pending · old UI references only |
 
 ## Existing visual baseline
 
