@@ -2,6 +2,8 @@
 
 Court-Vision is a premium, high-fidelity sports analytics web application designed to browse, search, and analyze NBA player performances. Leveraging a fully responsive glassmorphic dark-mode interface, Court-Vision couples real-time schedule aggregations with cutting-edge machine learning predictions (XGBoost models) to forecast breakout metrics for athletes across the league.
 
+For frontend redesign work, start with the [design handoff](docs/frontend-redesign/README.md) for route briefs, screenshots, mockups, and source links.
+
 ---
 
 ## 🛠️ Technology Stack
