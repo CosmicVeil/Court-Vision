@@ -5,7 +5,7 @@ const HEADSHOT_SIZES = { small: '260x190', large: '1040x760' };
 const FALLBACK_ID_START = 900_000_000;
 const REGULAR_SEASON = 2;
 
-const cleanTricode = tricode => String(tricode || '').trim().toUpperCase();
+export const cleanTricode = tricode => String(tricode || '').trim().toUpperCase();
 
 export const getTeamPath = tricode => `/teams/${encodeURIComponent(cleanTricode(tricode))}`;
 export const buildTeamEndpoint = tricode => `teams/${encodeURIComponent(cleanTricode(tricode))}`;
@@ -39,19 +39,29 @@ export function formatScore(game) {
   return overtimes > 0 ? `${game.score} ${overtimes > 1 ? overtimes : ''}OT` : game.score;
 }
 
-// Each team's main colour, for the banner behind its name. Teams whose main colour is close to
-// black or navy use their brighter second colour, so it still shows on the dark page.
-const TEAM_COLORS = {
-  ATL: '#E03A3E', BOS: '#007A33', BKN: '#9A9A9E', CHA: '#00788C', CHI: '#CE1141', CLE: '#860038',
-  DAL: '#00538C', DEN: '#FEC524', DET: '#C8102E', GSW: '#FFC72C', HOU: '#CE1141', IND: '#FDBB30',
-  LAC: '#C8102E', LAL: '#552583', MEM: '#5D76A9', MIA: '#98002E', MIL: '#00471B', MIN: '#236192',
-  NOP: '#B4975A', NYK: '#006BB6', OKC: '#007AC1', ORL: '#0077C0', PHI: '#006BB6', PHX: '#E56020',
-  POR: '#E03A3E', SAC: '#5A2D81', SAS: '#C4CED4', TOR: '#CE1141', UTA: '#753BBD', WAS: '#E31837',
+// Each team's full name and main colour (the banner behind its name). Teams whose main colour is
+// close to black or navy use their brighter second colour, so it still shows on the dark page.
+export const TEAMS = {
+  ATL: { name: 'Atlanta Hawks', color: '#E03A3E' }, BOS: { name: 'Boston Celtics', color: '#007A33' },
+  BKN: { name: 'Brooklyn Nets', color: '#9A9A9E' }, CHA: { name: 'Charlotte Hornets', color: '#00788C' },
+  CHI: { name: 'Chicago Bulls', color: '#CE1141' }, CLE: { name: 'Cleveland Cavaliers', color: '#860038' },
+  DAL: { name: 'Dallas Mavericks', color: '#00538C' }, DEN: { name: 'Denver Nuggets', color: '#FEC524' },
+  DET: { name: 'Detroit Pistons', color: '#C8102E' }, GSW: { name: 'Golden State Warriors', color: '#FFC72C' },
+  HOU: { name: 'Houston Rockets', color: '#CE1141' }, IND: { name: 'Indiana Pacers', color: '#FDBB30' },
+  LAC: { name: 'LA Clippers', color: '#C8102E' }, LAL: { name: 'Los Angeles Lakers', color: '#552583' },
+  MEM: { name: 'Memphis Grizzlies', color: '#5D76A9' }, MIA: { name: 'Miami Heat', color: '#98002E' },
+  MIL: { name: 'Milwaukee Bucks', color: '#00471B' }, MIN: { name: 'Minnesota Timberwolves', color: '#236192' },
+  NOP: { name: 'New Orleans Pelicans', color: '#B4975A' }, NYK: { name: 'New York Knicks', color: '#006BB6' },
+  OKC: { name: 'Oklahoma City Thunder', color: '#007AC1' }, ORL: { name: 'Orlando Magic', color: '#0077C0' },
+  PHI: { name: 'Philadelphia 76ers', color: '#006BB6' }, PHX: { name: 'Phoenix Suns', color: '#E56020' },
+  POR: { name: 'Portland Trail Blazers', color: '#E03A3E' }, SAC: { name: 'Sacramento Kings', color: '#5A2D81' },
+  SAS: { name: 'San Antonio Spurs', color: '#C4CED4' }, TOR: { name: 'Toronto Raptors', color: '#CE1141' },
+  UTA: { name: 'Utah Jazz', color: '#753BBD' }, WAS: { name: 'Washington Wizards', color: '#E31837' },
 };
 const DEFAULT_TEAM_COLOR = '#ff6436';
 
-export const getTeamColor = tricode => (Object.hasOwn(TEAM_COLORS, cleanTricode(tricode))
-  ? TEAM_COLORS[cleanTricode(tricode)] : DEFAULT_TEAM_COLOR);
+export const getTeamColor = tricode => (Object.hasOwn(TEAMS, cleanTricode(tricode))
+  ? TEAMS[cleanTricode(tricode)].color : DEFAULT_TEAM_COLOR);
 
 const regularSeason = games => (Array.isArray(games) ? games : [])
   .filter(g => g && g.season_type === REGULAR_SEASON && (g.result === 'W' || g.result === 'L'));

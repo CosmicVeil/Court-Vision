@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef } from 'react';
 import { Outlet, useLocation, useNavigationType } from 'react-router-dom';
 import BackToTop from './BackToTop';
+import PageMeta from './PageMeta';
 import SiteHeader from './SiteHeader';
 import { shouldResetScroll } from '../utils/scroll';
 
@@ -21,6 +22,7 @@ export default function AppShell() {
 
   return (
     <>
+      <PageMeta />
       <SiteHeader />
       <Outlet />
       <BackToTop />

@@ -1,0 +1,6 @@
+# Everything may be crawled. Account pages are kept out of results with a noindex
+# meta tag instead (set in src/config/seo.js): a Disallow here would hide that tag from Google.
+User-agent: *
+Allow: /
+
+Sitemap: https://courtvision.works/sitemap.xml
