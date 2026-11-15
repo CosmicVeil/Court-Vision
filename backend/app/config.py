@@ -14,6 +14,14 @@ PREDICTIONS_CACHE_FILE = "predictions_cache.json"
 UPCOMING_GAMES_CSV_FILE = "nba_upcoming_data.csv"
 MODEL_EVALUATION_REPORT_FILE = "model_evaluation_report.json"
 
+# Per-game stat model (app/ml/game_model.py): one saved file per architecture.
+GAME_MODEL_FILE_TEMPLATE = "nba_game_model_{architecture}.pkl"
+GAME_MODEL_ARCHITECTURE_ENV = "GAME_MODEL_ARCHITECTURE"
+DEFAULT_GAME_MODEL_ARCHITECTURE = "xgboost"
+GAME_MODEL_EVALUATION_REPORT_FILE = "game_model_evaluation_report.json"
+# Next slate's per-game predictions, written daily by scripts/generate_game_predictions_cache.py.
+GAME_PREDICTIONS_CACHE_FILE = "game_predictions_cache.json"
+
 DEFAULT_PORT = 5001
 TOKEN_EXPIRY_HOURS = 24
 

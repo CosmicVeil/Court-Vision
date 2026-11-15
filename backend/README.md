@@ -20,6 +20,8 @@ to signed-out clients.
 | `GET /api/predictions` | Public preview / full | Signed out: first `PUBLIC_PREVIEW_LIMIT` players only, `page` forced to 1, response flagged `"preview": true`. Signed in: full searchable, sortable, paginated list. |
 | `GET /api/player-prediction/<name>` | Account | `require_auth` → 401 without a valid token. |
 | `GET /api/recommendations/<stat>` | Account | `require_auth` → 401 without a valid token. |
+| `GET /api/game-predictions` | Public preview / full | Per-game predictions for the next slate (`search`, `team`, `game_id`, `sort_by`, `sort_order`, `page`, `limit`). Same preview rule as `/api/predictions`. 503 when there is no `game_predictions_cache.json`. |
+| `GET /api/game-recommendations` | Account | Per-game picks: `{top, over, fade}` × stat, `limit` per list (default 5, max 20). |
 | `GET /api/players/search-all`, `/api/players/<id>` | Public / full | Player stats and history are public. The per-player prediction (`ml_stats`) is only included with a valid token; signed out it is `null` with `"predictions_locked": true`. |
 | `GET /api/players`, `/api/stats/*`, `/api/games/*` | Public | Live games and season stats stay open. |
 
@@ -44,6 +46,9 @@ Command-line tools in `scripts/`. Run them from `backend/`:
 | `.venv/bin/python scripts/generate_predictions_cache.py` | Rebuild `data/predictions_cache.json` (what Render serves) from the saved model. Run after retraining. |
 | `.venv/bin/python scripts/repair_player_names.py --dry-run` | Report garbled accented player names in the data files; drop `--dry-run` to fix them (writes a backup first). |
 | `.venv/bin/python scripts/scrape_season_stats.py` | Load or refresh the current-season stats (the daily GitHub Action runs this). |
+| `.venv/bin/python scripts/evaluate_game_model.py [--arch NAME] [--folds N]` | Walk-forward MAE comparison of the per-game model architectures (see [Per-game stat model](#per-game-stat-model)). Reads the game archive, so it needs `DATABASE_URL`. |
+| `.venv/bin/python scripts/train_game_model.py [--arch NAME] [--output PATH]` | Train the per-game model on every archived game and save it to `data/nba_game_model_<arch>.pkl` (git-ignored). |
+| `.venv/bin/python scripts/generate_game_predictions_cache.py [--arch NAME] [--date YYYY-MM-DD]` | Predict the next slate (the first day from `--date`, default today ET, with unstarted games) and write `data/game_predictions_cache.json`, which the API serves. Needs `DATABASE_URL` and a trained model. |
 | `.venv/bin/python scripts/archive_games.py` | Store finished games (yesterday + today) in PostgreSQL. `--date`, `--start/--end` or `--season 2025-26` to backfill. |
 
 ## Game archive
@@ -112,6 +117,7 @@ Add `-v` to list each test as it runs. Add `-W ignore` to hide the expected
 | `test_weekly_pra.py` | 10 | Week's Best PRA: Monday–Sunday Eastern week bounds (including DST), only started games count, best single game wins, tie-breaks, preseason included, caching, and the `/api/stats/top-pra` response shape. |
 | `test_player_names.py` | 5 | Repairing garbled accented names, idempotence, scraper output, and `scripts/repair_player_names.py` on temp copies. |
 | `test_game_detail_api.py` | 3 | `/api/games/<id>` finds today's and upcoming games, and returns 404 for unknown ids. |
+| `test_game_predictions.py` | 25 | Per-game serving: the view's rolling windows rebuilt for an unplayed game (no games on or after the slate), rosters (active, enough history, not ruled out), ruled-out players as missing minutes, spread per side, ESPN scoreboard parsing, the cache shape, PRA/fantasy/diffs, pick ranking, the rotation rule, NULL `did_not_play`, accuracy carry-over, reloading a rewritten cache, the stale flag, and the `/api/game-predictions` preview gate and `/api/game-recommendations` auth. |
 
 API tests build the app with `create_app(load_data=False)`, so they need no data files,
 model or database.
@@ -167,3 +173,80 @@ Each run also writes `data/model_evaluation_report.json`, which is git-ignored.
 Note: `print_season_accuracies()` and the metrics printed during training are
 in-sample, because they score seasons the model trained on. Use
 `scripts/evaluate_model.py` for real accuracy.
+
+## Per-game stat model
+
+A second, separate model predicts a player's line for one game (points, rebounds,
+assists, steals, blocks, turnovers, threes, minutes). It trains on the
+`player_game_features` view of the game archive, so it runs only where the archive
+database is available.
+
+Absent players are read from the box score's did-not-play reason, as a stand-in for the
+pre-game injury report. Coach's-decision DNPs are ignored because they are not known
+before tip-off. When serving, the same numbers come from ESPN's injury report
+(`app/services/injuries.py`): players listed Out or suspended count as absent.
+
+| File | Role |
+|---|---|
+| `app/ml/game_features.py` | Feature and target columns; loads the view, team box scores and box-score appearances into one DataFrame. |
+| `app/ml/game_context_features.py` | Team context computed in pandas: the team's offence and the opponent's defence over their previous 10 games, and the usual minutes of players sitting out. |
+| `app/ml/game_architectures.py` | Registry of architectures: `xgboost`, `random_forest`. |
+| `app/ml/game_model.py` | `GameStatModel`: fit, predict, save and load, the same for every architecture. |
+| `app/ml/game_model_evaluation.py` | Walk-forward evaluation by game date. |
+| `app/ml/game_upcoming.py` | Feature rows for games not played yet (see below). |
+| `app/services/game_predictions.py` | Builds the served cache; adds PRA, fantasy points and the "vs average" diffs per request and ranks the picks. |
+| `app/api/routes/game_predictions.py` | `/api/game-predictions` and `/api/game-recommendations`. |
+
+To switch architecture, pass `--arch` to either script or set `GAME_MODEL_ARCHITECTURE`
+(default `xgboost`). To add one, write a factory in `game_architectures.py` that returns
+an unfitted estimator with scikit-learn's `fit(X, y)` / `predict(X)` and decorate it with
+`@register("name")`. The scripts and the evaluation pick it up by name.
+
+`scripts/evaluate_game_model.py` trains on the first half of the archive's game dates,
+then walks through the second half in consecutive blocks, retraining before each block
+on everything earlier. It prints MAE per stat for each architecture next to the naive
+baseline (the player's average over the previous 10 games) and writes
+`data/game_model_evaluation_report.json`, which is git-ignored.
+
+### Serving per-game predictions
+
+```
+ESPN scoreboard (next slate, odds) ─┐
+ESPN injury report (Out players) ───┼─> scripts/generate_game_predictions_cache.py
+Postgres game archive ──────────────┘      app/ml/game_upcoming.py  (features)
+                                           GameStatModel.predict()
+                                                │
+                              data/game_predictions_cache.json
+                                                │
+                    app/state.py ─> /api/game-predictions, /api/game-recommendations
+                                                │
+                    /predictions/games, /recommendations/games, home page section
+```
+
+Production cannot run the model (no archive, low memory), so it is run once a day and the
+API reads the result, the same pattern as `predictions_cache.json`. The trade-off is
+staleness: a lineup change after the run is not reflected until the next one.
+
+`game_upcoming.py` rebuilds the `player_game_features` windows in pandas over everything
+archived before the slate date, and reuses `add_context()` unchanged by giving each
+upcoming game a placeholder team row and each ruled-out player a synthetic did-not-play
+row. Rebuilding a past day this way (from earlier games only) matches the view's rows
+feature for feature, so the model sees the same inputs it was trained on.
+
+A player is predicted if his latest league game was for one of the slate's teams within
+the last 30 days, he played in at least one of that team's last 3 games, he has at least 5
+archived games, and he is not ruled out. The "last 3 games" rule drops deep-bench players
+the model was never trained on (it only sees games a player played): on 10 archived days
+it kept 96% of the players who then played, and the share of predicted players who
+actually played rose from 66% to 76%. The
+recommendations' above/below-average lists skip players averaging under 15 minutes.
+
+The daily GitHub Action runs `train_game_model.py` and this script only when the
+repository has a `DATABASE_URL` secret (the trained model is git-ignored, so it is
+retrained each run); without it, regenerate the cache locally and commit it. The evaluation
+report is git-ignored too, so a run without it keeps the previous cache's accuracy numbers
+(same architecture only).
+
+The API re-reads the cache whenever the file changes, so no restart is needed, and flags
+it `"stale": true` once its slate day (US Eastern) has passed. The pages then say so,
+and the home page hides the player cards rather than showing old games as upcoming.

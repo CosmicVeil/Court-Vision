@@ -42,6 +42,9 @@ Backend (run from `backend/`, always with the venv Python):
 .venv/bin/python -m unittest discover -s tests -t .        # offline tests, ~1s
 .venv/bin/python scripts/evaluate_model.py --fast          # walk-forward MAE report
 .venv/bin/python scripts/retrain_nba_ai.py                 # retrain from cached data
+.venv/bin/python scripts/evaluate_game_model.py            # per-game model: compare architectures (needs DATABASE_URL)
+.venv/bin/python scripts/train_game_model.py --arch xgboost  # train + save the per-game model
+.venv/bin/python scripts/generate_game_predictions_cache.py  # predict next slate -> game_predictions_cache.json
 .venv/bin/python scripts/generate_predictions_cache.py     # rebuild predictions_cache.json after retraining
 ```
 
@@ -62,6 +65,8 @@ Both together: `./start_app.sh` from the repo root.
 - `backend/app/api/routes/` — one file per area (auth, games, players, predictions, saved_players, stats, health)
 - `backend/app/services/` — live games (ESPN), recommendations, game archive (Postgres)
 - `backend/app/ml/` — XGBoost model (`nba_ai_system.py`) and walk-forward evaluation
+- `backend/app/ml/game_*.py` — per-game stat model: features from the archive, architecture registry (`game_architectures.py`), walk-forward evaluation
+- `backend/app/ml/game_upcoming.py` + `app/services/game_predictions.py` — per-game serving: features for unplayed games, daily cache, picks (`/predictions/games`, `/recommendations/games`)
 - `backend/app/scraping/` — Basketball Reference + NBA.com scraper
 - `backend/data/` — `.pkl` datasets, trained model, `predictions_cache.json` (what production serves)
 - `frontend/src/pages/` — one component per route; `components/` shared UI; `config/` API endpoints and stat definitions

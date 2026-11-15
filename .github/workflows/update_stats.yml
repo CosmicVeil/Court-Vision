@@ -41,6 +41,23 @@ jobs:
       run: |
         python backend/scripts/generate_predictions_cache.py
 
+    # Per-game predictions need the game archive (Postgres) and are skipped without a DATABASE_URL
+    # secret. The trained model is git-ignored, so it is retrained from the archive first.
+    # (A step's own env is not visible to its `if`, so a separate step checks for the secret.)
+    - name: Check for the game archive secret
+      id: per-game
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      run: echo "enabled=$([ -n "$DATABASE_URL" ] && echo true || echo false)" >> $GITHUB_OUTPUT
+
+    - name: Per-game predictions (Update game_predictions_cache.json)
+      if: steps.per-game.outputs.enabled == 'true'
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      run: |
+        python backend/scripts/train_game_model.py
+        python backend/scripts/generate_game_predictions_cache.py
+
     - name: Check for modified files
       id: git-check
       run: |
@@ -53,5 +70,6 @@ jobs:
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git add backend/data/nba_2025_26_data.pkl backend/data/predictions_cache.json
+        git add backend/data/game_predictions_cache.json 2>/dev/null || true
         git commit -m "chore: Auto-update NBA season stats and AI predictions [skip ci]"
         git push origin HEAD:${{ github.ref_name }} || git push
