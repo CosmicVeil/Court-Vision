@@ -15,6 +15,8 @@ is_render = False
 ai_available = False
 ai = None  # app.ml.nba_ai_system, loaded only outside low-memory mode
 predictions_cache = None
+game_predictions_cache = None  # next slate's per-game predictions (app.services.game_predictions)
+_game_predictions_mtime = None
 prediction_accuracy = None  # latest accuracy snapshot (see app.services.prediction_accuracy)
 
 nba_data = None
@@ -103,6 +105,48 @@ def load_ai():
             ai_available = True
         except ImportError as e:
             print(f"AI predictions module not available: {e}")
+
+
+def load_game_predictions():
+    """Read data/game_predictions_cache.json, written daily by scripts/generate_game_predictions_cache.py.
+
+    Loaded in every mode: the per-game model needs the archive database, so even locally the
+    API serves the cache rather than predicting on request."""
+    global game_predictions_cache, _game_predictions_mtime
+    path = config.data_path(config.GAME_PREDICTIONS_CACHE_FILE)
+    try:
+        mtime = path.stat().st_mtime
+    except FileNotFoundError:
+        print("No game_predictions_cache.json; per-game predictions are unavailable.")
+        return
+    # Remember this version even if it turns out bad: a broken file is reported once, not re-read on
+    # every request, and the next rewrite (a new mtime) is still picked up.
+    _game_predictions_mtime = mtime
+    try:
+        with open(path, 'r') as f:
+            cache = json.load(f)
+        if not (isinstance(cache, dict) and isinstance(cache.get('players'), list)):
+            raise ValueError("expected an object with a 'players' list")
+    except Exception as e:
+        # Validate before swapping, so a bad file never replaces a good slate that is already loaded.
+        print(f"Failed to load game_predictions_cache.json: {e}; keeping the previous slate.")
+        return
+    game_predictions_cache = cache
+    print(f"Loaded per-game predictions for {cache.get('slate_date')}.")
+
+
+def current_game_predictions():
+    """The per-game cache, re-read if the generator rewrote the file since it was loaded.
+
+    One stat() per request, so a long-running server (or a local one) picks up a new slate
+    without a restart."""
+    try:
+        mtime = config.data_path(config.GAME_PREDICTIONS_CACHE_FILE).stat().st_mtime
+    except OSError:
+        return game_predictions_cache
+    if mtime != _game_predictions_mtime:
+        load_game_predictions()
+    return game_predictions_cache
 
 
 def get_cached_player_prediction(name: str):
@@ -293,6 +337,7 @@ def initialize():
     load_multi_season_data()
     assign_player_ids()
     load_ai()  # after the season data: the predictions cache is re-keyed by player ID
+    load_game_predictions()
     db.init_db()
     apply_archive_teams()
     load_current_season()

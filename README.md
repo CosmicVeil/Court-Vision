@@ -110,6 +110,13 @@ python scripts/evaluate_model.py --fast
 ```
 See [backend/README.md](backend/README.md) for what each suite covers, how to read the MAE report, how to tune the model, and the other scripts (retraining, regenerating the predictions cache, repairing names).
 
+The per-game model reads the game archive in PostgreSQL, so it needs `DATABASE_URL`:
+```bash
+python scripts/train_game_model.py                  # train and save the per-game model
+python scripts/generate_game_predictions_cache.py   # predict the next slate for the API
+```
+See [Per-game stat model](backend/README.md#per-game-stat-model).
+
 ### 4. Configure and Run Frontend
 In a second terminal, start the Vite development server from `frontend/`:
 ```bash
