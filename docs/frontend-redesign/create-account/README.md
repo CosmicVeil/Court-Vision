@@ -4,7 +4,7 @@
 
 ## Review images
 
-Mockups are pending design direction review. The screenshots below show the existing frontend.
+[Light and dark redesign board](mockups/light-dark.png) · Registration form on desktop and mobile.
 
 ## Existing screen references
 

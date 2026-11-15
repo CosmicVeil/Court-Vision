@@ -1,0 +1,11 @@
+# Light and dark comparison boards
+
+Generated with the built-in chat image generator. The two Next-Game Predictions desktop concepts provided the light and dark visual references. Each board also used its route's existing desktop capture and the existing UI brief from the route folder. The Profile board used the signed-in archive capture.
+
+The rendered data, labels, and control details are illustrative. Use the existing UI brief, archived captures, and linked source to verify behavior and copy during implementation.
+
+## Shared prompt
+
+Generate one high-resolution widescreen UI comparison board for one CourtVision screen, with exactly four independent flat screenshot panels and a thin dark divider between the two themes. Left half contains wide landscape LIGHT DESKTOP panel and narrow tall LIGHT MOBILE panel. Right half contains wide DARK DESKTOP and narrow tall DARK MOBILE. Alternatively use a wide horizontal two-row board with light then dark, each row a desktop rectangle and a right-aligned narrow phone rectangle. Every panel should be whole and legible, no mock device housings, no angled presentation, no decorative artwork outside interface. Show identical feature state and data across panels. Size desktop labels and UI text for readability, deliberately show fewer example rows where needed. Use the first reference as the established light art direction, second as the dark art direction, third as old page inventory. Light is warm paper and ink green, dark is cool graphite and soft white, calibrated warm orange accent in both. Compact Sleeper-like stat comparisons and theScore-like game hierarchy, CourtVision brand only. Apple-like restraint in transition-ready control styling. Preserve page-specific actions and coherent filled states. Use restrained rules, intentional whitespace, real data labels, no AI-style glow. Standard navigation, readable hierarchy and touch controls. Preserve distinctive content and make this page look appropriate to its job.
+
+Append the route title, its existing UI brief, and the visible state to depict. Keep the same state and sample data across themes. The primary screen for each board is listed in the route README and mockup checklist.

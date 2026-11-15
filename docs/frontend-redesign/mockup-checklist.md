@@ -4,11 +4,13 @@
 
 The [route index](README.md) links to the old-screen briefs. The [archive crosswalk](archive-crosswalk.csv) assigns each screenshot and video reference to the checklist IDs. It includes the full game catalog, season choices, team captures, pagination and all viewport references. Repeated data variants share a visual state. Counts below are archive files linked to that state, including paired viewports and full-page crops. No count means a source-derived state or a redesign interaction.
 
-Desktop and phone are the main deliverables for every route. Use desktop/mobile companions for materially different states and tablet/narrow viewport frames where navigation, chart or table layout changes. Capture a follow-on viewport whenever a control or section falls below the fold.
+Each route has a light and dark board for desktop and phone or individual images for those views. Use desktop/mobile companions for materially different states and tablet/narrow viewport frames where navigation, chart or table layout changes. Capture a follow-on viewport whenever a control or section falls below the fold.
 
 <a id="sh--shared-navigation-and-interaction"></a>
 
 ## SH · [Shared navigation and interaction](site-shell/README.md)
+
+[Light and dark board](site-shell/mockups/light-dark.png) · Navigation and account menus.
 
 `All routes`
 
@@ -21,6 +23,8 @@ Desktop and phone are the main deliverables for every route. Use desktop/mobile 
 <a id="pm--player-details-modal"></a>
 
 ## PM · [Player Details modal](player-details/README.md)
+
+[Light and dark board](player-details/mockups/light-dark.png) · Player Details overlay.
 
 `Shared overlay`
 
@@ -83,6 +87,8 @@ Desktop and phone are the main deliverables for every route. Use desktop/mobile 
 
 ## P02 · [Home](home/README.md)
 
+[Light and dark board](home/mockups/light-dark.png) · Home and player search.
+
 `/`
 
 - [ ] **P02-closing-cta** · Closing CTA (2 references).
@@ -118,6 +124,8 @@ Desktop and phone are the main deliverables for every route. Use desktop/mobile 
 
 ## P03 · [Player Stats](player-stats/README.md)
 
+[Light and dark board](player-stats/mockups/light-dark.png) · Player stats table and filters.
+
 `/stats`
 
 - [ ] **P03-card-view** · Card view (14 references).
@@ -141,6 +149,8 @@ Desktop and phone are the main deliverables for every route. Use desktop/mobile 
 
 ## P04 · [Standings](standings/README.md)
 
+[Light and dark board](standings/mockups/light-dark.png) · League standings.
+
 `/standings`
 
 - [ ] **P04-current** · Current (10 references).
@@ -153,6 +163,8 @@ Desktop and phone are the main deliverables for every route. Use desktop/mobile 
 <a id="p05--team"></a>
 
 ## P05 · [Team](team/README.md)
+
+[Light and dark board](team/mockups/light-dark.png) · Team overview and roster.
 
 `/teams/:tricode`
 
@@ -172,6 +184,8 @@ Desktop and phone are the main deliverables for every route. Use desktop/mobile 
 <a id="p06--nba-games"></a>
 
 ## P06 · [NBA Games](games/README.md)
+
+[Light and dark board](games/mockups/light-dark.png) · Games slate.
 
 `/games`
 
@@ -202,6 +216,8 @@ Desktop and phone are the main deliverables for every route. Use desktop/mobile 
 
 ## P07 · [Game Detail](game-detail/README.md)
 
+[Light and dark board](game-detail/mockups/light-dark.png) · Final game and box score.
+
 `/games/:gameId`
 
 - [ ] **P07-box-score-away-team** · Box score away team (4 references).
@@ -224,6 +240,8 @@ Desktop and phone are the main deliverables for every route. Use desktop/mobile 
 <a id="p08--season-predictions"></a>
 
 ## P08 · [Season Predictions](season-predictions/README.md)
+
+[Light and dark board](season-predictions/mockups/light-dark.png) · Season projections.
 
 `/predictions`
 
@@ -248,6 +266,8 @@ Desktop and phone are the main deliverables for every route. Use desktop/mobile 
 
 ## P09 · [Breakout Recommendations](breakout-recommendations/README.md)
 
+[Light and dark board](breakout-recommendations/mockups/light-dark.png) · Breakout spotlights.
+
 `/recommendations`
 
 - [ ] **P09-loading** · Loading (2 references).
@@ -260,6 +280,8 @@ Desktop and phone are the main deliverables for every route. Use desktop/mobile 
 <a id="p10--next-game-picks"></a>
 
 ## P10 · [Next-Game Picks](next-game-picks/README.md)
+
+[Light and dark board](next-game-picks/mockups/light-dark.png) · Points picks.
 
 `/recommendations/games`
 
@@ -280,6 +302,8 @@ Desktop and phone are the main deliverables for every route. Use desktop/mobile 
 
 ## P11 · [Recommendation chart](recommendation-chart/README.md)
 
+[Light and dark board](recommendation-chart/mockups/light-dark.png) · PRA recommendation chart.
+
 `/recommendations/:stat`
 
 - [ ] **P11-apg** · APG (6 references).
@@ -297,6 +321,8 @@ Desktop and phone are the main deliverables for every route. Use desktop/mobile 
 
 ## P12 · [Favourites](favourites/README.md)
 
+[Light and dark board](favourites/mockups/light-dark.png) · Saved players.
+
 `/favourites`
 
 - [ ] **P12-empty** · Empty (8 references).
@@ -309,6 +335,8 @@ Desktop and phone are the main deliverables for every route. Use desktop/mobile 
 <a id="p13--login"></a>
 
 ## P13 · [Login](login/README.md)
+
+[Light and dark board](login/mockups/light-dark.png) · Sign-in form.
 
 `/login`
 
@@ -325,6 +353,8 @@ Desktop and phone are the main deliverables for every route. Use desktop/mobile 
 
 ## P14 · [Create Account](create-account/README.md)
 
+[Light and dark board](create-account/mockups/light-dark.png) · Registration form.
+
 `/create-account`
 
 - [ ] **P14-default** · Default (8 references).
@@ -338,6 +368,8 @@ Desktop and phone are the main deliverables for every route. Use desktop/mobile 
 <a id="p15--profile--scoring"></a>
 
 ## P15 · [Profile & Scoring](profile-scoring/README.md)
+
+[Light and dark board](profile-scoring/mockups/light-dark.png) · Scoring editor.
 
 `/profile`
 
@@ -359,6 +391,8 @@ Desktop and phone are the main deliverables for every route. Use desktop/mobile 
 
 ## P16 · [Contact](contact/README.md)
 
+[Light and dark board](contact/mockups/light-dark.png) · Project and team.
+
 `/contact`
 
 - [ ] **P16-default** · Default (8 references).
@@ -367,6 +401,8 @@ Desktop and phone are the main deliverables for every route. Use desktop/mobile 
 
 ## P17 · [Privacy & Cookies](privacy/README.md)
 
+[Light and dark board](privacy/mockups/light-dark.png) · Privacy and cookies.
+
 `/privacy`
 
 - [ ] **P17-default** · Default (8 references).
@@ -374,6 +410,8 @@ Desktop and phone are the main deliverables for every route. Use desktop/mobile 
 <a id="p18--404"></a>
 
 ## P18 · [404](not-found/README.md)
+
+[Light and dark board](not-found/mockups/light-dark.png) · 404 recovery.
 
 `Unmatched route`
 
