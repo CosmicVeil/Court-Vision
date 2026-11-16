@@ -121,3 +121,33 @@ Files in scope: `src/pages/LiveGames.jsx`, `src/pages/LiveGames.css`, new `src/s
 6. **Behavior is unchanged**: same endpoints, the same 30-second refresh, the same sort order, the same links to `/games/:id`, and existing tests still pass.
 
 Out of scope for Phase 1: every other page, colors and fonts, the navbar, backend changes.
+
+## Light and dark appearance
+
+`src/styles/theme.css` supplies the current visual palette and compact layouts from
+`docs/frontend-redesign`. Use `--bg-main`, `--surface`, `--surface-subtle`,
+`--text-primary`, `--text-secondary`, `--border-glass`, `--positive`, and `--negative`
+for new UI. `--accent-fill` is for filled controls with white text;
+`--color-ember-orange` is the contrast-adjusted accent for text and outlines.
+Legacy color aliases resolve to these same semantic colors in both modes.
+
+The `/profile` appearance controls work for guests and signed-in users. The
+`courtvision-theme` localStorage entry stores Light or Dark for this browser.
+Without a valid saved setting the initial theme follows the system preference.
+The document bootstrap applies it before paint; `utils/theme.js` handles runtime
+switches and cross-tab updates. Appearance changes do not remount routes or reset
+filters. Keep the bootstrap and module behavior in agreement (`theme.test.mjs`).
+
+Court choreography, reveals, indicator movement and card interactions remain;
+reduced-motion preferences disable movement and reveal all content immediately.
+
+### Reference palette and type
+
+The authoritative values are in `docs/frontend-redesign/light-imagegen-prompts.md`
+and `dark-imagegen-prompts.md`. Light uses #F6F4EF / #FFFFFF surfaces, #17211D
+ink, #D8D6CE rules and #B94925 accent. Dark uses #111317 / #1D2127 surfaces,
+#F4F5F7 text, #A7ADB8 secondary text, #30343B rules and #F27C45 accent.
+Light headings use Barlow Condensed; dark headings and interface text use Inter.
+Font files and OFL licenses are bundled in `public/fonts` and declared in
+`src/styles/fonts.css`. Data surfaces have no decorative glow or shadow;
+physical shading stays on the animated basketball.

@@ -1,0 +1,56 @@
+/* Per-game predictions page. Layout, filters, sorting and cards come from Predictions.css and
+   PlayerCard.css; this adds the slate strip and each card's matchup line. */
+
+/* ---------- Slate strip: one button per game, filters the list to it ---------- */
+.gp-slate {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(var(--space) * 3);
+  max-width: 1200px;
+  margin: 0 auto 28px;
+}
+
+.gp-game {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 150px;
+  padding: 12px 18px;
+  background: var(--surface);
+  border: 1px solid rgb(var(--ink-rgb) / 0.08);
+  border-radius: var(--radius-lg, 14px);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-brand), background var(--duration-fast) var(--ease-brand);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .gp-game:hover { border-color: color-mix(in srgb, var(--color-ember-orange) 45%, transparent); }
+}
+
+.gp-game:focus-visible {
+  outline: 2px solid var(--color-ember-orange);
+  outline-offset: 3px;
+}
+
+.gp-game.is-active {
+  border-color: var(--color-ember-orange, #ff6436);
+  background: color-mix(in srgb, var(--color-ember-orange) 12%, transparent);
+}
+
+.gp-game-teams {
+  font-family: var(--font-heading, 'Inter', sans-serif);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.gp-game-meta {
+  color: var(--color-stone, var(--text-secondary));
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
+}

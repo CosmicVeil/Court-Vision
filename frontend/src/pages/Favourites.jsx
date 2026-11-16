@@ -1,3 +1,4 @@
+import ContentSkeleton from '../components/ContentSkeleton';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { applyFavoriteTeams, getFavorites, normalizeFavoritePlayer, removeFavorite } from '../utils/favorites';
@@ -99,7 +100,7 @@ const Favourites = () => {
   };
 
   const hero = (lead, stats) => (
-    <PageHero eyebrow="PLAYER ROSTER" title="SAVED" accent="FAVOURITES" lead={lead} stats={stats} />
+    <PageHero eyebrow="PLAYER ROSTER" title="Saved" accent="Favourites" lead={lead} stats={stats} />
   );
 
   if (!authenticated) {
@@ -133,7 +134,7 @@ const Favourites = () => {
       {hero('Your personalized watchlist of tracked NBA athletes', getFavouritesHeroStats({ ready: !loading, favorites }))}
 
       {loading ? (
-        <div className="loading-state">Loading favorites...</div>
+        <ContentSkeleton count={3} label="Loading favorites…" />
       ) : favorites.length === 0 ? (
         <div className="empty-state" data-enter style={enterDelay(1)}>
           <h2 className="empty-title">No favorites yet</h2>

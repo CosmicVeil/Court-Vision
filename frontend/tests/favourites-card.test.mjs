@@ -27,7 +27,7 @@ test('favourites keep their trend tiles inside the card', () => {
 });
 
 test('the page heading is the shared PageHero with a key stats row', () => {
-  assert.match(component, /<PageHero eyebrow="PLAYER ROSTER" title="SAVED" accent="FAVOURITES"/);
+  assert.match(component, /<PageHero eyebrow="PLAYER ROSTER" title="Saved" accent="Favourites"/);
   assert.match(component, /getFavouritesHeroStats\(\{ ready: !loading, favorites \}\)/);
   // ScrollReveal stays mounted through loading so the cards rise in when they arrive.
   assert.match(component, /<ScrollReveal scanKey=\{favorites\} \/>/);

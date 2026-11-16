@@ -24,7 +24,7 @@
   transform: translate(-50%, -50%);
   width: 600px;
   height: 600px;
-  background: radial-gradient(circle, rgba(255, 100, 54, 0.15) 0%, rgba(255, 100, 54, 0.03) 45%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-ember-orange) 15%, transparent) 0%, color-mix(in srgb, var(--color-ember-orange) 3%, transparent) 45%, transparent 70%);
   pointer-events: none;
 }
 
@@ -32,8 +32,8 @@
   position: absolute;
   inset: 0;
   background-image:
-    radial-gradient(circle at center, transparent 35%, rgba(255, 255, 255, 0.02) 36%, transparent 37%),
-    linear-gradient(to bottom, transparent 49.8%, rgba(255, 255, 255, 0.03) 50%, transparent 50.2%);
+    radial-gradient(circle at center, transparent 35%, rgb(var(--ink-rgb) / 0.02) 36%, transparent 37%),
+    linear-gradient(to bottom, transparent 49.8%, rgb(var(--ink-rgb) / 0.03) 50%, transparent 50.2%);
   pointer-events: none;
 }
 
@@ -47,18 +47,18 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
-  border: 1px solid rgba(255, 100, 54, 0.25);
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 25%, transparent);
   border-radius: var(--radius-xl);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8), 0 0 32px rgba(255, 100, 54, 0.15);
+  box-shadow: var(--shadow);
 }
 
 .notfound-card [data-slot="eyebrow"] {
   max-width: 100%;
   margin-bottom: calc(var(--space) * 6);
-  letter-spacing: 1.5px;
+  letter-spacing: 0;
 }
 
 .notfound-dot {
@@ -67,7 +67,7 @@
   height: 6px;
   border-radius: 50%;
   background: var(--color-ember-orange);
-  box-shadow: 0 0 8px var(--color-ember-orange);
+  box-shadow: var(--shadow);
 }
 
 .notfound-code {
@@ -84,7 +84,7 @@
   font-weight: 900;
   line-height: 1;
   letter-spacing: -2px;
-  text-shadow: 0 0 40px rgba(255, 255, 255, 0.2);
+  text-shadow: none;
 }
 
 .notfound-ball {
@@ -92,10 +92,7 @@
   height: clamp(52px, 8vw, 76px);
   border-radius: 50%;
   background: radial-gradient(circle at 32% 28%, #ffaa78 0%, var(--color-ember-orange) 46%, #b22f08 85%, #571100 100%);
-  box-shadow:
-    inset -8px -8px 16px rgba(0, 0, 0, 0.85),
-    inset 4px 4px 10px rgba(255, 215, 170, 0.45),
-    0 8px 24px rgba(255, 100, 54, 0.5);
+  box-shadow: var(--shadow);
   position: relative;
   overflow: hidden;
 }
@@ -114,7 +111,7 @@
   font-family: var(--font-heading);
   font-size: clamp(var(--text-2xl), 5vw, 2.4rem);
   font-weight: 900;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .notfound-description {
@@ -139,21 +136,21 @@
   gap: calc(var(--space) * 2);
   padding: calc(var(--space) * 3) calc(var(--space) * 5.5);
   border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 100, 54, 0.25);
+  background: rgb(var(--ink-rgb) / 0.04);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 25%, transparent);
   color: var(--color-pure-white);
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   text-decoration: none;
   transition: background var(--duration-base) var(--ease-brand), border-color var(--duration-base) var(--ease-brand),
     box-shadow var(--duration-base) var(--ease-brand), transform var(--duration-base) var(--ease-brand);
 }
 
 .notfound-btn:hover {
-  background: rgba(255, 100, 54, 0.15);
+  background: color-mix(in srgb, var(--color-ember-orange) 15%, transparent);
   border-color: var(--color-ember-orange);
   transform: translateY(-2px);
 }
@@ -161,12 +158,12 @@
 .notfound-btn-primary {
   background: var(--color-ember-orange);
   border-color: var(--color-ember-orange);
-  box-shadow: 0 4px 20px rgba(255, 100, 54, 0.4);
+  box-shadow: var(--shadow);
 }
 
 .notfound-btn-primary:hover {
   background: #ff7d56;
-  box-shadow: 0 6px 28px rgba(255, 100, 54, 0.6);
+  box-shadow: var(--shadow);
 }
 
 .notfound-btn:focus-visible {

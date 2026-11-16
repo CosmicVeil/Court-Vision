@@ -1,6 +1,9 @@
+import ContentSkeleton from '../components/ContentSkeleton';
+import LockIcon from '../components/LockIcon';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import PlayerStatsModal from '../components/PlayerStatsModal';
+import PredictionModeToggle from '../components/PredictionModeToggle';
 import TiltCard from '../components/TiltCard';
 import { buildApiUrl } from '../config/api';
 import { clearAuth } from '../utils/auth';
@@ -201,12 +204,13 @@ const Recommendations = () => {
 
   return (
     <div className="recommendations-wrapper">
+      <PredictionModeToggle base="/recommendations" value="season" />
       <header className="recommendations-header" data-enter>
         <div className="stats-nav-top">
           <span className="cv-section-badge">INTELLIGENCE RADAR</span>
         </div>
         <h1 className="recommendations-title">
-          BREAKOUT <span className="text-ember">RECOMMENDATIONS</span>
+          Breakout <span className="text-ember">recommendations</span>
         </h1>
         <p className="recommendations-subtitle">
           Players our model expects to improve the most per game next season, compared with their current averages
@@ -221,13 +225,10 @@ const Recommendations = () => {
             <h2 className="spotlight-heading">LIVE AI RADAR</h2>
             <p className="spotlight-subheading">The #1 predicted breakout players across the league next season</p>
             {spotlightLoading ? (
-              <div className="spotlight-loader-wrap">
-                <div className="spotlight-spinner"></div>
-                <p className="spotlight-loader">Calculating AI Forecasts...</p>
-              </div>
+              <ContentSkeleton variant="spotlight" count={4} label="Loading recommendations…" />
             ) : needsAuth ? (
               <div className="predictions-locked">
-                <div className="predictions-locked-icon" aria-hidden="true">🔒</div>
+                <div className="predictions-locked-icon" aria-hidden="true"><LockIcon /></div>
                 <h2 className="predictions-locked-title">Sign in to see full predictions</h2>
                 <p className="predictions-locked-desc">
                   Breakout recommendations are a free account feature. Log in or create an

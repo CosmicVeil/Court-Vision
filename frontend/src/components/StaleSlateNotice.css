@@ -1,0 +1,12 @@
+.stale-slate {
+  max-width: 760px;
+  margin: 0 auto 24px;
+  padding: 12px 18px;
+  background: color-mix(in srgb, var(--color-ember-orange) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 35%, transparent);
+  border-radius: var(--radius-md, 10px);
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}

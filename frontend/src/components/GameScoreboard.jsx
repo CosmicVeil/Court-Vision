@@ -47,17 +47,18 @@ export default function GameScoreboard({ game, scoreChanges }) {
           const team = game[side];
           const popped = Boolean(scoreChanges?.[side]);
           return (
-            // The heading's label already reads out both teams and the score, so the name and score
-            // are hidden from assistive tech; the logo link is not, since it is a real control.
+            // Team names and logos both open the roster; the heading already announces the score.
             <span key={side} className={`scoreboard-team side-${side} ${leading && leading !== side ? 'is-trailing' : ''}`}
               style={{ '--word': index * 2 }}>
               <Link to={getTeamPath(team.tricode)} className="scoreboard-team-link" aria-label={`${team.city} ${team.name} roster and season`}>
                 {team.logo ? <img src={team.logo} alt="" className="scoreboard-logo" /> : <span className="team-logo-placeholder">{team.tricode}</span>}
               </Link>
-              <span className="scoreboard-name" aria-hidden="true">
-                <span className="scoreboard-tricode">{team.tricode}</span>
+              <Link to={getTeamPath(team.tricode)} className="scoreboard-name" aria-label={`${team.city} ${team.name} roster and season`}>
+                <span className="scoreboard-city">{team.city}</span>
+                <span className="scoreboard-tricode">{team.name || team.tricode}</span>
+                <span className="scoreboard-roster">Roster &amp; season →</span>
                 {team.record && <span className="scoreboard-record" data-numeric>{team.record}</span>}
-              </span>
+              </Link>
               <span className="scoreboard-score" data-numeric aria-hidden="true" key={popped ? `${side}-${team.score}` : side}
                 data-score-pop={popped ? '' : undefined}>
                 {isFuture ? '–' : team.score}

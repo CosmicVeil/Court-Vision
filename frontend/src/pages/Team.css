@@ -35,18 +35,18 @@
   /* The team colour fades into the page's own dark surface, so dark and light colours both read. */
   background:
     radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--team-color) 70%, transparent) 0%, transparent 65%),
-    linear-gradient(180deg, rgba(24, 24, 30, 0.9) 0%, rgba(14, 14, 18, 0.96) 100%);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+    var(--surface);
+  box-shadow: var(--shadow);
 }
 
 .tp-back {
   grid-column: 1 / -1;
   justify-self: start;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgb(var(--ink-rgb) / 0.7);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   font-weight: 700;
-  letter-spacing: 1.5px;
+  letter-spacing: 0;
   text-decoration: none;
   transition: color var(--duration-fast) ease;
 }
@@ -74,11 +74,11 @@
 .tp-eyebrow {
   display: block;
   margin-bottom: calc(var(--space) * 2);
-  color: rgba(255, 255, 255, 0.7);
+  color: rgb(var(--ink-rgb) / 0.7);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   font-weight: 700;
-  letter-spacing: 2px;
+  letter-spacing: 0;
 }
 
 .tp-title {
@@ -86,7 +86,7 @@
   font-family: var(--font-heading);
   font-size: clamp(var(--text-2xl), 4.5vw, var(--text-display-sm));
   font-weight: 900;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .tp-city { font-weight: 500; }
@@ -108,11 +108,11 @@
 
 .tp-streak[data-result='W'],
 .tp-form-pill[data-result='W'],
-.tp-result[data-result='W'] { color: #4ade80; }
+.tp-result[data-result='W'] { color: var(--positive); }
 
 .tp-streak[data-result='L'],
 .tp-form-pill[data-result='L'],
-.tp-result[data-result='L'] { color: #f87171; }
+.tp-result[data-result='L'] { color: var(--negative); }
 
 .tp-streak { font-size: var(--text-sm); }
 
@@ -132,14 +132,14 @@
 .tp-partial,
 .tp-games-note {
   margin: 0;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgb(var(--ink-rgb) / 0.7);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   line-height: 1.5;
 }
 
 .tp-partial { max-width: 48ch; margin-top: calc(var(--space) * 3); }
-.tp-games-note { padding: calc(var(--space) * 3) calc(var(--space) * 5); border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+.tp-games-note { padding: calc(var(--space) * 3) calc(var(--space) * 5); border-bottom: 1px solid rgb(var(--ink-rgb) / 0.06); }
 
 .tp-hero-stats {
   display: grid;
@@ -153,11 +153,11 @@
 .tp-hero-stats dt {
   order: 2;
   margin-top: var(--space);
-  color: rgba(255, 255, 255, 0.7);
+  color: rgb(var(--ink-rgb) / 0.7);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   white-space: nowrap;
 }
 
@@ -185,7 +185,7 @@
   overflow: hidden;
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-lg);
-  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
+  background: var(--surface);
   color: inherit;
   font: inherit;
   text-align: left;
@@ -212,8 +212,8 @@
   color: var(--color-stone);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .tp-leader-value {
@@ -252,7 +252,7 @@
   padding: var(--space);
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-full);
-  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
+  background: var(--surface);
 }
 
 .tp-tab {
@@ -268,8 +268,8 @@
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   cursor: pointer;
   transition: scale var(--duration-fast) var(--ease-brand);
 }
@@ -283,13 +283,13 @@
 .tp-tab-count {
   padding: 2px 8px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(var(--ink-rgb) / 0.1);
   font-size: 9px;
 }
 
 .tp-page [data-slot="pill-indicator"] {
-  background: linear-gradient(135deg, #ff6436, #e04a1c);
-  box-shadow: 0 0 20px rgba(255, 100, 54, 0.45);
+  background: var(--accent-fill);
+  box-shadow: var(--shadow);
 }
 
 /* ---------- Panels ---------- */
@@ -304,7 +304,7 @@
   color: var(--color-stone);
   font-family: var(--font-mono);
   font-size: var(--text-sm);
-  letter-spacing: 1px;
+  letter-spacing: 0;
   text-align: center;
 }
 
@@ -312,8 +312,8 @@
 .tp-games-wrap {
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-xl);
-  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
 .tp-table-wrap { overflow-x: auto; }
@@ -326,7 +326,7 @@
 }
 
 .tp-table thead,
-.tp-games-head { background: rgba(255, 100, 54, 0.08); }
+.tp-games-head { background: color-mix(in srgb, var(--color-ember-orange) 8%, transparent); }
 
 .tp-table th,
 .tp-games-head {
@@ -335,19 +335,19 @@
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.5px;
-  text-transform: uppercase;
+  text-transform: none;
   white-space: nowrap;
 }
 
 .tp-table th {
   padding: calc(var(--space) * 3);
-  border-bottom: 1px solid rgba(255, 100, 54, 0.2);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-ember-orange) 20%, transparent);
   text-align: center;
 }
 
 .tp-table td {
   padding: calc(var(--space) * 2.5) calc(var(--space) * 3);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgb(var(--ink-rgb) / 0.04);
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   font-weight: 600;
@@ -358,7 +358,7 @@
 .tp-table tbody tr:last-child td { border-bottom: 0; }
 .tp-table .tp-left { text-align: left; }
 .tp-table tbody tr { transition: background var(--duration-fast) ease; }
-.tp-table tbody tr:hover { background: rgba(255, 100, 54, 0.08); }
+.tp-table tbody tr:hover { background: color-mix(in srgb, var(--color-ember-orange) 8%, transparent); }
 .tp-strong { color: var(--color-pure-white); font-weight: 800; }
 
 .tp-player-row { cursor: pointer; }
@@ -404,24 +404,24 @@
 }
 
 /* The header reuses the row's grid so its labels line up with the columns below. */
-.tp-game.tp-games-head { border-bottom: 1px solid rgba(255, 100, 54, 0.2); font-size: 10px; font-weight: 700; }
+.tp-game.tp-games-head { border-bottom: 1px solid color-mix(in srgb, var(--color-ember-orange) 20%, transparent); font-size: 10px; font-weight: 700; }
 .tp-games-head .tp-game-record { color: inherit; }
 
-.tp-games .tp-game + .tp-game { border-top: 1px solid rgba(255, 255, 255, 0.04); }
+.tp-games .tp-game + .tp-game { border-top: 1px solid rgb(var(--ink-rgb) / 0.04); }
 .tp-games .tp-game { transition: background var(--duration-fast) ease; }
 .tp-games .tp-game[data-linked]:hover,
-.tp-games .tp-game:focus-within { background: rgba(255, 100, 54, 0.08); }
+.tp-games .tp-game:focus-within { background: color-mix(in srgb, var(--color-ember-orange) 8%, transparent); }
 
 .tp-game-date { color: var(--color-silver-mist); white-space: nowrap; }
 
 .tp-tag {
   margin-left: calc(var(--space) * 1.5);
   padding: 1px 5px;
-  border: 1px solid rgba(255, 100, 54, 0.45);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 45%, transparent);
   border-radius: 4px;
   color: var(--color-ember-orange);
   font-size: 9px;
-  letter-spacing: 1px;
+  letter-spacing: 0;
 }
 
 /* The game link's ::after covers the whole line, so the line is one big link to the game. */
@@ -498,7 +498,7 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: calc(var(--space) * 3);
     padding-top: calc(var(--space) * 5);
-    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    border-top: 1px solid rgb(var(--ink-rgb) / 0.12);
   }
   .tp-logo { width: calc(var(--space) * 18); height: calc(var(--space) * 18); }
   .tp-hero-main { gap: calc(var(--space) * 4); }

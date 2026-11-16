@@ -113,7 +113,7 @@ const SignUp = () => {
         <header className="auth-head">
           <span className="cv-section-badge" data-slot="eyebrow" data-enter>JOIN THE PLATFORM</span>
           <h1 className="auth-title" data-slot="display-heading" data-enter style={enterDelay(1)}>
-            CREATE <span className="text-ember">ACCOUNT</span>
+            Create <span className="text-ember">account</span>
           </h1>
           <p className="auth-lead" data-slot="lead" data-enter style={enterDelay(2)}>
             Save players to your watchlist and keep them on every device.

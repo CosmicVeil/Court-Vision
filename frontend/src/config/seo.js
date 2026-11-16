@@ -30,9 +30,17 @@ const PUBLIC_PAGES = {
     title: 'NBA Player Predictions – AI Stat Projections',
     description: 'Machine-learning projections for NBA players: predicted points, rebounds, assists and fantasy points.',
   },
+  '/predictions/games': {
+    title: 'NBA Next-Game Predictions – Projected Box Scores',
+    description: "AI-projected stat lines for each player's next NBA game, built from recent form, matchups and rest.",
+  },
   '/recommendations': {
     title: 'NBA Player Picks – AI Recommendations',
     description: 'The players CourtVision\'s model expects to outperform their averages, ranked by stat.',
+  },
+  '/recommendations/games': {
+    title: 'NBA Game Picks – Tonight\'s Best Player Projections',
+    description: "The strongest projected performances on the next NBA slate, picked by CourtVision's per-game model.",
   },
   '/contact': {
     title: 'Contact the CourtVision Team',

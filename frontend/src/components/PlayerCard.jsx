@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import TiltCard from './TiltCard';
+import FavouriteStar from './FavouriteStar';
 import { getChangedStatKeys, toStatValues } from '../utils/playerCard';
 import { getRevealDelay } from '../utils/scrollReveal';
 import './PlayerCard.css';
@@ -37,7 +38,7 @@ function StatList({ stats, label, className, changed }) {
 // The tilt, spotlight, lift and corner arrow come from TiltCard, shared with other cards.
 export default function PlayerCard({
   player, stats, statsLabel, extraStats, extraLabel,
-  isFavorite = false, onToggleFavorite, onOpen, index = 0, ctaLabel = 'View player', children,
+  isFavorite = false, onToggleFavorite, onOpen, index = 0, ctaLabel = 'View player', children, headerAside,
 }) {
   // Compare against the values from the previous render (the usePrevious pattern), so only
   // values that actually changed tick in, and nothing animates on the first render.
@@ -62,11 +63,13 @@ export default function PlayerCard({
             )}
           </div>
         </div>
+        {headerAside}
         {onToggleFavorite && (
           <button type="button" className={`pc-fav ${isFavorite ? 'is-on' : ''}`} onClick={onToggleFavorite}
             aria-pressed={isFavorite}
             aria-label={isFavorite ? `Remove ${player.name} from favorites` : `Add ${player.name} to favorites`}>
-            {isFavorite ? 'FAVORITED' : 'ADD FAV'}
+            <FavouriteStar selected={isFavorite} />
+            <span className="visually-hidden">{isFavorite ? 'FAVORITED' : 'ADD FAV'}</span>
           </button>
         )}
       </header>

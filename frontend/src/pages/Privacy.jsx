@@ -12,8 +12,8 @@ function Privacy() {
       <div className="privacy-shell">
         <PageHero
           eyebrow="PRIVACY & COOKIES"
-          title="PRIVACY &"
-          accent="COOKIES"
+          title="Privacy &"
+          accent="Cookies"
           lead="A plain-English summary of what Court Vision stores and why."
         />
         <p className="privacy-updated" data-enter style={enterDelay(1)}>Last updated: October 18, 2026</p>
@@ -43,10 +43,11 @@ function Privacy() {
               <li><code>authToken</code>: a random sign-in token, valid up to 24 hours.</li>
               <li><code>user</code>: your account's id, first name, last name and email, used to show your profile, and your fantasy scoring setting.</li>
               <li><code>nba_favorites</code>: players you favourited.</li>
+              <li><code>courtvision-theme</code>: your light or dark appearance preference for this browser.</li>
             </ul>
             <p>
               Logging out clears <code>authToken</code> and <code>user</code>.
-              You can clear all three by clearing site data in your browser.
+              You can clear these preferences by clearing site data in your browser.
             </p>
           </section>
 
@@ -67,8 +68,7 @@ function Privacy() {
             <p className="privacy-eyebrow">04</p>
             <h2 id="privacy-third-parties-title">Third parties</h2>
             <p>
-              Google Fonts (<code>fonts.googleapis.com</code> / <code>fonts.gstatic.com</code>) loads our fonts,
-              so Google receives your IP address and browser information when the page loads.
+              Inter and Barlow Condensed are served with the site. Loading these fonts does not contact Google Fonts.
             </p>
             <p>
               The site is hosted on Vercel (frontend) and Render (API). Like any host, they

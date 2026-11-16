@@ -1,3 +1,6 @@
+import ContentSkeleton from '../components/ContentSkeleton';
+import LockIcon from '../components/LockIcon';
+import FavouriteStar from '../components/FavouriteStar';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { isFavorite, toggleFavorite, getFavorites } from '../utils/favorites';
@@ -157,6 +160,7 @@ const Stats = () => {
   const fetchPlayers = async (signal) => {
     try {
       setLoading(true);
+      setError(null);
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: String(STATS_PAGE_SIZE),
@@ -249,8 +253,8 @@ const Stats = () => {
   const hero = (
     <PageHero
       eyebrow="PLAYER DATABASE"
-      title="NBA PLAYER"
-      accent="STATISTICS"
+      title="Player"
+      accent="Stats"
       lead="Browse and analyze comprehensive player performance metrics, season averages, and AI projections"
       stats={getStatsHeroStats({
         ready: !error && (!loading || players.length > 0),
@@ -258,29 +262,6 @@ const Stats = () => {
       })}
     />
   );
-
-  if (loading && players.length === 0) {
-    return (
-      <div className="stats-container">
-        {hero}
-        <div className="loading">Loading NBA players...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    const serverUrl = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5001' : 'https://court-vision-zxuj.onrender.com');
-    return (
-      <div className="stats-container">
-        {hero}
-        <div className="error">
-          Error: {error}
-          <br />
-          Make sure the Flask API server is running on {serverUrl}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="stats-container">
@@ -381,7 +362,16 @@ const Stats = () => {
       </div>
 
       {/* Players Display */}
-      {viewMode === 'table' ? (
+      {error ? (
+        // Same hint as Predictions/Standings: a failed fetch here usually means the API is down.
+        <div className="error" role="alert">
+          Error: {error}
+          <br />
+          Make sure the Flask API server is running on {import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5001' : 'https://court-vision-zxuj.onrender.com')}
+        </div>
+      ) : loading && players.length === 0 ? (
+        <ContentSkeleton variant={viewMode === 'table' ? 'table' : 'cards'} count={viewMode === 'table' ? 12 : 6} label="Loading NBA players…" />
+      ) : viewMode === 'table' ? (
         <div className="table-container" data-results aria-busy={loading}>
           <div className="table-wrapper">
             <table className="players-table">
@@ -461,8 +451,10 @@ const Stats = () => {
                           handleFavoriteToggle(player);
                         }}
                         title={favorites.has(player.id) ? 'Remove from favorites' : 'Add to favorites'}
+                        aria-label={favorites.has(player.id) ? `Remove ${player.name} from favorites` : `Add ${player.name} to favorites`}
+                        aria-pressed={favorites.has(player.id)}
                       >
-                        {favorites.has(player.id) ? 'FAVORITED' : 'ADD FAV'}
+                        <FavouriteStar selected={favorites.has(player.id)} />
                       </button>
                     </td>
                   </tr>
@@ -538,14 +530,14 @@ const Stats = () => {
             <button className="stats-modal-close-btn" onClick={() => setShowAuthModal(false)}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
-            <div style={{ fontSize: '4rem', marginBottom: '1.5rem', filter: 'drop-shadow(0 0 15px rgba(255, 69, 0, 0.4))' }}>🔒</div>
-            <h2 className="empty-title" style={{ fontSize: '1.8rem', marginBottom: '1rem', color: '#fff', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: "'Outfit', sans-serif", fontWeight: 900 }}>Authentication Required</h2>
+            <div style={{ marginBottom: '1.5rem' }} aria-hidden="true"><LockIcon /></div>
+            <h2 className="empty-title" style={{ fontSize: '1.8rem', marginBottom: '1rem', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: "'Outfit', sans-serif", fontWeight: 900 }}>Authentication Required</h2>
             <p className="empty-description" style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', lineHeight: '1.6', marginBottom: '2rem' }}>
               You must create an account or log in to save your favorite NBA players and customize your analytics tracking!
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <Link to="/login" className="empty-cta" style={{ textDecoration: 'none', padding: '0.8rem 2rem', fontSize: '1rem', textAlign: 'center' }}>Log In</Link>
-              <Link to="/create-account" className="empty-cta" style={{ textDecoration: 'none', padding: '0.8rem 2rem', fontSize: '1rem', background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)', color: '#fff', boxShadow: 'none', textAlign: 'center' }}>Create Account</Link>
+              <Link to="/create-account" className="empty-cta" style={{ textDecoration: 'none', padding: '0.8rem 2rem', fontSize: '1rem', background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)', color: 'var(--text-primary)', boxShadow: 'none', textAlign: 'center' }}>Create Account</Link>
             </div>
           </div>
         </div>

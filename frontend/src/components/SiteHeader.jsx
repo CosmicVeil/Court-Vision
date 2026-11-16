@@ -66,7 +66,7 @@ export default function SiteHeader() {
       <div ref={sentinelRef} className="header-sentinel" aria-hidden="true" />
       <header ref={headerRef} className={`header ${scrolled || menuOpen ? 'scrolled' : ''}`}>
         <div className="header-left">
-          <Link to="/" className="header-title">COURT VISION</Link>
+          <Link to="/" className="header-title"><svg className="brand-mark" viewBox="0 0 40 28" fill="none" aria-hidden="true"><path d="M2 25a18 18 0 0 1 36 0H2ZM20 7v18M14 19h12" stroke="currentColor" strokeWidth="2.5" /></svg>CourtVision</Link>
         </div>
         <nav className="header-nav" aria-label="Main">{links}</nav>
         <div className="header-actions">
@@ -102,6 +102,7 @@ export default function SiteHeader() {
                 </>
               ) : (
                 <>
+                  <Link to="/profile" className="dropdown-item" onClick={closeAll}>User preferences</Link>
                   <Link to="/login" className="dropdown-item" onClick={closeAll}>Login</Link>
                   <Link to="/create-account" className="dropdown-item" onClick={closeAll}>Create Account</Link>
                 </>

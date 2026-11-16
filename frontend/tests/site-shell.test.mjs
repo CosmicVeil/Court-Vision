@@ -44,7 +44,7 @@ test('the site header marks the current page, re-reads auth per route and has a 
   assert.match(header, /IntersectionObserver/);
   assert.match(header, /aria-expanded={menuOpen}/);
   assert.match(header, /aria-controls="site-menu"/);
-  assert.match(header, /<Link to="\/" className="header-title">COURT VISION<\/Link>/);
+  assert.match(header, /<Link to="\/" className="header-title">[\s\S]*CourtVision<\/Link>/);
   const css = read('src/components/SiteHeader.css');
   assert.match(css, /\.header-nav a\[aria-current="page"\]/);
   // The full link row needs ~1080px, so the menu button takes over below 1100px, not just on phones.

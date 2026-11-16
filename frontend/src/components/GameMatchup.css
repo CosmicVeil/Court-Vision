@@ -1,0 +1,34 @@
+/* Team logos in place of tricodes on the per-game views (slate strip, cards, picks, popup). */
+.gm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  vertical-align: middle;
+}
+
+.gm-logo {
+  width: var(--gm-size);
+  height: var(--gm-size);
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.gm--sm { --gm-size: 22px; }
+.gm--md { --gm-size: 30px; }
+.gm--lg { --gm-size: 40px; }
+
+.gm-joiner {
+  color: var(--color-stone, var(--text-secondary));
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.gm-tricode {
+  color: var(--text-primary);
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 800;
+}

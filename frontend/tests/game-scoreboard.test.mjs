@@ -40,7 +40,7 @@ test('missing logos keep linked tricode placeholders and normalize the team path
   assert.match(html, /<a[^>]*href="\/teams\/LAL"[^>]*><span class="team-logo-placeholder">LAL<\/span><\/a>/);
 });
 
-test('team links have no hidden ancestors while duplicate names and scores remain aria-hidden', () => {
+test('team links have no hidden ancestors while duplicate scores remain aria-hidden', () => {
   for (const status of [1, 2, 3]) {
     let links = 0;
     let hiddenText = 0;
@@ -49,7 +49,7 @@ test('team links have no hidden ancestors while duplicate names and scores remai
     function visit(node, ancestors = []) {
       if (!isValidElement(node)) return;
       const { props } = node;
-      if (props.className === 'scoreboard-team-link') {
+      if (['scoreboard-team-link', 'scoreboard-name'].includes(props.className)) {
         links += 1;
         assert.equal(node.type, Link);
         for (const ancestor of [...ancestors, node]) {
@@ -59,15 +59,15 @@ test('team links have no hidden ancestors while duplicate names and scores remai
         }
         assert.notEqual(props.tabIndex, -1);
       }
-      if (['scoreboard-name', 'scoreboard-score'].includes(props.className)) {
+      if (props.className === 'scoreboard-score') {
         hiddenText += 1;
         assert.ok([true, 'true'].includes(props['aria-hidden']));
       }
       Children.forEach(props.children, child => visit(child, [...ancestors, node]));
     }
     visit(GameScoreboard({ game: { ...game, status }, scoreChanges: { home: true } }));
-    assert.equal(links, 2);
-    assert.equal(hiddenText, 4);
+    assert.equal(links, 4);
+    assert.equal(hiddenText, 2);
   }
 });
 

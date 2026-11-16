@@ -25,7 +25,7 @@
   position: absolute;
   width: 480px;
   height: 480px;
-  background: radial-gradient(circle, rgba(255, 100, 54, 0.12), transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-ember-orange) 12%, transparent), transparent 70%);
   filter: blur(60px);
   pointer-events: none;
 }
@@ -37,12 +37,12 @@
 .contact-project-card,
 .contact-team-card {
   min-width: 0;
-  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
+  background: var(--surface);
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-xl);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--shadow);
   overflow-wrap: anywhere;
 }
 
@@ -62,8 +62,8 @@
   font-size: 10px;
   font-weight: 700;
   color: var(--color-ember-orange);
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   margin: 0 0 calc(var(--space) * 1.5);
 }
 
@@ -84,8 +84,8 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  background: rgba(255, 100, 54, 0.12);
-  border: 1px solid rgba(255, 100, 54, 0.35);
+  background: color-mix(in srgb, var(--color-ember-orange) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 35%, transparent);
   padding: calc(var(--space) * 3) calc(var(--space) * 6);
   border-radius: var(--radius-md);
   text-decoration: none;
@@ -95,9 +95,9 @@
 }
 
 .contact-domain:hover {
-  background: rgba(255, 100, 54, 0.22);
+  background: color-mix(in srgb, var(--color-ember-orange) 22%, transparent);
   border-color: var(--color-ember-orange);
-  box-shadow: 0 0 20px rgba(255, 100, 54, 0.3);
+  box-shadow: var(--shadow);
   transform: translateY(-2px);
 }
 
@@ -112,7 +112,7 @@
   font-family: var(--font-mono);
   font-size: 10px;
   color: var(--color-stone);
-  letter-spacing: 1px;
+  letter-spacing: 0;
 }
 
 /* ---------- Team ---------- */
@@ -159,7 +159,7 @@
 .contact-team-card:has(.contact-team-link:focus-visible) {
   transform: translateY(-6px);
   border-color: var(--border-focus);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 24px rgba(255, 100, 54, 0.2);
+  box-shadow: var(--shadow);
 }
 
 .contact-team-topline {
@@ -175,7 +175,7 @@
   width: 44px;
   height: 44px;
   border-radius: var(--radius-md);
-  background: rgba(255, 100, 54, 0.15);
+  background: color-mix(in srgb, var(--color-ember-orange) 15%, transparent);
   border: 1px solid var(--color-ember-orange);
   color: var(--color-ember-orange);
   display: flex;
@@ -193,15 +193,15 @@
   font-family: var(--font-mono);
   font-size: 10px;
   color: var(--color-stone);
-  letter-spacing: 1px;
+  letter-spacing: 0;
 }
 
 .contact-team-status i {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #4ade80;
-  box-shadow: 0 0 8px #4ade80;
+  background: var(--positive);
+  box-shadow: var(--shadow);
 }
 
 .contact-team-content h3 {
@@ -235,8 +235,8 @@
 }
 
 .contact-team-skills li {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgb(var(--ink-rgb) / 0.05);
+  border: 1px solid rgb(var(--ink-rgb) / 0.1);
   padding: calc(var(--space)) calc(var(--space) * 2.5);
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
@@ -250,16 +250,16 @@
   width: fit-content;
   max-width: 100%;
   padding: calc(var(--space) * 2.5) calc(var(--space) * 5);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 100, 54, 0.25);
+  background: rgb(var(--ink-rgb) / 0.04);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 25%, transparent);
   border-radius: var(--radius-full);
   color: var(--color-pure-white);
   text-decoration: none;
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   transition: background var(--duration-base) var(--ease-brand), border-color var(--duration-base) var(--ease-brand),
     box-shadow var(--duration-base) var(--ease-brand);
 }
@@ -271,9 +271,9 @@
 }
 
 .contact-team-link:hover {
-  background: rgba(255, 100, 54, 0.15);
+  background: color-mix(in srgb, var(--color-ember-orange) 15%, transparent);
   border-color: var(--color-ember-orange);
-  box-shadow: 0 0 16px rgba(255, 100, 54, 0.25);
+  box-shadow: var(--shadow);
 }
 
 /* ---------- Footer ---------- */
@@ -287,7 +287,7 @@
   gap: calc(var(--space) * 2) calc(var(--space) * 3);
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 1.5px;
+  letter-spacing: 0;
   color: var(--color-stone);
   text-align: center;
 }

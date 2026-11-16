@@ -1,0 +1,48 @@
+/* Season / Game projections switch at the top of the predictions and recommendations pages.
+   Same pill shape as the Live Games tabs (LiveGames.css .lg-tabs). */
+.pm-toggle-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 0 auto 28px;
+  position: relative;
+  z-index: 10;
+}
+
+.pm-toggle {
+  display: flex;
+  gap: calc(var(--space));
+  padding: calc(var(--space));
+  background: var(--surface);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-full, 9999px);
+}
+
+.pm-toggle [data-slot="pill-indicator"] {
+  background: var(--accent-fill);
+  box-shadow: var(--shadow);
+}
+
+.pm-tab {
+  min-height: 40px;
+  padding: 8px 22px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full, 9999px);
+  color: var(--color-stone, var(--text-secondary));
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pm-tab:hover { color: var(--text-primary); }
+}
+
+.pm-tab.active,
+.pm-tab[data-indicator-target] { color: var(--text-primary); }
+
+.pm-tab.active { font-weight: 800; }

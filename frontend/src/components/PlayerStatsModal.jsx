@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import InjuryBadge from './InjuryBadge';
 import PlayerGameLog from './PlayerGameLog';
 import PlayerHeadshot from './PlayerHeadshot';
+import PlayerNextGame from './PlayerNextGame';
 import PlayerPredictionGrid from './PlayerPredictionGrid';
 import { injuryDescription, injuryReturnLabel } from '../utils/injury';
 
@@ -10,6 +11,7 @@ const TABS = [
   ['current', 'Current Stats'],
   ['games', 'Game Log'],
   ['predictions', 'AI Predictions'],
+  ['next-game', 'Game projections'],
   ['history', 'Career History'],
 ];
 
@@ -133,6 +135,7 @@ export default function PlayerStatsModal({ player, loading, onClose }) {
                   </p>
                 </div>
               ) : <div className="no-data">AI Prediction model is currently loading or unavailable for this player.</div>)}
+              {tab === 'next-game' && <PlayerNextGame player={player} returnTo={returnTo} />}
               {tab === 'history' && (
                 <div className="stats-history-table-container">
                   <div className="stats-history-scroll-box">

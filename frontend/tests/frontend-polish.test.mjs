@@ -23,9 +23,9 @@ test("recommendation percentage badges use sign-aware classes", () => {
 
 test("negative recommendation modifiers use the red palette", () => {
   const css = readComponent("Recommendations.css");
-  assert.match(css, /\.spotlight-growth-badge\.negative\s*\{[^}]*color:\s*#f87171/s);
-  assert.match(css, /\.spotlight-stat-growth\.negative\s*\{[^}]*color:\s*#f87171/s);
-  assert.match(css, /\.growth-callout\.negative\s*\{[^}]*color:\s*#f87171/s);
+  assert.match(css, /\.spotlight-growth-badge\.negative\s*\{[^}]*color:\s*var\(--negative\)/s);
+  assert.match(css, /\.spotlight-stat-growth\.negative\s*\{[^}]*color:\s*var\(--negative\)/s);
+  assert.match(css, /\.growth-callout\.negative\s*\{[^}]*color:\s*var\(--negative\)/s);
 });
 
 test("AI prediction list cards show the three main predicted stats", () => {

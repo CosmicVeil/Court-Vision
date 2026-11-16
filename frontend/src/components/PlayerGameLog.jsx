@@ -66,7 +66,7 @@ export default function PlayerGameLog({ playerId, history }) {
       <div className="game-log-toolbar">
         <div className="game-log-season-group">
           <label htmlFor="game-log-season-select" className="game-log-season-label">
-            <span className="game-log-label-icon">🏀</span> SEASON
+            SEASON
           </label>
           <div className="game-log-select-wrapper">
             <select

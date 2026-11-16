@@ -17,10 +17,10 @@
   gap: calc(var(--space) * 4);
   min-width: 0;
   padding: calc(var(--space) * 6);
-  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
-  border: 1px solid rgba(255, 100, 54, 0.18);
+  background: var(--surface);
+  border: 1px solid var(--border-glass);
   border-radius: var(--radius-xl);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--shadow);
   /* Tilt, spotlight, lift and the corner arrow: TiltCard.css. */
 }
 
@@ -39,7 +39,7 @@
   font-size: var(--text-lg);
   font-weight: 900;
   line-height: var(--leading-snug);
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .pc-open {
@@ -77,26 +77,26 @@
 
 .pc-badge {
   padding: 4px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgb(var(--ink-rgb) / 0.15);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgb(var(--ink-rgb) / 0.06);
   color: var(--color-pure-white);
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .pc-badge.is-accent {
-  border-color: rgba(255, 100, 54, 0.3);
-  background: rgba(255, 100, 54, 0.12);
+  border-color: color-mix(in srgb, var(--color-ember-orange) 30%, transparent);
+  background: color-mix(in srgb, var(--color-ember-orange) 12%, transparent);
   color: var(--color-ember-orange);
 }
 
 .pc-badge.is-muted {
-  border-color: rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
+  border-color: rgb(var(--ink-rgb) / 0.08);
+  background: rgb(var(--ink-rgb) / 0.03);
   color: var(--color-stone);
 }
 
@@ -106,14 +106,14 @@
   z-index: 2;
   flex-shrink: 0;
   padding: 6px 12px;
-  border: 1px solid rgba(255, 100, 54, 0.25);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 25%, transparent);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgb(var(--ink-rgb) / 0.04);
   color: var(--color-ember-orange);
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 1px;
+  letter-spacing: 0;
   white-space: nowrap;
   cursor: pointer;
   transition: background-color var(--duration-fast) var(--ease-brand), border-color var(--duration-fast) var(--ease-brand);
@@ -129,7 +129,7 @@
 .pc-fav.is-on {
   border-color: rgba(255, 206, 109, 0.4);
   background: rgba(255, 206, 109, 0.15);
-  color: #ffce6d;
+  color: var(--warning);
 }
 
 .pc-section-label {
@@ -138,8 +138,8 @@
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .pc-stat-list {
@@ -161,9 +161,9 @@
   align-items: center;
   min-width: 0;
   padding: calc(var(--space) * 2.5) calc(var(--space) * 1.5);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgb(var(--ink-rgb) / 0.05);
   border-radius: var(--radius-md);
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--surface-subtle);
   text-align: center;
 }
 
@@ -175,7 +175,7 @@
   font-family: var(--font-mono);
   font-size: 9px;
   letter-spacing: .5px;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .pc-stat dd { margin: 0; }
@@ -192,7 +192,7 @@
   font-size: var(--text-xl);
 }
 
-.pc-extra .pc-stat { padding: calc(var(--space) * 1.5); background: rgba(255, 255, 255, 0.02); }
+.pc-extra .pc-stat { padding: calc(var(--space) * 1.5); background: rgb(var(--ink-rgb) / 0.02); }
 .pc-extra .pc-stat-value { color: var(--color-pure-white); font-size: var(--text-xs); }
 
 .pc-stat-value[data-tick] {
@@ -209,12 +209,12 @@
   white-space: nowrap;
 }
 
-.pc-delta[data-direction="up"] { color: #4caf50; }
-.pc-delta[data-direction="down"] { color: #f87171; }
+.pc-delta[data-direction="up"] { color: var(--positive); }
+.pc-delta[data-direction="down"] { color: var(--negative); }
 .pc-delta[data-direction="flat"] { color: var(--color-stone); }
 
 @media (hover: hover) and (pointer: fine) {
-  .pc-fav:hover { border-color: var(--color-ember-orange); background: rgba(255, 100, 54, 0.15); }
+  .pc-fav:hover { border-color: var(--color-ember-orange); background: color-mix(in srgb, var(--color-ember-orange) 15%, transparent); }
 }
 
 @media (max-width: 480px) {
@@ -224,3 +224,19 @@
 @media (prefers-reduced-motion: reduce) {
   .pc-stat-value[data-tick] { animation: none; }
 }
+
+/* Per-game cards: "vs BOS · 7:30 PM ET" under the stats (GamePredictions, home preview). */
+.pc-matchup {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space) * 3);
+  margin: calc(var(--space) * 3) 0 0;
+  color: var(--color-stone, var(--text-secondary));
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.pc-matchup span:first-child { color: var(--text-primary); }

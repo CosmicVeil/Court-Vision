@@ -49,7 +49,7 @@ const Login = () => {
         <header className="auth-head">
           <span className="cv-section-badge" data-slot="eyebrow" data-enter>ACCESS PORTAL</span>
           <h1 className="auth-title" data-slot="display-heading" data-enter style={enterDelay(1)}>
-            AUTHENTICATE <span className="text-ember">ACCOUNT</span>
+            Log <span className="text-ember">in</span>
           </h1>
           <p className="auth-lead" data-slot="lead" data-enter style={enterDelay(2)}>
             Sign in to keep your saved players in sync.

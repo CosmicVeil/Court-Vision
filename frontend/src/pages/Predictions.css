@@ -33,22 +33,22 @@
   font-family: var(--font-mono, monospace);
   font-size: 11px;
   font-weight: 700;
-  color: var(--color-stone, #8e8c94);
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
+  color: var(--color-stone, var(--text-secondary));
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .prediction-sort-select {
   padding: 8px 18px;
-  border: 1px solid rgba(255, 100, 54, 0.25);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 25%, transparent);
   border-radius: var(--radius-full, 9999px);
-  background: rgba(0, 0, 0, 0.5);
-  color: #fff;
+  background: var(--surface-subtle);
+  color: var(--text-primary);
   font-size: 11px;
   font-family: var(--font-mono, monospace);
   font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -56,7 +56,7 @@
 .prediction-sort-select:focus {
   outline: none;
   border-color: var(--color-ember-orange, #ff6436);
-  box-shadow: 0 0 16px rgba(255, 100, 54, 0.3);
+  box-shadow: var(--shadow);
 }
 
 .sort-direction-btn {
@@ -64,23 +64,23 @@
   align-items: center;
   gap: 6px;
   padding: 8px 18px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 100, 54, 0.25);
+  background: rgb(var(--ink-rgb) / 0.04);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 25%, transparent);
   border-radius: var(--radius-full, 9999px);
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone, var(--text-secondary));
   font-family: var(--font-mono, monospace);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .sort-direction-btn:hover {
-  background: rgba(255, 100, 54, 0.12);
+  background: color-mix(in srgb, var(--color-ember-orange) 12%, transparent);
   border-color: var(--color-ember-orange, #ff6436);
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .sort-direction-btn:focus-visible {
@@ -109,13 +109,13 @@
   padding: 80px 20px;
   font-family: var(--font-mono, monospace);
   font-size: 13px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--color-stone, #8e8c94);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-stone, var(--text-secondary));
 }
 
 .error {
-  color: #ef5350;
+  color: var(--negative);
 }
 
 /* ---------- Auth Modal inside Predictions ---------- */
@@ -132,14 +132,14 @@
 }
 
 .prediction-auth-modal-content {
-  background: linear-gradient(180deg, rgba(24, 24, 30, 0.95) 0%, rgba(14, 14, 18, 0.98) 100%);
-  border: 1px solid rgba(255, 100, 54, 0.3);
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 30%, transparent);
   border-radius: var(--radius-xl, 20px);
   padding: 36px;
   max-width: 480px;
   width: 100%;
   text-align: center;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
+  box-shadow: var(--shadow);
 }
 
 .prediction-auth-actions {
@@ -152,32 +152,32 @@
 .empty-cta {
   display: inline-block;
   padding: 10px 24px;
-  background: linear-gradient(135deg, #ff6436, #e04a1c);
+  background: var(--accent-fill);
   color: #fff;
   border-radius: var(--radius-full, 9999px);
   font-family: var(--font-mono, monospace);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   text-decoration: none;
-  box-shadow: 0 0 20px rgba(255, 100, 54, 0.4);
+  box-shadow: var(--shadow);
   transition: all 0.2s ease;
 }
 
 .empty-cta:hover {
   transform: translateY(-2px);
-  box-shadow: 0 0 28px rgba(255, 100, 54, 0.6);
+  box-shadow: var(--shadow);
 }
 
 .prediction-auth-secondary {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 100, 54, 0.3);
-  box-shadow: none;
+  background: rgb(var(--ink-rgb) / 0.04);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 30%, transparent);
+  box-shadow: var(--shadow);
 }
 
 .prediction-auth-secondary:hover {
-  background: rgba(255, 100, 54, 0.15);
+  background: color-mix(in srgb, var(--color-ember-orange) 15%, transparent);
   border-color: var(--color-ember-orange, #ff6436);
 }
 
@@ -191,10 +191,10 @@
   max-width: 560px;
   padding: 2.5rem 2rem;
   text-align: center;
-  border: 1px solid rgba(255, 100, 54, 0.3);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 30%, transparent);
   border-radius: 16px;
-  background: linear-gradient(180deg, rgba(24, 24, 30, 0.9) 0%, rgba(14, 14, 18, 0.96) 100%);
-  box-shadow: 0 0 40px rgba(255, 100, 54, 0.12);
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
 .predictions-locked-icon {
@@ -211,7 +211,7 @@
 .predictions-locked-desc {
   margin: 0 auto 1.5rem;
   max-width: 44ch;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgb(var(--ink-rgb) / 0.7);
   line-height: 1.5;
 }
 
