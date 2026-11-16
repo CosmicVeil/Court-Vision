@@ -30,24 +30,25 @@ if name=='codex' and prompt.startswith('Diagnose this bug'):
         pathlib.Path('tests/repro.txt').write_text('fails until fixed')
     pathlib.Path(args[args.index('-o')+1]).write_text('' if os.environ.get('FAKE_DIAG')=='empty' else 'Root cause: value.txt')
     sys.exit(0)
-if name=='codex':
-    pathlib.Path('value.txt').write_text('changed')
-    pathlib.Path(args[args.index('-o')+1]).write_text('Implemented task')
-    sys.exit(0)
 mode=os.environ.get('FAKE_MODE','pass')
-if mode=='quota':
-    print('Usage limit reached'); sys.exit(1)
-schema=json.loads(args[args.index('--json-schema')+1])
-if 'plan' in schema['properties']:
-    result={'plan':'Change value.txt and verify it.'}
-else:
+if name=='codex':  # code review
     counter=pathlib.Path(os.environ['FAKE_COUNT'])
     n=int(counter.read_text()) if counter.exists() else 0
     counter.write_text(str(n+1))
-    approved=mode=='pass' or (mode=='fix' and n>0)
-    result={'approved':approved,'summary':'Review','findings':[] if approved else ['Correct value.txt']}
-    if mode=='invalid': result['approved']='true'
-print(json.dumps({'structured_output':result,'is_error':False}))
+    approved=mode in ('pass','nit') or (mode=='fix' and n>0)
+    review='Looks correct.' if approved else (
+        'Review comment:\\n\\n- [P1] Correct value.txt \\u2014 value.txt:1-1\\n  It must say fixed.\\n')
+    if mode=='nit': review+='\\n- [P3] Consider a comment \\u2014 value.txt:1-1\\n'
+    pathlib.Path(args[args.index('-o')+1]).write_text('' if mode=='empty' else review)
+    sys.exit(0)
+if mode=='quota':
+    print('Usage limit reached'); sys.exit(1)
+if '--json-schema' in args:
+    print(json.dumps({'structured_output':{'plan':'Change value.txt and verify it.'},'is_error':False}))
+else:  # implementation or fix round
+    pathlib.Path(os.environ['FAKE_PROMPTS']+'.claude-code-args').write_text(json.dumps(args))
+    pathlib.Path('value.txt').write_text('changed')
+    print(json.dumps({'result':'Implemented task','is_error':False,'permission_denials':[]}))
 '''
 
 class PipelineTests(unittest.TestCase):
@@ -97,9 +98,35 @@ class PipelineTests(unittest.TestCase):
         p=self.invoke('reject'); self.assertEqual(p.returncode,2)
         self.assertEqual(self.state()[1]['stage'],'needs-attention')
         self.assertEqual((self.root/'count').read_text(),'3')
-    def test_bad_review_fails_closed(self):
-        p=self.invoke('invalid'); self.assertEqual(p.returncode,2)
-        self.assertIn('Invalid review shape',p.stderr)
+    def test_empty_review_fails_closed(self):
+        p=self.invoke('empty'); self.assertEqual(p.returncode,2)
+        self.assertIn('empty review',p.stderr)
+        self.assertEqual(self.state()[1]['stage'],'review')
+    def test_review_findings_are_parsed(self):
+        p=self.invoke('fix'); self.assertEqual(p.returncode,0,p.stderr)
+        path,_=self.state()
+        first=json.loads((path.parent/'review-0.result.json').read_text())
+        self.assertFalse(first['approved'])
+        self.assertEqual(first['findings'],['[P1] Correct value.txt \u2014 value.txt:1-1\nIt must say fixed.'])
+        fix=[x for x in self.prompts().split('---\n') if x.strip()][3]
+        self.assertIn('Correct value.txt',fix)
+    def test_nits_do_not_block_approval(self):
+        p=self.invoke('nit'); self.assertEqual(p.returncode,0,p.stderr)
+        path,s=self.state(); self.assertEqual(s['stage'],'complete')
+        verdict=json.loads((path.parent/'review-0.result.json').read_text())
+        self.assertEqual(verdict['findings'],[])
+        self.assertEqual(len(verdict['non_blocking']),1)
+    def test_claude_implements_and_codex_reviews(self):
+        p=self.invoke(); self.assertEqual(p.returncode,0,p.stderr)
+        order=[x.split(':')[0] for x in self.prompts().split('---\n') if x.strip()]
+        self.assertEqual(order,['claude','claude','codex'])  # plan, code, review
+        review=json.loads(Path(str(self.root/'prompts')+'.codex-args').read_text())
+        self.assertEqual(review[:4],['-a','never','exec','review'])
+        self.assertIn('sandbox_mode="read-only"',review)
+        code=json.loads(Path(str(self.root/'prompts')+'.claude-code-args').read_text())
+        self.assertIn('Read,Glob,Grep,Edit,Write,Bash',code)
+        allowed=code[code.index('--allowedTools')+1]
+        self.assertIn('Bash(npm *)',allowed); self.assertNotIn('Bash(*)',allowed)
     def test_dirty_source_is_refused(self):
         (self.repo/'value.txt').write_text('user edits')
         p=self.invoke(); self.assertEqual(p.returncode,2)
@@ -133,7 +160,7 @@ class PipelineTests(unittest.TestCase):
         self.assertTrue((run/'repro.json').exists())
         self.assertIn('tests/repro.txt',(run/'diff-diagnosis-new-files.txt').read_text())
         order=[line.split(':')[0] for line in self.prompts().split('---\n') if line.strip()]
-        self.assertEqual(order[:3],['codex','claude','codex'])
+        self.assertEqual(order[:3],['codex','claude','claude'])
         self.assertTrue(self.prompts().startswith('codex: Diagnose this bug'))
         plan_prompt=self.prompts().split('---\n')[1]
         self.assertIn(str(run/'diagnosis.md'),plan_prompt)
@@ -156,13 +183,14 @@ class PipelineTests(unittest.TestCase):
         self.assertIn('--ignore-user-config',args)
     def test_codex_reasoning_effort_per_stage(self):
         config=json.loads(self.config.read_text())
-        config['codex_reasoning_effort']={'code':'high','fix':'medium'}
+        config['codex_reasoning_effort']={'diagnose':'high','review':'medium'}
         self.config.write_text(json.dumps(config))
-        p=self.invoke('fix'); self.assertEqual(p.returncode,0,p.stderr)
+        p=self.invoke('fix',extra=['--bug']); self.assertEqual(p.returncode,0,p.stderr)
         calls=[json.loads(x) for x in Path(str(self.root/'prompts')+'.codex-args-all').read_text().splitlines()]
-        self.assertEqual(len(calls),2)  # code, then one fix round
-        self.assertIn('model_reasoning_effort="high"',calls[0])
+        self.assertEqual(len(calls),3)  # diagnosis, then two reviews
+        self.assertIn('model_reasoning_effort="high"',calls[0]); self.assertNotIn('review',calls[0])
         self.assertIn('model_reasoning_effort="medium"',calls[1])
+        self.assertIn('model_reasoning_effort="medium"',calls[2])
     def test_codex_defaults_when_unset(self):
         p=self.invoke(); self.assertEqual(p.returncode,0,p.stderr)
         args=json.loads(Path(str(self.root/'prompts')+'.codex-args').read_text())
@@ -219,7 +247,7 @@ class PipelineTests(unittest.TestCase):
         return str(d)
     def test_stage_skills_are_copied_and_named_in_prompts(self):
         config=json.loads(self.config.read_text())
-        config['codex_skills']={'diagnose':[self.make_skill('debugging')],
+        config['stage_skills']={'diagnose':[self.make_skill('debugging')],
                                 'code':[self.make_skill('tdd')],'fix':[self.make_skill('receiving')]}
         config['review_skills']=[self.make_skill('review-anim','STANDARDS.md')]
         self.config.write_text(json.dumps(config))
@@ -238,7 +266,7 @@ class PipelineTests(unittest.TestCase):
         self.assertIn('No one is available',code)
     def test_missing_skill_is_refused_before_run_folder(self):
         config=json.loads(self.config.read_text())
-        config['codex_skills']={'code':[str(self.root/'nope')]}
+        config['stage_skills']={'code':[str(self.root/'nope')]}
         self.config.write_text(json.dumps(config))
         p=self.invoke(); self.assertEqual(p.returncode,2)
         self.assertIn('Skill for code not found',p.stderr)
