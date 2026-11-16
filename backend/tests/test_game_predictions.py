@@ -3,6 +3,7 @@
 Offline: synthetic archive rows, no database, no ESPN, no trained model.
 """
 import unittest
+import zlib
 from datetime import date, timedelta
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -130,6 +131,22 @@ class BuildUpcomingFrameTests(unittest.TestCase):
         self.assertEqual(frame.loc[3, "over_under"], 228.0)
         self.assertEqual(frame.loc[3, "injury"]["status"], "Questionable")
 
+    def test_rest_days_count_the_teams_earlier_games_in_the_window(self):
+        # LAL plays on the 20th and 21st (a back-to-back), BOS on the 20th and 23rd. Form is as of
+        # the 20th for both days; rest is measured from each team's previous game in the window.
+        later = [GAME, dict(GAME, game_id="b2b", game_date=SLATE + timedelta(days=1), home="LAL", away="NYK"),
+                 dict(GAME, game_id="far", game_date=SLATE + timedelta(days=3), home="BOS", away="NYK")]
+        frame = build_upcoming_frame(later, self.history, [], _appearances(self.history), self.injuries, season=2027)
+        rows = frame.set_index(["game_id", "espn_player_id"])
+        self.assertEqual(rows.loc[("next", 1), "rest_days"], (SLATE - date(2026, 11, 10)).days)  # last archived game
+        self.assertEqual(rows.loc[("b2b", 1), "rest_days"], 1)
+        self.assertEqual(rows.loc[("b2b", 1), "back_to_back"], 1.0)
+        self.assertEqual(rows.loc[("far", 3), "rest_days"], 3)
+        self.assertEqual(rows.loc[("b2b", 1), "games_before"], rows.loc[("next", 1), "games_before"] + 1)
+        self.assertEqual(rows.loc[("b2b", 1), "pts_last10"], rows.loc[("next", 1), "pts_last10"])  # same form
+        self.assertNotIn(("b2b", 2), rows.index)                      # ruled out for every day
+        self.assertEqual(list(frame["game_id"].drop_duplicates()), ["next", "b2b", "far"])  # oldest day first
+
     def test_no_games_gives_an_empty_frame(self):
         self.assertTrue(build_upcoming_frame([], self.history, [], [], {}).empty)
 
@@ -156,9 +173,11 @@ class ScoreboardEventTests(unittest.TestCase):
         self.assertIsNone(game_predictions.parse_scoreboard_event(self._event(home="STARS")))
 
 
-def _row(name, team="LAL", minutes=30.0, pts=(20.0, 15.0), game_id="next", injury=None):
-    row = {"id": 100 + int("".join(c for c in name if c.isdigit()) or 0), "espn_id": 1, "name": name, "team": team, "opponent": "BOS", "is_home": True,
-           "position": "G", "game_id": game_id, "tipoff": "", "injury": injury}
+def _row(name, team="LAL", minutes=30.0, pts=(20.0, 15.0), game_id="next", injury=None, game_date=None):
+    digits = "".join(c for c in name if c.isdigit())
+    player_id = 100 + int(digits) if digits else zlib.crc32(name.encode())  # a distinct player per name
+    row = {"id": player_id, "espn_id": player_id, "name": name, "team": team, "opponent": "BOS", "is_home": True,
+           "position": "G", "game_id": game_id, "game_date": game_date, "tipoff": "", "injury": injury}
     for stat in TARGET_COLUMNS:
         row[f"predicted_{stat}"], row[f"last10_{stat}"] = 2.0, 2.0
     row["predicted_pts"], row["last10_pts"] = pts
@@ -192,12 +211,64 @@ class RankingTests(unittest.TestCase):
             _row("Up big", pts=(25.0, 15.0)), _row("Up small", pts=(16.0, 15.0)),
             _row("Down", pts=(10.0, 15.0)), _row("Bench up", minutes=8.0, pts=(12.0, 4.0)),
             _row("Top", pts=(30.0, 29.0)))]
-        picks = game_predictions.recommendations(rows, limit=3)
+        picks = game_predictions.recommendations(rows, limit=2)
         names = lambda kind: [row["name"] for row in picks[kind]["pts"]]  # noqa: E731
-        self.assertEqual(names("top"), ["Top", "Up big", "Up small"])
-        self.assertEqual(names("over"), ["Up big", "Up small", "Top"])   # bench player filtered out
+        self.assertEqual(names("top"), ["Top", "Up big"])
+        self.assertEqual(names("over"), ["Up small"])   # top players and the bench player left out
         self.assertEqual(names("fade"), ["Down"])
         self.assertEqual(set(picks["top"]), set(game_predictions.RECOMMENDATION_STATS))
+
+    def test_a_player_is_in_one_list_per_stat(self):
+        # The top projection is also the biggest drop from his average: Top keeps him, Fade moves on.
+        rows = [game_predictions.enrich(r) for r in (
+            _row("Star1", pts=(31.0, 41.0)), _row("Mid2", pts=(20.0, 22.0)), _row("Low3", pts=(10.0, 13.0)))]
+        picks = game_predictions.recommendations(rows, limit=1)
+        self.assertEqual([r["name"] for r in picks["top"]["pts"]], ["Star1"])
+        self.assertEqual([r["name"] for r in picks["fade"]["pts"]], ["Low3"])
+        for stat in game_predictions.RECOMMENDATION_STATS:
+            listed = [r["name"] for kind in game_predictions.RECOMMENDATION_KINDS for r in picks[kind][stat]]
+            self.assertEqual(len(listed), len(set(listed)), stat)
+
+    def test_upcoming_drops_past_days_but_keeps_everything_when_all_have_passed(self):
+        cache = {"slate_date": "2026-11-20", "slate_dates": ["2026-11-20", "2026-11-21", "2026-11-22"],
+                 "games": [{"game_id": d, "game_date": f"2026-11-{d}"} for d in ("20", "21", "22")],
+                 "players": [_row("A", game_date="2026-11-20"), _row("A", game_date="2026-11-22")]}
+        live = game_predictions.upcoming(cache, "2026-11-21")
+        self.assertEqual(live["slate_date"], "2026-11-21")
+        self.assertEqual(live["slate_dates"], ["2026-11-21", "2026-11-22"])
+        self.assertEqual([g["game_id"] for g in live["games"]], ["21", "22"])
+        self.assertEqual([r["game_date"] for r in live["players"]], ["2026-11-22"])
+        self.assertEqual(game_predictions.upcoming(cache, "2026-11-25")["slate_dates"], cache["slate_dates"])
+        self.assertEqual(game_predictions.upcoming(cache, "2026-11-01")["slate_date"], "2026-11-20")
+
+    def test_upcoming_reads_a_single_day_cache_written_before_game_dates(self):
+        row = _row("A")
+        del row["game_date"]
+        live = game_predictions.upcoming({"slate_date": "2026-11-20", "games": [{"game_id": "x"}], "players": [row]},
+                                         "2026-11-20")
+        self.assertEqual(live["slate_dates"], ["2026-11-20"])
+        self.assertEqual((live["games"][0]["game_date"], live["players"][0]["game_date"]), ("2026-11-20", "2026-11-20"))
+
+    def test_group_by_player_features_the_nearest_game(self):
+        rows = [game_predictions.enrich(r) for r in (
+            _row("A1", pts=(30.0, 20.0), game_id="later", game_date="2026-11-22"),
+            _row("A1", pts=(18.0, 20.0), game_id="soon", game_date="2026-11-20"),
+            _row("B2", game_id="only", game_date="2026-11-21"))]
+        grouped = {row["name"]: row for row in game_predictions.group_by_player(rows)}
+        self.assertEqual(grouped["A1"]["game_id"], "soon")
+        self.assertEqual(grouped["A1"]["predicted_pts"], 18.0)          # ranked by the nearest game
+        self.assertEqual([g["game_id"] for g in grouped["A1"]["later_games"]], ["later"])
+        self.assertEqual(grouped["A1"]["later_games"][0]["predicted_pts"], 30.0)
+        self.assertEqual(set(grouped["A1"]["later_games"][0]), set(game_predictions.LATER_GAME_FIELDS))
+        self.assertEqual(grouped["B2"]["later_games"], [])
+
+    def test_resolve_day(self):
+        dates = ["2026-11-20", "2026-11-21"]
+        self.assertEqual(game_predictions.resolve_day("next", dates), "2026-11-20")
+        self.assertEqual(game_predictions.resolve_day("2026-11-21", dates), "2026-11-21")
+        self.assertEqual(game_predictions.resolve_day("2026-11-25", dates), "")    # not covered -> all days
+        self.assertEqual(game_predictions.resolve_day("", dates), "")
+        self.assertEqual(game_predictions.resolve_day("next", []), "")
 
     def test_sort_and_filter(self):
         rows = [game_predictions.enrich(r) for r in (
@@ -207,6 +278,8 @@ class RankingTests(unittest.TestCase):
         self.assertEqual([r["name"] for r in game_predictions.filter_rows(rows, team="BOS")], ["a"])
         self.assertEqual([r["name"] for r in game_predictions.filter_rows(rows, game_id="next")], ["b"])
         self.assertEqual([r["name"] for r in game_predictions.filter_rows(rows, search="A")], ["a"])
+        rows[0]["game_date"] = "2026-11-21"
+        self.assertEqual([r["name"] for r in game_predictions.filter_rows(rows, day="2026-11-21")], ["b"])
 
 
 class BuildCacheTests(unittest.TestCase):
@@ -225,6 +298,8 @@ class BuildCacheTests(unittest.TestCase):
         self.assertEqual((player["id"], player["tipoff"], player["opponent"]), (1001, "T", "BOS"))
         self.assertEqual(cache["accuracy"], {"pts": {"mae": 4.56, "naive_mae": 4.76, "improvement_pct": 4.2}})
         self.assertEqual(cache["slate_date"], "2026-11-20")
+        self.assertEqual(cache["slate_dates"], ["2026-11-20"])
+        self.assertEqual((player["game_date"], cache["games"][0]["game_date"]), ("2026-11-20", "2026-11-20"))
 
     def test_accuracy_carries_over_when_there_is_no_report(self):
         model = SimpleNamespace(architecture="xgboost", trained_at="t", trained_rows=10)
@@ -289,6 +364,61 @@ class GamePredictionRouteTests(unittest.TestCase):
         self.assertIsNone(body['prediction'])                                # not on the slate
         self.assertEqual(body['slate_date'], '2026-11-20')
 
+    def _multi_day(self):
+        """Player 01 plays tonight and the day after; Player 02 only the day after."""
+        today = date.today()  # the routes use US Eastern; one day either side keeps this safe
+        days = [(today + timedelta(days=n)).isoformat() for n in (1, 2)]
+        self.cache = {'slate_date': days[0], 'slate_dates': days,
+                      'games': [{'game_id': 'g1', 'game_date': days[0], 'home': 'LAL', 'away': 'BOS'},
+                                {'game_id': 'g2', 'game_date': days[1], 'home': 'LAL', 'away': 'NYK'}],
+                      'players': [_row('Player 01', pts=(10.0, 10.0), game_id='g1', game_date=days[0]),
+                                  _row('Player 01', pts=(40.0, 10.0), game_id='g2', game_date=days[1]),
+                                  _row('Player 02', pts=(20.0, 10.0), game_id='g2', game_date=days[1])]}
+        return days
+
+    def test_list_has_one_card_per_player_with_later_games_attached(self):
+        days = self._multi_day()
+        headers = self._signed_in()
+        body = self.client.get('/api/game-predictions', headers=headers).get_json()
+        self.assertEqual(body['slate_dates'], days)
+        self.assertEqual(body['pagination']['total'], 2)
+        self.assertEqual([p['name'] for p in body['predictions']], ['Player 02', 'Player 01'])  # by nearest game
+        first = body['predictions'][1]
+        self.assertEqual((first['game_id'], [g['game_id'] for g in first['later_games']]), ('g1', ['g2']))
+        self.assertEqual(len(body['games']), 2)
+
+        body = self.client.get(f'/api/game-predictions?date={days[1]}', headers=headers).get_json()
+        self.assertEqual(body['date'], days[1])
+        self.assertEqual([g['game_id'] for g in body['games']], ['g2'])
+        self.assertEqual({(p['name'], p['game_id']) for p in body['predictions']}, {('Player 01', 'g2'), ('Player 02', 'g2')})
+        self.assertTrue(all(p['later_games'] == [] for p in body['predictions']))
+        body = self.client.get('/api/game-predictions?date=next', headers=headers).get_json()
+        self.assertEqual([p['name'] for p in body['predictions']], ['Player 01'])
+
+    def test_recommendations_rank_one_day_at_a_time(self):
+        days = self._multi_day()
+        headers = self._signed_in()
+        body = self.client.get('/api/game-recommendations', headers=headers).get_json()
+        self.assertEqual(body['date'], days[0])                               # nearest day by default
+        self.assertEqual([p['game_id'] for p in body['recommendations']['top']['pts']], ['g1'])
+        body = self.client.get(f'/api/game-recommendations?date={days[1]}', headers=headers).get_json()
+        self.assertEqual([p['name'] for p in body['recommendations']['top']['pts']], ['Player 01', 'Player 02'])
+
+    def test_player_lookup_lists_every_game_nearest_first(self):
+        self._multi_day()
+        body = self.client.get('/api/game-predictions/player/101', headers=self._signed_in()).get_json()
+        self.assertEqual([p['game_id'] for p in body['predictions']], ['g1', 'g2'])
+        self.assertEqual(body['prediction']['game_id'], 'g1')
+
+    def test_past_days_are_dropped(self):
+        days = self._multi_day()
+        self.cache['slate_dates'] = ['2000-01-01', *days]
+        self.cache['slate_date'] = '2000-01-01'
+        self.cache['players'].append(_row('Player 03', game_id='old', game_date='2000-01-01'))
+        body = self.client.get('/api/game-predictions', headers=self._signed_in()).get_json()
+        self.assertEqual((body['slate_date'], body['slate_dates'], body['stale']), (days[0], days, False))
+        self.assertNotIn('Player 03', [p['name'] for p in body['predictions']])
+
     def test_missing_cache_is_503(self):
         self.cache = None
         self.assertEqual(self.client.get('/api/game-predictions').status_code, 503)
@@ -334,6 +464,22 @@ class CacheReloadTests(unittest.TestCase):
                 path.write_text(json.dumps({'slate_date': 'c', 'players': []}))
                 os.utime(path, (5, 5))
                 self.assertEqual(state.current_game_predictions()['slate_date'], 'c')
+
+
+class FindSlateTests(unittest.TestCase):
+    def test_collects_the_next_game_days_skipping_off_days(self):
+        from scripts import generate_game_predictions_cache as script
+        event = ScoreboardEventTests()._event
+        schedule = {"20261120": [event()], "20261122": [event(), event(state="in")], "20261123": [event()],
+                    "20261124": [event()]}                                   # the 21st is an off-day
+        fake = lambda url, params: {"events": schedule.get(params["dates"], [])}  # noqa: E731
+        with patch.object(script.live_games, "_get", side_effect=fake) as get:
+            first, games = script.find_slate(SLATE, days=3)
+        self.assertEqual(first, SLATE)
+        self.assertEqual([g["game_date"] for g in games], [SLATE, SLATE + timedelta(days=2), SLATE + timedelta(days=3)])
+        self.assertEqual(get.call_count, 4)                                   # stops after the third game day
+        with patch.object(script.live_games, "_get", return_value={}):
+            self.assertEqual(script.find_slate(SLATE), (None, []))
 
 
 class AtomicCacheWriteTests(unittest.TestCase):

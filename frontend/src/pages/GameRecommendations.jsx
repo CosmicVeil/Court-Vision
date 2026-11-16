@@ -13,7 +13,7 @@ import TiltCard from '../components/TiltCard';
 import { GAME_PICK_KINDS, GAME_PICK_STATS, gameStat } from '../config/gamePredictionStats';
 import { buildApiUrl } from '../config/api';
 import { authHeaders, clearAuth, isAuthenticated } from '../utils/auth';
-import { formatSlateDate, formatTipoff, getPickLine } from '../utils/gamePredictions';
+import { formatSlateDate, formatTipoff, getDayTabs, getPickLine } from '../utils/gamePredictions';
 import { samePlayerName } from '../utils/playerNames';
 import { enterDelay } from '../utils/scrollReveal';
 import './Recommendations.css';
@@ -27,12 +27,15 @@ export default function GameRecommendations() {
   const [needsAuth, setNeedsAuth] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
   const [stat, setStat] = useState('pts');
+  // '' = the nearest day, which the API picks; picks compare players within one night.
+  const [day, setDay] = useState('');
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [loadingPlayer, setLoadingPlayer] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(buildApiUrl('game-recommendations'), { signal: controller.signal, headers: authHeaders() })
+    const query = day ? `?${new URLSearchParams({ date: day })}` : '';
+    fetch(buildApiUrl(`game-recommendations${query}`), { signal: controller.signal, headers: authHeaders() })
       .then(async response => {
         if (response.status === 401) {
           clearAuth();
@@ -43,12 +46,15 @@ export default function GameRecommendations() {
           setUnavailable(true);
           return;
         }
-        if (response.ok) setData(await response.json());
+        if (response.ok) {
+          const body = await response.json();
+          if (!controller.signal.aborted) setData(body);
+        }
       })
       .catch(err => { if (!controller.signal.aborted) console.error('Error fetching game picks', err); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, []);
+  }, [day]);
 
   const handlePlayerClick = async player => {
     setLoadingPlayer(true);
@@ -89,7 +95,7 @@ export default function GameRecommendations() {
         </h1>
         <p className="recommendations-subtitle">
           Who our per-game model expects to beat, top or fall short of their recent form
-          {data?.slate_date ? ` on ${formatSlateDate(data.slate_date)}` : ''}
+          {data?.date || data?.slate_date ? ` on ${formatSlateDate(data.date || data.slate_date)}` : ''}
         </p>
       </header>
 
@@ -97,6 +103,10 @@ export default function GameRecommendations() {
         {data && <StaleSlateNotice data={data} />}
         {/* Signed-out visitors always get the sign-in card, so only show the tabs while loading if
             they will still be there afterwards; otherwise the layout jumps when the 401 arrives. */}
+        {showPicks && data.slate_dates?.length > 1 && (
+          <PillNav className="pm-toggle gr-day-tabs" tabClassName="pm-tab" label="Game day" idPrefix="gr-day"
+            items={getDayTabs(data.slate_dates)} value={data.date || data.slate_dates[0]} onChange={setDay} />
+        )}
         {((loading && isAuthenticated()) || showPicks) && (
           <PillNav className="pm-toggle gr-stat-tabs" tabClassName="pm-tab" label="Stat" idPrefix="gr"
             panelId={showPicks ? 'gr-panel' : undefined} items={STAT_TABS} value={stat} onChange={setStat} />
@@ -174,7 +184,8 @@ export default function GameRecommendations() {
             </ResultRegion>
             <p className="gr-footnote">
               "avg" is the player's average over his previous 10 games. Above/below-average lists only include
-              players averaging {data.min_average_minutes ?? 15}+ minutes. Players ruled out on the injury report
+              players averaging {data.min_average_minutes ?? 15}+ minutes, and leave out anyone already in the top
+              projected lines. Players ruled out on the injury report
               are left out; questionable ones are flagged.
             </p>
           </>

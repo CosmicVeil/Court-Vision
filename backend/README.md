@@ -20,8 +20,8 @@ to signed-out clients.
 | `GET /api/predictions` | Public preview / full | Signed out: first `PUBLIC_PREVIEW_LIMIT` players only, `page` forced to 1, response flagged `"preview": true`. Signed in: full searchable, sortable, paginated list. |
 | `GET /api/player-prediction/<name>` | Account | `require_auth` → 401 without a valid token. |
 | `GET /api/recommendations/<stat>` | Account | `require_auth` → 401 without a valid token. |
-| `GET /api/game-predictions` | Public preview / full | Per-game predictions for the next slate (`search`, `team`, `game_id`, `sort_by`, `sort_order`, `page`, `limit`). Same preview rule as `/api/predictions`. 503 when there is no `game_predictions_cache.json`. |
-| `GET /api/game-recommendations` | Account | Per-game picks: `{top, over, fade}` × stat, `limit` per list (default 5, max 20). |
+| `GET /api/game-predictions` | Public preview / full | Per-game predictions for the next few game days, one row per player: his nearest game, with any later ones in `later_games` (`search`, `team`, `game_id`, `date` = `YYYY-MM-DD` or `next`, `sort_by`, `sort_order`, `page`, `limit`). Same preview rule as `/api/predictions`. 503 when there is no `game_predictions_cache.json`. |
+| `GET /api/game-recommendations` | Account | Per-game picks for one day (`date`, default the nearest): `{top, over, fade}` × stat, `limit` per list (default 5, max 20). |
 | `GET /api/players/search-all`, `/api/players/<id>` | Public / full | Player stats and history are public. The per-player prediction (`ml_stats`) is only included with a valid token; signed out it is `null` with `"predictions_locked": true`. |
 | `GET /api/players`, `/api/stats/*`, `/api/games/*` | Public | Live games and season stats stay open. |
 
@@ -48,7 +48,7 @@ Command-line tools in `scripts/`. Run them from `backend/`:
 | `.venv/bin/python scripts/scrape_season_stats.py` | Load or refresh the current-season stats (the daily GitHub Action runs this). |
 | `.venv/bin/python scripts/evaluate_game_model.py [--arch NAME] [--folds N]` | Walk-forward MAE comparison of the per-game model architectures (see [Per-game stat model](#per-game-stat-model)). Reads the game archive, so it needs `DATABASE_URL`. |
 | `.venv/bin/python scripts/train_game_model.py [--arch NAME] [--output PATH]` | Train the per-game model on every archived game and save it to `data/nba_game_model_<arch>.pkl` (git-ignored). |
-| `.venv/bin/python scripts/generate_game_predictions_cache.py [--arch NAME] [--date YYYY-MM-DD]` | Predict the next slate (the first day from `--date`, default today ET, with unstarted games) and write `data/game_predictions_cache.json`, which the API serves. Needs `DATABASE_URL` and a trained model. |
+| `.venv/bin/python scripts/generate_game_predictions_cache.py [--arch NAME] [--date YYYY-MM-DD] [--days N]` | Predict the next `N` game days (default 3; the first days from `--date`, default today ET, with unstarted games, within a week) and write `data/game_predictions_cache.json`, which the API serves. Needs `DATABASE_URL` and a trained model. |
 | `.venv/bin/python scripts/archive_games.py` | Store finished games (yesterday + today) in PostgreSQL. `--date`, `--start/--end` or `--season 2025-26` to backfill. |
 
 ## Game archive
@@ -211,7 +211,7 @@ baseline (the player's average over the previous 10 games) and writes
 ### Serving per-game predictions
 
 ```
-ESPN scoreboard (next slate, odds) ─┐
+ESPN scoreboard (next 3 game days) ─┐
 ESPN injury report (Out players) ───┼─> scripts/generate_game_predictions_cache.py
 Postgres game archive ──────────────┘      app/ml/game_upcoming.py  (features)
                                            GameStatModel.predict()
@@ -226,6 +226,13 @@ Postgres game archive ──────────────┘      app/ml/
 Production cannot run the model (no archive, low memory), so it is run once a day and the
 API reads the result, the same pattern as `predictions_cache.json`. The trade-off is
 staleness: a lineup change after the run is not reflected until the next one.
+
+Each run covers the next 3 game days, so a late or failed run still leaves the following
+days on the site: the routes drop days that have passed (US Eastern) per request
+(`game_predictions.upcoming()`). Every day is predicted from form as of the first one, since
+the earlier games in the window have not been played; rest days and back-to-backs are
+counted per game from the schedule. The run repeats daily, so a day is re-predicted with
+fresher form as it gets closer.
 
 `game_upcoming.py` rebuilds the `player_game_features` windows in pandas over everything
 archived before the slate date, and reuses `add_context()` unchanged by giving each

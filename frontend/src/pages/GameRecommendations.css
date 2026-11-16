@@ -1,12 +1,15 @@
 /* Per-game picks page. Header, cards and the lock panel come from Recommendations.css; the stat
    tabs reuse the Season / Game projections pill (PredictionModeToggle.css). */
 
+.gr-day-tabs,
 .gr-stat-tabs {
   width: max-content;
   max-width: 100%;
   margin: 0 auto 28px;
   overflow-x: auto;
 }
+
+.gr-day-tabs { margin-bottom: 14px; }
 
 .gr-grid {
   display: grid;

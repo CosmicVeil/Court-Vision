@@ -1,0 +1,59 @@
+/* A player's later predicted games: muted, compact lines under the nearest game's stats. */
+.later-games {
+  position: relative;
+  z-index: 1;
+  margin-top: calc(var(--space) * 3);
+  padding-top: calc(var(--space) * 3);
+  border-top: 1px dashed rgb(var(--ink-rgb) / 0.12);
+  color: var(--color-stone, var(--text-secondary));
+}
+
+.later-games-title {
+  margin: 0 0 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.later-games-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.later-game {
+  display: grid;
+  grid-template-columns: minmax(64px, auto) minmax(72px, auto) 1fr;
+  align-items: center;
+  gap: calc(var(--space) * 2);
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  letter-spacing: 0;
+  opacity: 0.85;
+}
+
+.later-game-day { font-weight: 700; }
+
+.later-game-opp {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.later-game-logo { --gm-size: 16px; display: inline-flex; }
+
+.later-game-stats {
+  display: flex;
+  justify-content: flex-end;
+  gap: calc(var(--space) * 2);
+  color: var(--text-primary);
+}
+
+.later-game-stats small {
+  color: var(--color-stone, var(--text-secondary));
+  font-size: 9px;
+}

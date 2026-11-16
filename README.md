@@ -113,7 +113,7 @@ See [backend/README.md](backend/README.md) for what each suite covers, how to re
 The per-game model reads the game archive in PostgreSQL, so it needs `DATABASE_URL`:
 ```bash
 python scripts/train_game_model.py                  # train and save the per-game model
-python scripts/generate_game_predictions_cache.py   # predict the next slate for the API
+python scripts/generate_game_predictions_cache.py   # predict the next 3 game days for the API
 ```
 See [Per-game stat model](backend/README.md#per-game-stat-model).
 

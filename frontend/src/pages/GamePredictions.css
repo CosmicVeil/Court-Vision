@@ -1,15 +1,47 @@
 /* Per-game predictions page. Layout, filters, sorting and cards come from Predictions.css and
    PlayerCard.css; this adds the slate strip and each card's matchup line. */
 
-/* ---------- Slate strip: one button per game, filters the list to it ---------- */
+/* ---------- Day tabs: every day, or one ---------- */
+.gp-day-tabs {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 20px;
+}
+
+/* ---------- Slate strip: games by day, one button per game, filters the list to it ---------- */
 .gp-slate {
+  display: grid;
+  gap: 18px;
+  max-width: 1200px;
+  margin: 0 auto 28px;
+}
+
+.gp-slate-games {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: calc(var(--space) * 3);
-  max-width: 1200px;
-  margin: 0 auto 28px;
 }
+
+.gp-slate-day-title {
+  margin: 0 0 10px;
+  color: var(--text-primary);
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.gp-slate-day-title span { color: var(--color-stone, var(--text-secondary)); }
+
+/* Later days: the nearest games lead, the rest stay readable but recede. */
+.gp-slate-day.is-later .gp-game { opacity: 0.7; }
+.gp-slate-day.is-later .gp-game:hover,
+.gp-slate-day.is-later .gp-game:focus-visible,
+.gp-slate-day.is-later .gp-game.is-active { opacity: 1; }
+.gp-slate-day.is-later .gp-slate-day-title { color: var(--color-stone, var(--text-secondary)); }
 
 .gp-game {
   display: flex;

@@ -2,9 +2,12 @@
 
 The per-game model (app/ml/game_model.py) needs the game archive and the trained model, which
 production (Render, low memory) does not load. So scripts/generate_game_predictions_cache.py
-predicts the next slate once a day and writes data/game_predictions_cache.json; the routes in
-app/api/routes/game_predictions.py only read that file. Same pattern as predictions_cache.json
-for the season model.
+predicts the next few game days once a day and writes data/game_predictions_cache.json; the
+routes in app/api/routes/game_predictions.py only read that file. Same pattern as
+predictions_cache.json for the season model.
+
+The cache covers several days so a late daily run still leaves the next games covered: at
+request time upcoming() drops the days that have already passed.
 
 Fantasy points and PRA are derived here at request time, so a user's scoring preset applies
 without regenerating the cache.
@@ -24,6 +27,10 @@ RECOMMENDATION_KINDS = ("top", "over", "fade")
 MIN_AVERAGE_MINUTES = 15.0
 DEFAULT_PICKS = 5
 MAX_PICKS = 20
+
+# Fields kept for a player's later games on a card: enough for one compact line each.
+LATER_GAME_FIELDS = ("game_id", "game_date", "tipoff", "team", "opponent", "is_home", "opponent_logo", "injury",
+                     "predicted_pts", "predicted_reb", "predicted_ast", "predicted_minutes")
 
 SORT_KEYS = {"name", "team", "tipoff"} | {f"predicted_{stat}" for stat in (*TARGET_COLUMNS, "pra", "fantasy")} \
     | {f"diff_{stat}" for stat in (*TARGET_COLUMNS, "pra", "fantasy")}
@@ -74,10 +81,18 @@ def _injury_fields(injury) -> Optional[Dict]:
     return {key: injury.get(key) for key in keys}
 
 
+def _iso_date(value) -> str:
+    """date, Timestamp or ISO string -> "YYYY-MM-DD" ("" when missing)."""
+    if value is None or value != value:  # None or NaT
+        return ""
+    return value.isoformat()[:10] if hasattr(value, "isoformat") else str(value)[:10]
+
+
 def build_cache(slate_date: str, games: List[Dict], frame, predictions, model, report: Optional[Dict] = None,
                 generated_at: Optional[str] = None, previous: Optional[Dict] = None) -> Dict:
-    """The JSON the API serves: the slate, one row per player, and the model's held-out accuracy.
+    """The JSON the API serves: the games, one row per (player, game), and the model's held-out accuracy.
 
+    slate_date: the first day covered; slate_dates lists every day with games, oldest first.
     frame: build_upcoming_frame() output; predictions: model.predict(frame), same index.
     previous: the cache being replaced. The evaluation report is git-ignored, so the daily
     GitHub Action has none; it keeps the last known accuracy for the same architecture instead.
@@ -94,6 +109,7 @@ def build_cache(slate_date: str, games: List[Dict], frame, predictions, model, r
             "is_home": bool(row["is_home"]),
             "position": row["position"] or "",
             "game_id": row["game_id"],
+            "game_date": _iso_date(row["game_date"]),
             "tipoff": tipoffs.get(row["game_id"], ""),
             "injury": _injury_fields(row["injury"]),
         }
@@ -115,13 +131,58 @@ def build_cache(slate_date: str, games: List[Dict], frame, predictions, model, r
     return {
         "generated_at": generated_at or datetime.now().astimezone().isoformat(timespec="seconds"),
         "slate_date": slate_date,
+        "slate_dates": sorted({_iso_date(game.get("game_date")) for game in games} - {""}) or [slate_date],
         "model": {"architecture": model.architecture, "trained_at": model.trained_at,
                   "trained_rows": model.trained_rows},
         "accuracy": accuracy,
-        "games": [{key: game.get(key) for key in ("game_id", "tipoff", "home", "away", "spread", "over_under", "odds_text")}
+        "games": [{**{key: game.get(key) for key in ("game_id", "tipoff", "home", "away", "spread", "over_under", "odds_text")},
+                   "game_date": _iso_date(game.get("game_date")) or slate_date}
                   for game in games],
         "players": players,
     }
+
+
+def upcoming(cache: Dict, today: str) -> Dict:
+    """Copy of the cache without the days before `today` (US Eastern, "YYYY-MM-DD").
+
+    Rows and games from a cache written before multi-day slates have no game_date: they get
+    slate_date. If every day has passed, every day is kept, so the pages can still show the
+    games and flag them stale instead of showing nothing."""
+    first = cache.get("slate_date") or ""
+    games = [{**game, "game_date": game.get("game_date") or first} for game in cache.get("games") or []]
+    rows = [{**row, "game_date": row.get("game_date") or first} for row in cache.get("players") or []]
+    dates = sorted(({item["game_date"] for item in games + rows} | set(cache.get("slate_dates") or [first])) - {""})
+    kept = [day for day in dates if day >= today] or dates
+    return {
+        **cache,
+        "slate_date": kept[0] if kept else first,
+        "slate_dates": kept,
+        "games": [game for game in games if game["game_date"] in kept],
+        "players": [row for row in rows if row["game_date"] in kept],
+    }
+
+
+def resolve_day(day: str, dates: List[str]) -> str:
+    """A ?date= value -> a day in `dates`: "next" is the nearest, anything not covered is "" (all days)."""
+    if day == "next":
+        return dates[0] if dates else ""
+    return day if day in dates else ""
+
+
+def group_by_player(rows: List[Dict]) -> List[Dict]:
+    """One row per player: his nearest game, with his later games compacted into `later_games`.
+
+    Rows must already be enriched (later games carry the opponent's logo). Sort the result
+    afterwards: the ranking is by each player's nearest game."""
+    by_player: Dict = {}
+    for row in sorted(rows, key=lambda r: (r.get("game_date") or "", r.get("tipoff") or "")):
+        by_player.setdefault(row.get("espn_id") or row.get("id") or row["name"], []).append(row)
+    grouped = []
+    for games in by_player.values():
+        nearest = dict(games[0])
+        nearest["later_games"] = [{key: game.get(key) for key in LATER_GAME_FIELDS} for game in games[1:]]
+        grouped.append(nearest)
+    return grouped
 
 
 def with_logos(game: Dict) -> Dict:
@@ -146,12 +207,13 @@ def enrich(row: Dict, weights=None) -> Dict:
     return row
 
 
-def filter_rows(rows: List[Dict], search: str = "", team: str = "", game_id: str = "") -> List[Dict]:
+def filter_rows(rows: List[Dict], search: str = "", team: str = "", game_id: str = "", day: str = "") -> List[Dict]:
     search = search.lower()
     return [row for row in rows
             if (not search or search in row["name"].lower())
             and (not team or row["team"] == team)
-            and (not game_id or row["game_id"] == game_id)]
+            and (not game_id or row["game_id"] == game_id)
+            and (not day or row.get("game_date") == day)]
 
 
 def sort_rows(rows: List[Dict], sort_by: str, sort_order: str) -> List[Dict]:
@@ -165,18 +227,29 @@ def sort_rows(rows: List[Dict], sort_by: str, sort_order: str) -> List[Dict]:
     return sorted(present, key=lambda row: row[sort_by], reverse=reverse) + missing
 
 
+def _pick_key(row: Dict):
+    """One player in one game, for keeping a player out of two pick lists."""
+    return row.get("espn_id") or row.get("id") or row.get("name"), row.get("game_id")
+
+
 def recommendations(rows: List[Dict], limit: int = DEFAULT_PICKS) -> Dict[str, Dict[str, List[Dict]]]:
     """{kind: {stat: [rows]}} for every RECOMMENDATION_KINDS x RECOMMENDATION_STATS.
 
     Rows must already be enriched. Players flagged on the injury report stay in (with their
     flag): only ruled-out players are left out, and the cache never contains those.
+
+    A player shows up in one list per stat: one already in "top" is left out of "over" and
+    "fade", which fill up with the next players. "top" keeps him because it is a plain ranking
+    by projection, and a top list without its #1 would read as broken.
     """
     regulars = [row for row in rows if (row.get("last10_minutes") or 0) >= MIN_AVERAGE_MINUTES]
     picks = {kind: {} for kind in RECOMMENDATION_KINDS}
     for stat in RECOMMENDATION_STATS:
         picks["top"][stat] = sort_rows(rows, f"predicted_{stat}", "desc")[:limit]
-        over = [row for row in regulars if (row.get(f"diff_{stat}") or 0) > 0]
-        fade = [row for row in regulars if (row.get(f"diff_{stat}") or 0) < 0]
+        in_top = {_pick_key(row) for row in picks["top"][stat]}
+        rest = [row for row in regulars if _pick_key(row) not in in_top]
+        over = [row for row in rest if (row.get(f"diff_{stat}") or 0) > 0]
+        fade = [row for row in rest if (row.get(f"diff_{stat}") or 0) < 0]
         picks["over"][stat] = sort_rows(over, f"diff_{stat}", "desc")[:limit]
         picks["fade"][stat] = sort_rows(fade, f"diff_{stat}", "asc")[:limit]
     return picks
