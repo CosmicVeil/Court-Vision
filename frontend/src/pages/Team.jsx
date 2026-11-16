@@ -1,14 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { buildApiUrl } from '../config/api';
 import InjuryBadge from '../components/InjuryBadge';
 import PillNav from '../components/PillNav';
 import PlayerHeadshot from '../components/PlayerHeadshot';
-import PlayerStatsModal from '../components/PlayerStatsModal';
 import { getScoring } from '../utils/auth';
 import { fptsTitle } from '../utils/fantasy';
 import { getGameDetailPath } from '../utils/liveGames';
-import { buildPlayerFallback, fetchPlayerDetails } from '../utils/playerDetails';
+import { playerPath } from '../utils/playerPage';
 import {
   buildTeamEndpoint, formatScore, getRecentForm, getScoringAverages, getTeamColor, getTeamLeaders, getTeamPath,
   summarizeGames, withRunningRecord,
@@ -193,9 +192,7 @@ export default function Team() {
   // Keyed by team, so moving to another team shows the loading state instead of the old team.
   const [result, setResult] = useState({ tricode: null, status: 'loading', data: null });
   const [tab, setTab] = useState('roster');
-  const [player, setPlayer] = useState(null);
-  const [playerLoading, setPlayerLoading] = useState(false);
-  const playerRequestRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Aborting on cleanup drops a slow response for a team the user has already left.
@@ -213,38 +210,15 @@ export default function Team() {
     return () => controller.abort();
   }, [tricode]);
 
-  useEffect(() => () => playerRequestRef.current?.abort(), []);
-
-  const closePlayer = useCallback(() => {
-    playerRequestRef.current?.abort();
-    playerRequestRef.current = null;
-    setPlayerLoading(false);
-    setPlayer(null);
-  }, []);
-
-  const selectPlayer = useCallback(async selected => {
-    playerRequestRef.current?.abort();
-    const controller = new AbortController();
-    playerRequestRef.current = controller;
-    // If the detail lookup fails, the popout is built from this row, so hand it every stat the
-    // row shows (under the box-score names buildPlayerFallback reads) or it would show zeros.
-    const fallback = {
+  const selectPlayer = useCallback(selected => {
+    // The player page shows this row until the full profile loads (and if the lookup fails), so
+    // hand it every stat the row shows, under the box-score names buildPlayerFallback reads.
+    const player = {
       ...selected, team: tricode.toUpperCase(),
       pts: selected.ppg, reb: selected.rpg, ast: selected.apg, stl: selected.spg, blk: selected.bpg,
     };
-    setPlayer(null);
-    setPlayerLoading(true);
-    try {
-      setPlayer(await fetchPlayerDetails(fallback, controller.signal));
-    } catch (reason) {
-      if (reason.name !== 'AbortError') setPlayer(buildPlayerFallback(fallback));
-    } finally {
-      if (playerRequestRef.current === controller) {
-        playerRequestRef.current = null;
-        setPlayerLoading(false);
-      }
-    }
-  }, [tricode]);
+    navigate(playerPath(player), { state: { player } });
+  }, [navigate, tricode]);
 
   const status = result.tricode === tricode ? result.status : 'loading';
   // The team's own colour tints the banner; everything else stays in the site's palette.
@@ -291,7 +265,6 @@ export default function Team() {
             : <SeasonGames games={games} available={gamesAvailable} missing={gamesMissing} />}
         </section>
       </div>
-      <PlayerStatsModal player={player} loading={playerLoading} onClose={closePlayer} />
     </div>
   );
 }

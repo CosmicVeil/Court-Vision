@@ -56,10 +56,9 @@
   "codex_model": "gpt-6-astra",
   "codex_reasoning_effort": {
     "diagnose": "high",
-    "code": "high",
-    "fix": "medium"
+    "review": "high"
   },
-  "codex_skills": {
+  "stage_skills": {
     "diagnose": [
       "~/.codex/plugins/cache/openai-curated-remote/superpowers/7.0.1/skills/systematic-debugging",
       "~/.codex/plugins/cache/openai-curated-remote/superpowers/7.0.1/skills/test-driven-development"

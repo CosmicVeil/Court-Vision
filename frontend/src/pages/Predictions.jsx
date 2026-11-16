@@ -1,12 +1,11 @@
 import ContentSkeleton from '../components/ContentSkeleton';
 import LockIcon from '../components/LockIcon';
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import PageHero from '../components/PageHero';
 import Pagination from '../components/Pagination';
 import PlayerCard from '../components/PlayerCard';
-import PlayerStatsModal from '../components/PlayerStatsModal';
 import PredictionModeToggle from '../components/PredictionModeToggle';
 import useFlip from '../hooks/useFlip';
 import useListQuery from '../hooks/useListQuery';
@@ -16,7 +15,7 @@ import { getFavorites, toggleFavorite } from '../utils/favorites';
 import { authHeaders, clearAuth, isAuthenticated } from '../utils/auth';
 import { buildApiUrl } from '../config/api';
 import { scrollToIfAbove } from '../utils/scroll';
-import { samePlayerName } from '../utils/playerNames';
+import { playerPath } from '../utils/playerPage';
 import { getPredictionsHeroStats } from '../utils/pageHero';
 import { getPredictionCardStats } from '../utils/playerCard';
 import { getSoFarStats } from '../utils/seasonSoFar';
@@ -65,8 +64,6 @@ const Predictions = () => {
   const [positions, setPositions] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
   const [totalPlayers, setTotalPlayers] = useState(0);
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
-  const [loadingPlayer, setLoadingPlayer] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState(new Set());
   const [showAuthModal, setShowAuthModal] = useState(false);
   // True when the server returned only the signed-out preview slice.
@@ -74,6 +71,7 @@ const Predictions = () => {
   const [sessionExpired, setSessionExpired] = useState(false);
   const gridRef = useRef(null);
   const resultsRef = useRef(null);
+  const navigate = useNavigate();
   useFlip(gridRef);
 
   const goToPage = (page) => {
@@ -105,46 +103,8 @@ const Predictions = () => {
     });
   };
 
-  // Dismiss modal on Escape
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') setSelectedPlayer(null);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  const handlePlayerClick = async (player) => {
-    setLoadingPlayer(true);
-    try {
-      const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(player.name)}`));
-      const data = await response.json();
-      const match = (data.players || []).find(p => samePlayerName(p.name, player.name));
-      if (match) {
-        setSelectedPlayer(match);
-      } else {
-        setSelectedPlayer({
-          name: player.name,
-          team: player.team || 'UNK',
-          position: player.position || 'UNK',
-          current_stats: {
-            ppg: player.ppg_last || 0,
-            rpg: player.rpg_last || 0,
-            apg: player.apg_last || 0,
-            spg: player.spg_last || 0, bpg: player.bpg_last || 0,
-            tov: player.tov_last || 0, mpg: player.mpg_last || 0,
-            fg_pct: player.fg_pct_last || 0, fg3_pct: player.fg3_pct_last || 0,
-            ft_pct: player.ft_pct_last || 0, games_played: 0, minutes: player.mpg_last || 0
-          },
-          ml_stats: null,
-          history: {}
-        });
-      }
-    } catch (err) {
-      console.error('Error fetching player details:', err);
-    } finally {
-      setLoadingPlayer(false);
-    }
+  const handlePlayerClick = (player) => {
+    navigate(playerPath(player), { state: { player } });
   };
 
 
@@ -394,8 +354,6 @@ const Predictions = () => {
           )}
         </>
       )}
-
-      <PlayerStatsModal player={selectedPlayer} loading={loadingPlayer} onClose={() => setSelectedPlayer(null)} />
 
       {showAuthModal && (
         <div className="stats-modal-backdrop" onClick={() => setShowAuthModal(false)}>

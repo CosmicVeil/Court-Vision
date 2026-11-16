@@ -151,7 +151,7 @@ test("season dropdown starts at the player's first season in history", async () 
   assert.deepEqual(playerSeasons(seasons, { 2003: {}, 2004: {}, 2027: {} }, "2026-2027"), seasons);
   for (const history of [undefined, null, {}]) assert.deepEqual(playerSeasons(seasons, history, "2026-2027"), seasons);
   assert.match(gameLog, /playerSeasons\(result\.data\?\.available_seasons/);
-  assert.match(readSource("PlayerStatsModal.jsx"), /<PlayerGameLog playerId=\{player\.id\} history=\{player\.history\} \/>/);
+  assert.match(readSource("PlayerProfile.jsx"), /<PlayerGameLog playerId=\{player\.id\} history=\{player\.history\} \/>/);
 });
 
 test("retired players' seasons end at their last season and open on it", async () => {

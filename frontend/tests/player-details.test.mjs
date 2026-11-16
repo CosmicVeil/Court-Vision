@@ -1,9 +1,15 @@
 import assert from 'node:assert/strict';
 import test, { beforeEach } from 'node:test';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { loadFrontendModule, renderComponent } from './render-helpers.mjs';
 
 const { buildPlayerFallback, fetchPlayerDetails } = loadFrontendModule('src/utils/playerDetails.js');
-const { default: PlayerStatsModal } = loadFrontendModule('src/components/PlayerStatsModal.jsx');
+const { default: PlayerProfile } = loadFrontendModule('src/components/PlayerProfile.jsx');
+const { default: PlayerPage } = loadFrontendModule('src/pages/PlayerPage.jsx');
+// The player page's profile, on its default Current Stats tab.
+const profile = player => renderComponent(PlayerProfile, { player, tab: 'current', onTabChange: () => {}, returnTo: '/players/test' });
 beforeEach(t => {
   t.mock.method(globalThis, 'fetch', () => { throw new Error('Unexpected network request'); });
 });
@@ -37,7 +43,8 @@ test('fallback adds the id without mutating the box-score row or losing its stat
   assert.equal(Object.hasOwn(player, 'id'), false);
 });
 
-test('a search without an exact match carries the box-score personId into the modal photo', async t => {
+// The player page shows the large (1040x760) headshot where the popout used the small one.
+test('a search without an exact match carries the box-score personId into the profile photo', async t => {
   const signal = new AbortController().signal;
   const fetchMock = t.mock.method(globalThis, 'fetch', async () => ({
     ok: true, json: async () => ({ players: [{ id: 201939, name: 'Another Player' }] }),
@@ -46,43 +53,44 @@ test('a search without an exact match carries the box-score personId into the mo
   assert.equal(player.id, 2544);
   assert.deepEqual(fetchMock.mock.calls[0].arguments,
     ['/api/players/search-all?query=Test%20Player', { signal }]);
-  const html = renderComponent(PlayerStatsModal, { player, loading: false, onClose: () => {} });
-  assert.match(html, /class="player-headshot stats-modal-photo"/);
-  assert.match(html, /<img[^>]*src="https:\/\/cdn\.nba\.com\/headshots\/nba\/latest\/260x190\/2544\.png"[^>]*alt=""/);
+  const html = profile(player);
+  assert.match(html, /class="player-headshot pp-photo"/);
+  assert.match(html, /<img[^>]*src="https:\/\/cdn\.nba\.com\/headshots\/nba\/latest\/1040x760\/2544\.png"[^>]*alt=""/);
   assert.doesNotMatch(html, /player-headshot-fallback/);
 });
 
-test('a successful exact search keeps the detail id used by the modal header', async t => {
+test('a successful exact search keeps the detail id used by the profile header', async t => {
   const detail = { id: 2544, name: 'Test Player', team: 'LAL', position: 'F', age: 25 };
   t.mock.method(globalThis, 'fetch', async () => ({ ok: true, json: async () => ({ players: [detail] }) }));
   const player = await fetchPlayerDetails({ name: 'Test Player', personId: 201939 });
   assert.equal(player, detail);
-  const html = renderComponent(PlayerStatsModal, { player, loading: false, onClose: () => {} });
-  assert.match(html, /class="stats-modal-header stats-modal-header--photo"/);
-  assert.match(html, /260x190\/2544\.png/);
-  assert.match(html, /<h2[^>]*>Test Player<\/h2>/);
-  assert.match(html, /class="stats-modal-player-team-badge">LAL<\/span>/);
+  const html = profile(player);
+  assert.match(html, /<header class="pp-header"/);
+  assert.match(html, /1040x760\/2544\.png/);
+  assert.match(html, /<h1[^>]*>Test Player<\/h1>/);
+  assert.match(html, /class="pp-team-badge">LAL<\/span>/);
   assert.match(html, /<strong>Position:<\/strong> F/);
   assert.match(html, /<strong>Age:<\/strong> 25/);
 });
 
-test('modal renders a labelled silhouette path instead of requesting a photo for unusable ids', () => {
+test('profile renders a labelled silhouette path instead of requesting a photo for unusable ids', () => {
   for (const ids of [{}, { id: null }, { id: 0 }, { id: 900000000 }, { personId: null }]) {
     const player = buildPlayerFallback({ name: 'Rookie', ...ids });
-    const html = renderComponent(PlayerStatsModal, { player, loading: false, onClose: () => {} });
+    const html = profile(player);
     assert.doesNotMatch(html, /<img\b/);
     assert.match(html, /<svg[^>]*class="player-headshot-fallback"[^>]*role="img"[^>]*aria-label="No photo of Rookie"/);
     assert.match(html, /<circle\b/);
     assert.match(html, /<path d="[^"]+"/);
-    assert.match(html, /<h2[^>]*>Rookie<\/h2>/);
+    assert.match(html, /<h1[^>]*>Rookie<\/h1>/);
   }
 });
 
-test('closed and loading modals do not render a premature photo', () => {
-  assert.equal(renderComponent(PlayerStatsModal, { player: null, loading: false, onClose: () => {} }), '');
-  const html = renderComponent(PlayerStatsModal, { player: null, loading: true, onClose: () => {} });
-  assert.match(html, /Loading player details/);
-  assert.doesNotMatch(html, /player-headshot|stats-modal-photo|<img\b/);
+// Replaces "closed and loading modals": a page has no closed state, only loading before data arrives.
+test('a player page still loading without a row does not render a premature photo', () => {
+  const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/players/2544'] },
+    createElement(Routes, null, createElement(Route, { path: '/players/:playerId', element: createElement(PlayerPage) }))));
+  assert.match(html, /Loading player…/);
+  assert.doesNotMatch(html, /player-headshot|pp-photo|<img\b/);
 });
 
 test('fallback passes through season shooting percentages and games played without rescaling', () => {

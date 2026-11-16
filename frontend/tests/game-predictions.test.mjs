@@ -106,9 +106,8 @@ test("the popup's Game projections tab compares last-10 averages with the predic
   assert.equal(predictionStats.pts, 24.4);
   assert.equal(currentStats.reb, null);              // shown as "—", not 0
   assert.equal(predictionStats.fantasy, 40.2);
-  const modal = readSource("PlayerStatsModal.jsx");
-  assert.match(modal, /\['next-game', 'Game projections'\]/);
-  assert.match(modal, /<PlayerNextGame player=\{player\} returnTo=\{returnTo\} \/>/);
+  assert.match(readFrontend("src/utils/playerPage.js"), /\{ id: 'next-game', label: 'Game projections' \}/);
+  assert.match(readSource("PlayerProfile.jsx"), /<PlayerNextGame player=\{player\} returnTo=\{returnTo\} \/>/);
   assert.match(readSource("PlayerNextGame.jsx"), /groups=\{GAME_PREDICTION_GROUPS\}/);
 });
 

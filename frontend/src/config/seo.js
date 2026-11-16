@@ -100,6 +100,11 @@ export function getPageMeta(rawPathname) {
   // Single games go stale within a day, and stat charts sit behind login: keep them out of the index.
   if (/^\/games\/[^/]+$/.test(pathname)) return page({ title: 'NBA Game – Box Score' }, true);
   if (/^\/recommendations\/[^/]+$/.test(pathname)) return page({ title: 'NBA Stat Recommendations' }, true);
+  // Player pages: PageMeta only sees the path, so the title can't name the player, and thousands of
+  // pages with one title would be duplicate content. Keep them out of the index for now.
+  if (/^\/players\/(?:by-name\/)?(?!by-name$)[^/]+$/.test(pathname)) {
+    return page({ title: 'NBA Player – Stats, Game Log & Predictions' }, true);
+  }
 
   // Netlify answers every URL with 200, so an unknown path would look like a real page. noindex stops that.
   return page({ title: 'Page Not Found' }, true);

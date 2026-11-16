@@ -1,11 +1,11 @@
-# CourtVision: Claude plan → Codex code → Claude review
+# CourtVision: Claude plan → Claude code → Codex review
 
-This is a local, on-demand pipeline. Give it one task; it works directly in this checkout, prepares dependencies, records baseline checks, asks Claude to plan, asks Codex to implement, runs checks, and asks a fresh Claude session to review the actual changes. Codex can address findings up to twice. It leaves the changes uncommitted for you to review in your editor, plus the evidence.
+This is a local, on-demand pipeline. Give it one task; it works directly in this checkout, prepares dependencies, records baseline checks, asks Claude to plan, asks a second Claude session to implement, runs checks, and asks Codex (`codex exec review`, its built-in code review) to review the actual changes. Claude can address findings up to twice. It leaves the changes uncommitted for you to review in your editor, plus the evidence.
 
 There are two workflows:
 
-- **Feature workflow** (default): setup → baseline → Claude plan → Codex code → checks → Claude review → fixes.
-- **Bug workflow** (`--bug`): setup → baseline → **Codex diagnosis** → **reproduction checks** → Claude plan → Codex code → checks → Claude review → fixes. Codex tests and reviews the code to find what causes the error before anyone plans a fix.
+- **Feature workflow** (default): setup → baseline → Claude plan → Claude code → checks → Codex review → Claude fixes.
+- **Bug workflow** (`--bug`): setup → baseline → **Codex diagnosis** → **reproduction checks** → Claude plan → Claude code → checks → Codex review → Claude fixes. Codex tests and reviews the code to find what causes the error before anyone plans a fix.
 
 ## Start on this Mac
 
@@ -48,28 +48,28 @@ Codex must not fix the bug during diagnosis. If it changes any file outside `tes
 
 ## Strict scope
 
-Every agent prompt tells the agent to change only what the task asks for: no refactors, cleanups, config changes, or fixes to related code the task did not mention. The planner lists related issues under "Out of scope (not planned)". The reviewer flags unrequested changes as findings to revert and never asks for out-of-scope work, and Codex skips any review finding that would go beyond the task. Name everything you want changed in the task itself.
+Every agent prompt tells the agent to change only what the task asks for: no refactors, cleanups, config changes, or fixes to related code the task did not mention. The planner lists related issues under "Out of scope (not planned)". The reviewer flags unrequested changes as findings to revert and never asks for out-of-scope work, and the implementing Claude skips any review finding that would go beyond the task. Name everything you want changed in the task itself.
 
 ## Design specs, starting branches and check scripts
 
-- `--spec path/to/spec.md` copies a design spec into the run folder; the planner, Codex and the reviewer must all follow it.
+- `--spec path/to/spec.md` copies a design spec into the run folder; the planner, the implementer and the Codex reviewer must all follow it.
 - `--base <branch>` creates a new branch (named by `--branch`, or `ai/<timestamp>`) from that branch or commit and switches to it before the run.
 - Check commands can use `{workflow_dir}`, `{run_dir}` and `{checkout}`, and get `AI_RUN_DIR` and `AI_CHECK_LABEL` in their environment. Put controller-owned check scripts in `.ai-workflow/checks/` and reference them with `{workflow_dir}` so the agents can't edit them. A check that saves PNGs to `$AI_RUN_DIR/screenshots/$AI_CHECK_LABEL/` has them passed to the reviewer.
-- Codex's prompt includes two working rules adapted from the Superpowers skills: work test-first, and never report something as done without running the command that proves it.
+- The implementer's prompt includes two working rules adapted from the Superpowers skills: work test-first, and never report something as done without running the command that proves it.
 
 ## Skills per stage
 
 Codex can't usefully load skills on its own: it has about 1,700 skill descriptions available, overflows its skills budget and drops them all. The runner names exact skills per stage instead. In the config:
 
-- `codex_skills` maps a stage (`diagnose`, `code`, `fix`) to a list of skill folders.
-- `review_skills` lists skill folders for Claude's review.
+- `stage_skills` maps a stage (`diagnose` for Codex, `code` and `fix` for Claude) to a list of skill folders.
+- `review_skills` lists skill folders for the Codex review.
 
 Each folder must contain a `SKILL.md`. Before creating a run, the runner checks that every listed folder exists, and stops with the missing path if one doesn't. (Plugin version folders such as Superpowers' `6.4.2` change when the plugin updates.) It then copies each folder into `skills/` in the run folder. Every agent reads the skills from there, and the run keeps a record of exactly what it used. Prompts tell the agents that nobody is available to answer a skill's questions, and that the workflow's own rules (strict scope, no commits, no new dependencies, output format) override any skill.
 
 Left out on purpose:
 
 - `using-superpowers`, which would make Codex search every skill.
-- `brainstorming`, `writing-plans` and `requesting-code-review`, because Claude plans and reviews.
+- `brainstorming`, `writing-plans` and `requesting-code-review`, because Claude plans and Codex reviews.
 - `using-git-worktrees`, `finishing-a-development-branch`, `subagent-driven-development` and `dispatching-parallel-agents`, which conflict with the runner.
 - `scroll-experience`, which is built around GSAP, a library these projects don't use.
 
@@ -84,7 +84,7 @@ The `~/.agents/skills` folders are community-written; read a skill before adding
 
 The design skills only cover mechanics (tokens, spacing, motion performance, accessibility), not a visual style. They were chosen because they assume no CSS framework or animation library. Skills built around Tailwind, Framer Motion, shadcn or GSAP (`design-taste-frontend`, `high-end-visual-design`, `minimalist-ui`, `baseline-ui`) were left out, and so was `web-design-guidelines`, which fetches its rules from the web at runtime. The design system they apply is in `frontend/docs/design-system.md`; pass it with `--spec`.
 
-The animation skills used in Atlas (`fixing-motion-performance`, `review-animations` in `~/.agents/skills`) are optional here; add them to `codex_skills` and `review_skills` for animation-heavy tasks.
+The animation skills used in Atlas (`fixing-motion-performance`, `review-animations` in `~/.agents/skills`) are optional here; add them to `stage_skills` and `review_skills` for animation-heavy tasks.
 
 ## What a run does
 
@@ -92,11 +92,11 @@ The animation skills used in Atlas (`fixing-motion-performance`, `review-animati
 2. Runs the configured `setup` commands in the checkout (`npm ci` in `frontend/`, which reinstalls `node_modules`, and `backend/.venv`). This requires network access; stop a running Vite dev server first if `npm ci` disturbs it.
 3. Records baseline results for every configured check.
 4. Claude reads the code and produces `plan.md` with acceptance criteria.
-5. Codex edits the checkout with the workspace-write sandbox and no interactive approval prompts. Operations outside its sandbox fail rather than being automatically escalated. It must add or update tests for everything it builds or changes (the plan lists them, and the reviewer treats missing tests as a finding).
-6. The controller runs configured checks and saves logs. Claude independently reads the Git diff, new files, surrounding source, plan, and check results, and returns structured review findings.
+5. A second Claude session edits the checkout with Read, Glob, Grep, Edit and Write plus an allow-listed shell (`claude_bash` in the config; defaults to npm, node, npx, the venv Python, `git diff`, `git status`, `git rm` and `ls`; deletions go through `git rm` so only tracked files can be removed and Git can restore them). It runs in `dontAsk` mode, so anything outside that list is denied rather than prompting; denials are appended to its report. It must add or update tests for everything it builds or changes (the plan lists them, and the reviewer treats missing tests as a finding).
+6. The controller runs configured checks and saves logs. Codex runs `codex exec review` in a read-only sandbox with instructions naming the task, plan, diff, new files and check results. Codex review prints findings as `- [P0..P3] title — file:line`; the controller parses those. P0–P2 block approval, P3 nits are recorded as `non_blocking` (change the cut-off with `review_block_priority`). An empty review stops the run instead of counting as approval. (`codex review --uncommitted` cannot take custom instructions, and review mode ignores `--output-schema`, which is why the prompt names the diff and the result is parsed from text.)
 7. Up to two fix/review rounds run. Success requires both zero unresolved review findings and every required check passing. Otherwise the run ends with `needs-attention` and exit code 2.
 
-Claude receives only Read, Glob and Grep tools in safe mode. Its hooks, plugins and custom instructions are disabled by that mode; prompts explicitly ask it to read applicable AGENTS.md/CLAUDE.md. Codex is instructed not to commit/push/merge/deploy. No controller step performs these actions. This is a personal local development workflow, not a hostile-code sandbox or proof of correctness. Run it only against projects you trust.
+The planner receives only Read, Glob and Grep tools in safe mode; the implementer gets edit tools and the allow-listed shell, also in safe mode. Its hooks, plugins and custom instructions are disabled by that mode; prompts explicitly ask it to read applicable AGENTS.md/CLAUDE.md. The implementer is instructed not to commit/push/merge/deploy. No controller step performs these actions. This is a personal local development workflow, not a hostile-code sandbox or proof of correctness. Run it only against projects you trust.
 
 ## CourtVision verification
 
@@ -135,7 +135,7 @@ Review the uncommitted changes and new files in your editor (`git status`, `git 
 2. Copy `pipeline.py`, `config.json`, `SETUP.md` and optionally `test_pipeline.py` into the other repository's `.ai-workflow` directory.
 3. Edit `config.json` for that project. `setup` is a list of dependency-install commands; `checks` lists commands, names, whether they are required, and an optional `cwd` relative to the checkout. `test_paths` lists the globs the bug diagnosis may edit. Commands are argument arrays, not shell strings. Wildcards in check arguments are expanded by the runner. Use executable scripts for complex shell logic.
 4. Replace CourtVision's constraints with that project's requirements. Include at least one meaningful required check. Choose offline tests when possible. Keep `max_fix_rounds` between 0 and 2.
-5. CourtVision's configs use `claude_model` `opus`, and Codex `gpt-6-astra` with high reasoning effort for diagnosis and coding and medium for fix rounds. `codex_reasoning_effort` can be one value for every stage or a map per stage; both repos use `{"diagnose": "high", "code": "high", "fix": "medium"}`, because fix rounds address specific review findings and medium effort saves plan allowance. The runner starts Codex with `--ignore-user-config`, so `~/.codex/config.toml` is not read; set the model and effort in the config. Leaving `codex_model` or `codex_reasoning_effort` `null` falls back to the Codex CLI default, which is a different model with no reasoning. Larger models and higher effort use more of your allowance, and neither paid plan guarantees unlimited automatic runs.
+5. CourtVision's configs use `claude_model` `opus`, and Codex `gpt-6-astra` with high reasoning effort for diagnosis and review. `codex_reasoning_effort` can be one value for every Codex stage or a map per stage; both repos use `{"diagnose": "high", "review": "high"}`. The runner starts Codex with `--ignore-user-config`, so `~/.codex/config.toml` is not read; set the model and effort in the config. Leaving `codex_model` or `codex_reasoning_effort` `null` falls back to the Codex CLI default, which is a different model with no reasoning. Larger models and higher effort use more of your allowance, and neither paid plan guarantees unlimited automatic runs.
 6. Run the offline controller tests and readiness check:
 
 ```bash
@@ -172,7 +172,7 @@ Example configuration for a Python project (adjust interpreter/dependencies):
   "constraints": "Preserve public API compatibility. Use offline tests.",
   "claude_model": null,
   "codex_model": "gpt-6-astra",
-  "codex_reasoning_effort": {"diagnose": "high", "code": "high", "fix": "medium"}
+  "codex_reasoning_effort": {"diagnose": "high", "review": "high"}
 }
 ```
 
@@ -187,4 +187,4 @@ This setup uses `claude -p` without `--bare`: the currently documented bare mode
 
 ## Validation performed during setup
 
-Offline integration tests use fake AI executables and real temporary Git repos to verify in-place runs, repair-loop limits, failed-check gating, invalid-review rejection, dirty-source handling, checkpoint resumption, per-check `cwd`, strict-scope prompts, and the bug workflow (diagnosis before planning, the test-paths guard, empty reports). No live model task has been run: Claude Code still requires subscription sign-in, and no implementation task was supplied. The offline tests validate controller behavior, not model quality or live-provider availability.
+Offline integration tests use fake AI executables and real temporary Git repos to verify in-place runs, repair-loop limits, failed-check gating, empty-review rejection, review-finding parsing (P3 nits non-blocking), Claude-implements/Codex-reviews wiring, dirty-source handling, checkpoint resumption, per-check `cwd`, strict-scope prompts, and the bug workflow (diagnosis before planning, the test-paths guard, empty reports). No live model task has been run: Claude Code still requires subscription sign-in, and no implementation task was supplied. The offline tests validate controller behavior, not model quality or live-provider availability.

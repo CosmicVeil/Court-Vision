@@ -1,11 +1,10 @@
 import ContentSkeleton from '../components/ContentSkeleton';
 import LockIcon from '../components/LockIcon';
 import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import PlayerStatsModal from '../components/PlayerStatsModal';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import TiltCard from '../components/TiltCard';
 import { FPTS_TITLE, getFantasyComparison } from '../utils/fantasy';
-import { samePlayerName } from '../utils/playerNames';
+import { playerPath } from '../utils/playerPage';
 import { authHeaders, clearAuth } from '../utils/auth';
 import { enterDelay } from '../utils/scrollReveal';
 import './Recommendations.css';
@@ -18,43 +17,12 @@ const RecommendationChart = () => {
     // Set when the endpoint rejects a signed-out / expired request (401).
     const [needsAuth, setNeedsAuth] = useState(false);
 
-    // States for player details modal
-    const [selectedPlayer, setSelectedPlayer] = useState(null);
-    const [loadingPlayer, setLoadingPlayer] = useState(false);
+    const navigate = useNavigate();
 
-    const handlePlayerClick = async (player) => {
-        setLoadingPlayer(true);
-        try {
-            const pName = player.PLAYER_NAME || player.name || '';
-            const response = await fetch(`${API_BASE_URL}/players/search-all?query=${encodeURIComponent(pName)}`);
-            const data = await response.json();
-            const match = (data.players || []).find(p => samePlayerName(p.name, player.PLAYER_NAME || player.name));
-            if (match) {
-                setSelectedPlayer(match);
-            } else {
-                setSelectedPlayer({
-                    name: player.PLAYER_NAME || player.name,
-                    team: player.TEAM || player.team || 'UNK',
-                    position: player.POSITION || player.position || 'UNK',
-                    current_stats: {
-                        ppg: player.pts || player.PPG_LAST || 0,
-                        rpg: player.reb || player.RPG_LAST || 0,
-                        apg: player.ast || player.APG_LAST || 0,
-                        spg: player.stl || player.SPG_LAST || 0,
-                        bpg: player.blk || player.BPG_LAST || 0,
-                        tov: player.tov || player.TOV_LAST || 0,
-                        mpg: player.min || player.MIN_LAST || 0,
-                        fg_pct: 0, fg3_pct: 0, ft_pct: 0, games_played: 0, minutes: 0
-                    },
-                    ml_stats: null,
-                    history: {}
-                });
-            }
-        } catch (err) {
-            console.error('Error fetching player details:', err);
-        } finally {
-            setLoadingPlayer(false);
-        }
+    // Recommendation rows use upper-case keys; the player page reads name, team and position.
+    const handlePlayerClick = (row) => {
+        const player = { ...row, name: row.PLAYER_NAME || row.name, team: row.TEAM || row.team, position: row.POSITION || row.position };
+        navigate(playerPath(player), { state: { player } });
     };
 
     const API_BASE_URL = '/api';
@@ -276,8 +244,6 @@ const RecommendationChart = () => {
                     </div>
                 )}
             </div>
-
-            <PlayerStatsModal player={selectedPlayer} loading={loadingPlayer} onClose={() => setSelectedPlayer(null)} />
         </div>
     );
 };

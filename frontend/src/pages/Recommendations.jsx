@@ -1,14 +1,13 @@
 import ContentSkeleton from '../components/ContentSkeleton';
 import LockIcon from '../components/LockIcon';
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import PlayerStatsModal from '../components/PlayerStatsModal';
+import { Link, useNavigate } from 'react-router-dom';
 import PredictionModeToggle from '../components/PredictionModeToggle';
 import TiltCard from '../components/TiltCard';
 import { buildApiUrl } from '../config/api';
 import { clearAuth } from '../utils/auth';
 import { FPTS_TITLE, getFantasyComparison } from '../utils/fantasy';
-import { samePlayerName } from '../utils/playerNames';
+import { playerPath } from '../utils/playerPage';
 import { enterDelay } from '../utils/scrollReveal';
 import { formatSoFarLine } from '../utils/seasonSoFar';
 import './Recommendations.css';
@@ -72,43 +71,11 @@ const Recommendations = () => {
   // Recommendations need a free account; set when the API answers 401 (signed out or expired).
   const [needsAuth, setNeedsAuth] = useState(false);
 
-  // States for player details modal
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
-  const [loadingPlayer, setLoadingPlayer] = useState(false);
+  const navigate = useNavigate();
 
-  const handlePlayerClick = async (player) => {
-    setLoadingPlayer(true);
-    try {
-      const pName = player.name || player.PLAYER_NAME || '';
-      const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(pName)}`));
-      const data = await response.json();
-      const match = (data.players || []).find(p => samePlayerName(p.name, player.name || player.PLAYER_NAME));
-      if (match) {
-        setSelectedPlayer(match);
-      } else {
-        setSelectedPlayer({
-          name: player.name || player.PLAYER_NAME,
-          team: player.team || player.TEAM || 'UNK',
-          position: player.position || player.POSITION || 'UNK',
-          current_stats: {
-            ppg: player.pts || player.PPG_LAST || 0,
-            rpg: player.reb || player.RPG_LAST || 0,
-            apg: player.ast || player.APG_LAST || 0,
-            spg: player.stl || player.SPG_LAST || 0,
-            bpg: player.blk || player.BPG_LAST || 0,
-            tov: player.tov || player.TOV_LAST || 0,
-            mpg: player.min || player.MIN_LAST || 0,
-            fg_pct: 0, fg3_pct: 0, ft_pct: 0, games_played: 0, minutes: 0
-          },
-          ml_stats: null,
-          history: {}
-        });
-      }
-    } catch (err) {
-      console.error('Error fetching player details:', err);
-    } finally {
-      setLoadingPlayer(false);
-    }
+  // The spotlight hands over name, team and position only, so the player page is found by name.
+  const handlePlayerClick = (player) => {
+    navigate(playerPath(player), { state: { player } });
   };
 
   useEffect(() => {
@@ -351,8 +318,6 @@ const Recommendations = () => {
           )}
         </div>
       </div>
-
-      <PlayerStatsModal player={selectedPlayer} loading={loadingPlayer} onClose={() => setSelectedPlayer(null)} />
     </div>
   );
 };
