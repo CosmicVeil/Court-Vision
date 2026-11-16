@@ -117,9 +117,10 @@ def checks(state, label):
 
 
 # Shell commands the implementing Claude may run (Claude Code permission patterns). dontAsk
-# mode denies everything else instead of waiting for a human who is not there.
+# mode denies everything else instead of waiting for a human who is not there. Deleting goes
+# through `git rm` rather than `rm`: it only removes tracked files, and Git can bring them back.
 DEFAULT_CLAUDE_BASH = ['npm *', 'node *', 'npx *', 'backend/.venv/bin/python *',
-                       '.venv/bin/python *', 'git diff *', 'git status *', 'ls *']
+                       '.venv/bin/python *', 'git diff *', 'git status *', 'git rm *', 'ls *']
 
 
 def claude_args(state, tools, allowed):

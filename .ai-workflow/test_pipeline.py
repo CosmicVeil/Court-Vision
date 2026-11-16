@@ -127,6 +127,7 @@ class PipelineTests(unittest.TestCase):
         self.assertIn('Read,Glob,Grep,Edit,Write,Bash',code)
         allowed=code[code.index('--allowedTools')+1]
         self.assertIn('Bash(npm *)',allowed); self.assertNotIn('Bash(*)',allowed)
+        self.assertIn('Bash(git rm *)',allowed); self.assertNotIn('Bash(rm *)',allowed)
     def test_dirty_source_is_refused(self):
         (self.repo/'value.txt').write_text('user edits')
         p=self.invoke(); self.assertEqual(p.returncode,2)
