@@ -33,7 +33,9 @@ test("Privacy page explains cookies, data use, choices and future updates", () =
   assert.match(page, /no analytics, advertising or tracking scripts/);
   assert.match(page, /do not sell or share your data, or use it for advertising/);
   assert.match(page, /log out, clear site data/);
-  assert.match(page, /delete your account[\s\S]*?<Link to="\/contact">Contact page<\/Link>/);
+  // Contact page is temporarily hidden, so Privacy must not link to it.
+  assert.match(page, /ask us to delete your account\./);
+  assert.doesNotMatch(page, /to="\/contact"/);
   assert.match(page, /update this page and the "Last updated" date if anything changes/);
   assert.equal((page.match(/<section className="privacy-card" aria-labelledby=/g) || []).length, 7);
 });
@@ -85,7 +87,7 @@ test("Privacy page uses the Contact theme with readable prose and narrow-screen 
   assert.match(page, /Last updated: October 18, 2026/);
   assert.match(page, /privacy-ambient-one/);
   assert.match(page, /privacy-ambient-two/);
-  assert.match(page, /<footer className="privacy-footer"[^>]*>[\s\S]*?<Link to="\/contact">CONTACT<\/Link>/);
+  assert.match(page, /<footer className="privacy-footer"[^>]*>/);
   assert.match(css, /--color-ember-orange/);
   assert.match(css, /line-height: 1\.7/);
   assert.match(css, /max-width: 760px/);
@@ -98,9 +100,10 @@ test("Privacy page uses the Contact theme with readable prose and narrow-screen 
   assert.doesNotMatch(css, /\.contact-/);
 });
 
-test("Privacy is linked next to Contact in the site nav and from the Contact footer", () => {
+test("Privacy is in the site nav (Contact temporarily hidden) and linked from the Contact footer", () => {
   const siteNav = readFrontend("src/utils/siteNav.js");
-  assert.match(siteNav, /\{ to: '\/contact', label: 'Contact' \},\s*\{ to: '\/privacy', label: 'Privacy' \}/);
+  assert.match(siteNav, /^\s*\{ to: '\/privacy', label: 'Privacy' \}/m);
+  assert.doesNotMatch(siteNav, /^\s*\{ to: '\/contact'/m);
   const footer = readSource("Contact.jsx").match(/<footer className="contact-footer"[^>]*>([\s\S]*?)<\/footer>/)?.[1];
   assert.ok(footer);
   assert.match(footer, /<Link to="\/privacy">Privacy &amp; Cookies<\/Link>/);

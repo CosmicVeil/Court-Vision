@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import "./Privacy.css";
 import PageHero from "../components/PageHero";
 import { enterDelay } from "../utils/scrollReveal";
@@ -88,7 +87,7 @@ function Privacy() {
             <p className="privacy-eyebrow">06</p>
             <h2 id="privacy-choices-title">Your choices</h2>
             <p>
-              You can log out, clear site data, or ask us to delete your account via the <Link to="/contact">Contact page</Link>.
+              You can log out, clear site data, or ask us to delete your account.
             </p>
           </section>
 
@@ -101,7 +100,6 @@ function Privacy() {
 
         <footer className="privacy-footer" data-enter style={enterDelay(10)}>
           <span>COURT VISION</span>
-          <Link to="/contact">CONTACT</Link>
         </footer>
       </div>
     </main>

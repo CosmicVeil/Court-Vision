@@ -13,7 +13,8 @@ import RecommendationChart from "./pages/RecommendationChart.jsx";
 import Predictions from "./pages/Predictions.jsx";
 import GamePredictions from "./pages/GamePredictions.jsx";
 import GameRecommendations from "./pages/GameRecommendations.jsx";
-import Contact from "./pages/Contact.jsx";
+// Contact page temporarily hidden (see siteNav.js).
+// import Contact from "./pages/Contact.jsx";
 import Privacy from "./pages/Privacy.jsx";
 import Profile from "./pages/Profile.jsx";
 import NotFound from "./pages/NotFound.jsx";
@@ -40,7 +41,7 @@ function App() {
           <Route path="/games/:gameId" element={<LiveGameDetail />} />
           <Route path="/predictions" element={<Predictions />} />
           <Route path="/predictions/games" element={<GamePredictions />} />
-          <Route path="/contact" element={<Contact />} />
+          {/* <Route path="/contact" element={<Contact />} /> */}
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/profile" element={<Profile />} />
           <Route
