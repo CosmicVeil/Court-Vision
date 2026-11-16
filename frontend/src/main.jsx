@@ -34,9 +34,14 @@ window.fetch = function (input, init) {
   return originalFetch(input, init);
 };
 
+import { initializeTheme } from './utils/theme'
+initializeTheme();
+
 import App from './App.jsx'
+import './styles/fonts.css'
 import './styles/tokens.css'
 import './pages/Home.css'
+import './styles/theme.css'
 
 import ReactGA from "react-ga4";
 

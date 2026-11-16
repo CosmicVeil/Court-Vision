@@ -1,3 +1,4 @@
+import ContentSkeleton from '../components/ContentSkeleton';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { buildApiUrl } from '../config/api';
@@ -144,7 +145,7 @@ export default function LiveGames() {
         <h1 className="lg-title" data-slot="display-heading">
           <span className="lg-title-word" style={{ '--word': 0 }}>NBA</span>{' '}
           <span className="text-ember">
-            <span className="lg-title-word" style={{ '--word': 1 }}>GAMES</span>
+            <span className="lg-title-word" style={{ '--word': 1 }}>Games</span>
           </span>
         </h1>
         <HeroOrbit games={todayGames} />
@@ -172,7 +173,7 @@ export default function LiveGames() {
     {!loading && tab === 'today' && <LiveTicker games={displayToday} />}
     <div className="lg-content" id="lg-panel" role="tabpanel" aria-labelledby={`lg-tab-${tab}`}>
       {panelLoading ? (
-        <div className="lg-loading"><div className="spinner" /><p>{TAB_TEXT[tab].loading}</p></div>
+        <ContentSkeleton variant="games" count={6} label={TAB_TEXT[tab].loading} />
       ) : games.length === 0 ? (
         <div className="no-games">
           {tab === 'today' && <div className="trend-empty-radar" data-defer style={{ margin: '0 auto 1.5rem' }}><div className="trend-empty-dot" /></div>}

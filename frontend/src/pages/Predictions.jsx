@@ -1,3 +1,5 @@
+import ContentSkeleton from '../components/ContentSkeleton';
+import LockIcon from '../components/LockIcon';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
@@ -5,6 +7,7 @@ import PageHero from '../components/PageHero';
 import Pagination from '../components/Pagination';
 import PlayerCard from '../components/PlayerCard';
 import PlayerStatsModal from '../components/PlayerStatsModal';
+import PredictionModeToggle from '../components/PredictionModeToggle';
 import useFlip from '../hooks/useFlip';
 import useListQuery from '../hooks/useListQuery';
 import ScrollReveal from '../components/ScrollReveal';
@@ -260,10 +263,11 @@ const Predictions = () => {
     <div className="predictions-container">
       {/* New cards arrive with each fetch, so the reveal rescans when the list changes. */}
       <ScrollReveal scanKey={predictions} />
+      <PredictionModeToggle base="/predictions" value="season" />
       <PageHero
         eyebrow="OUR MODEL"
-        title="NEXT SEASON"
-        accent="PREDICTIONS"
+        title="Season"
+        accent="Predictions"
         lead="Our model uses past seasons' stats to predict each player's per-game averages for this season."
         stats={getPredictionsHeroStats({
           ready: !error && (!loading || predictions.length > 0),
@@ -311,7 +315,7 @@ const Predictions = () => {
       </div>
 
       {loading && predictions.length === 0 ? (
-        <div className="loading">Generating NBA predictions...</div>
+        <ContentSkeleton label="Loading season projections…" />
       ) : error ? (
         (() => {
           const serverUrl = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5001' : 'https://court-vision-zxuj.onrender.com');
@@ -363,7 +367,7 @@ const Predictions = () => {
 
           {isPreview ? (
             <div className="predictions-locked" data-enter>
-              <div className="predictions-locked-icon" aria-hidden="true">🔒</div>
+              <div className="predictions-locked-icon" aria-hidden="true"><LockIcon /></div>
               <h2 className="predictions-locked-title">
                 {sessionExpired ? 'Your session expired. Sign in again to see full predictions' : 'Sign in to see full predictions'}
               </h2>
@@ -408,7 +412,7 @@ const Predictions = () => {
             >
               ×
             </button>
-            <div className="prediction-auth-icon" aria-hidden="true">🔒</div>
+            <div className="prediction-auth-icon" aria-hidden="true"><LockIcon /></div>
             <h2 className="empty-title">Authentication Required</h2>
             <p className="empty-description">
               You must create an account or log in to save your favorite NBA players and customize your analytics tracking!

@@ -1,0 +1,24 @@
+.content-skeleton { width: 100%; }
+.skeleton-item { min-width: 0; padding: 24px; border: 1px solid var(--border-glass); border-radius: var(--radius-md); background: var(--surface); }
+.skeleton-line { display: block; height: 16px; background: var(--surface-subtle); border-radius: 3px; animation: skeleton-pulse 1.6s ease-in-out infinite alternate; }
+.skeleton-heading { width: 65%; height: 24px; margin-bottom: 12px; }
+.skeleton-subtitle { width: 40%; margin-bottom: 28px; }
+.skeleton-values { display: grid; gap: 20px; }
+.content-skeleton--cards .skeleton-item { min-height: 300px; }
+.content-skeleton--picks .skeleton-item { min-height: 540px; }
+.content-skeleton--picks .skeleton-values .skeleton-line { height: 64px; }
+.content-skeleton--spotlight .skeleton-item { min-height: 360px; }
+.content-skeleton--table { display: grid; gap: 0; }
+.content-skeleton--table .skeleton-item { display: flex; align-items: center; gap: 24px; padding: 16px; border-radius: 0; }
+.content-skeleton--table .skeleton-heading { width: 22%; height: 18px; margin: 0; }
+.content-skeleton--table .skeleton-subtitle { width: 10%; margin: 0; }
+.content-skeleton--table .skeleton-values { flex: 1; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+@keyframes skeleton-pulse { from { opacity: .45; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .skeleton-line { animation: none; } }
+.content-skeleton--games .skeleton-item { min-height: 280px; }
+.content-skeleton--recommendations .skeleton-item { min-height: 360px; }
+@media (min-width: 769px) {
+  .predictions-container:not(.game-predictions-page) .content-skeleton--cards .skeleton-item { min-height: 150px; display: grid; grid-template-columns: 1fr 2fr; gap: 24px; align-items: center; }
+  .predictions-container:not(.game-predictions-page) .skeleton-subtitle { display: none; }
+  .predictions-container:not(.game-predictions-page) .skeleton-values { grid-template-columns: repeat(3, 1fr); }
+}

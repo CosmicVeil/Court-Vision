@@ -25,7 +25,7 @@ html[data-motion-ready] .tilt-card[data-reveal] {
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 100, 54, 0.16), transparent 60%);
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--color-ember-orange) 16%, transparent), transparent 60%);
   opacity: 0;
   transition: opacity var(--duration-base) var(--ease-brand);
 }
@@ -41,15 +41,15 @@ html[data-motion-ready] .tilt-card[data-reveal] {
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .tilt-cta-label {
   padding: 6px 12px;
-  border: 1px solid rgba(255, 100, 54, 0.4);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 40%, transparent);
   border-radius: var(--radius-full);
-  background: rgba(255, 100, 54, 0.12);
+  background: color-mix(in srgb, var(--color-ember-orange) 12%, transparent);
   transition: opacity var(--duration-base) var(--ease-brand), translate var(--duration-base) var(--ease-brand);
 }
 
@@ -59,7 +59,7 @@ html[data-motion-ready] .tilt-card[data-reveal] {
   width: 2rem;
   height: 2rem;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, #ff6436, #e04a1c);
+  background: var(--accent-fill);
   font-size: .9rem;
   rotate: -45deg;
   transition: rotate var(--duration-base) var(--ease-brand), scale var(--duration-fast) var(--ease-brand);
@@ -73,7 +73,7 @@ html[data-motion-ready] .tilt-card[data-reveal] {
 
 /* Pointer-only play: lift, spotlight and the CTA label sliding out. Touch keeps the label visible. */
 @media (hover: hover) and (pointer: fine) {
-  .tilt-card:hover { --lift: -6px; border-color: rgba(255, 100, 54, 0.5); }
+  .tilt-card:hover { --lift: -6px; border-color: color-mix(in srgb, var(--color-ember-orange) 50%, transparent); }
   .tilt-card:hover::before { opacity: 1; }
 
   .tilt-cta-label { opacity: 0; translate: 8px 0; }

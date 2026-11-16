@@ -8,12 +8,12 @@
   max-width: 1200px;
   margin: 0 auto calc(var(--space) * 6);
   padding: calc(var(--space) * 5) calc(var(--space) * 6);
-  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
-  border: 1px solid rgba(255, 100, 54, 0.18);
+  background: var(--surface);
+  border: 1px solid var(--border-glass);
   border-radius: var(--radius-xl);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--shadow);
 }
 
 /* Search takes about twice a select's share; everything wraps before it gets cramped. */
@@ -28,12 +28,12 @@
 .fb-field--search { flex: 2 1 16rem; }
 
 .fb-label {
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone, var(--text-secondary));
   font-family: var(--font-mono, monospace);
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .fb-control {
@@ -42,18 +42,18 @@
   box-sizing: border-box;
   min-height: 44px;
   padding: calc(var(--space) * 2.5) calc(var(--space) * 4);
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 100, 54, 0.18);
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-glass);
   border-radius: var(--radius-md);
-  color: #fff;
+  color: var(--text-primary);
   font-family: var(--font-body, 'Inter', sans-serif);
   font-size: 0.95rem;
 }
 
-.fb-control::placeholder { color: var(--color-stone, #8e8c94); }
+.fb-control::placeholder { color: var(--color-stone, var(--text-secondary)); }
 
 .fb-select { cursor: pointer; }
-.fb-select option { background: #101014; color: #fff; }
+.fb-select option { background: var(--bg-main); color: var(--text-primary); }
 
 .fb-control:focus { border-color: var(--color-ember-orange, #ff6436); }
 
@@ -67,14 +67,14 @@
   min-height: 44px;
   padding: 0 calc(var(--space) * 5);
   background: transparent;
-  border: 1px solid rgba(255, 100, 54, 0.3);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 30%, transparent);
   border-radius: var(--radius-md);
   color: var(--color-ember-orange, #ff6436);
   font-family: var(--font-mono, monospace);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   white-space: nowrap;
   cursor: pointer;
   transition: scale var(--duration-fast) var(--ease-brand);
@@ -88,10 +88,10 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .fb-control:hover { border-color: rgba(255, 100, 54, 0.4); }
+  .fb-control:hover { border-color: color-mix(in srgb, var(--color-ember-orange) 40%, transparent); }
 
   .fb-clear:hover {
-    background: rgba(255, 100, 54, 0.12);
+    background: color-mix(in srgb, var(--color-ember-orange) 12%, transparent);
     border-color: var(--color-ember-orange, #ff6436);
   }
 }

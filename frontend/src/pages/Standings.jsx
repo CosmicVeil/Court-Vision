@@ -1,3 +1,4 @@
+import ContentSkeleton from '../components/ContentSkeleton';
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { buildApiUrl } from '../config/api';
@@ -196,7 +197,7 @@ const Standings = () => {
     <PageHero
       eyebrow="LEAGUE STANDINGS"
       title="NBA"
-      accent="STANDINGS"
+      accent="Standings"
       lead="All 30 teams ranked by conference, with playoff and play-in seeding"
       stats={[
         { key: 'teams', label: 'Teams', value: data ? '30' : '—' },
@@ -211,7 +212,10 @@ const Standings = () => {
     return (
       <div className="standings-container">
         {hero}
-        <div className="standings-loading">Loading standings…</div>
+        <div className="standings-grid" role="status" aria-label="Loading standings…">
+          <ContentSkeleton variant="table" count={15} label={null} />
+          <ContentSkeleton variant="table" count={15} label={null} />
+        </div>
       </div>
     );
   }

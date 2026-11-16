@@ -25,9 +25,9 @@ test("season tags use the lookup, base class and modifier in the Date cell", () 
 test("playoff tags use the ember accent while PRE stays muted", () => {
   assert.match(gameLogCss, /\.game-log-tag--post[^{]*\{[^}]*color:\s*var\(--color-ember-orange\)/);
   assert.match(gameLogCss, /\.game-log-tag--playin[^{]*\{[^}]*color:\s*var\(--color-ember-orange\)/);
-  assert.match(gameLogCss, /\.game-log-tag--post[^{]*\{[^}]*border-color:\s*rgba\(255,\s*100,\s*54,\s*0\.45\)/);
-  assert.match(gameLogCss, /\.game-log-tag--playin[^{]*\{[^}]*border-color:\s*rgba\(255,\s*100,\s*54,\s*0\.45\)/);
-  assert.match(gameLogCss, /\.game-log-tag\s*\{[^}]*color:\s*var\(--color-stone\)[^}]*border:\s*1px solid rgba\(255,\s*255,\s*255,\s*0\.12\)/);
+  assert.match(gameLogCss, /\.game-log-tag--post[^{]*\{[^}]*border-color:\s*color-mix\(in srgb, var\(--color-ember-orange\) 45%, transparent\)/);
+  assert.match(gameLogCss, /\.game-log-tag--playin[^{]*\{[^}]*border-color:\s*color-mix\(in srgb, var\(--color-ember-orange\) 45%, transparent\)/);
+  assert.match(gameLogCss, /\.game-log-tag\s*\{[^}]*color:\s*var\(--color-stone\)[^}]*border:\s*1px solid rgb\(var\(--ink-rgb\) \/ 0\.12\)/);
 });
 
 test("season teams preserve trade order and omit unknown or missing teams", async () => {

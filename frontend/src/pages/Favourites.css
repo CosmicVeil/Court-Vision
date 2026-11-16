@@ -18,9 +18,9 @@
   text-align: center;
   font-family: var(--font-mono, monospace);
   font-size: 11px;
-  color: var(--color-stone, #8e8c94);
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  color: var(--color-stone, var(--text-secondary));
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 /* ---------- Card extras ----------
@@ -33,7 +33,7 @@
   gap: 8px 16px;
   font-family: var(--font-mono, monospace);
   font-size: 11px;
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone, var(--text-secondary));
 }
 
 .player-detail-item-fav + .player-detail-item-fav::before {
@@ -45,10 +45,10 @@
 .player-trends-fav { margin-top: auto; }
 .trends-title {
   margin: 0 0 10px;
-  color: #fff;
+  color: var(--text-primary);
   font: 700 11px var(--font-mono, monospace);
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 .trends-grid-fav {
   display: grid;
@@ -62,20 +62,20 @@
   justify-content: center;
   min-width: 0;
   padding: 11px 8px;
-  border: 1px solid rgba(255, 100, 54, 0.2);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 20%, transparent);
   border-radius: var(--radius-md, 10px);
-  background: rgba(255, 255, 255, 0.035);
+  background: rgb(var(--ink-rgb) / 0.035);
   text-align: center;
 }
 .trend-label-fav {
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone, var(--text-secondary));
   font: 700 10px var(--font-mono, monospace);
   letter-spacing: .8px;
-  text-transform: uppercase;
+  text-transform: none;
 }
-.trend-value-fav { color: #fff; font-size: 1.25rem; font-weight: 800; overflow-wrap: anywhere; }
-.trend-value-fav.positive { color: #4caf50; }
-.trend-value-fav.negative { color: #f87171; }
+.trend-value-fav { color: var(--text-primary); font-size: 1.25rem; font-weight: 800; overflow-wrap: anywhere; }
+.trend-value-fav.positive { color: var(--positive); }
+.trend-value-fav.negative { color: var(--negative); }
 
 @media (max-width: 480px) {
   .favourites-wrapper { padding: 96px 14px 50px; }
@@ -83,28 +83,28 @@
 
 /* ---------- Empty State ---------- */
 .empty-state {
-  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
-  border: 1px solid rgba(255, 100, 54, 0.18);
+  background: var(--surface);
+  border: 1px solid var(--border-glass);
   border-radius: var(--radius-xl, 20px);
   padding: 60px 30px;
   text-align: center;
   max-width: 600px;
   margin: 0 auto;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--shadow);
 }
 
 .empty-title {
   font-family: var(--font-heading, 'Inter', sans-serif);
   font-size: 1.8rem;
   font-weight: 800;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.5px;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 10px;
 }
 
 .empty-description {
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone, var(--text-secondary));
   font-size: 14px;
   margin-bottom: 24px;
 }
@@ -119,9 +119,9 @@
   width: 64px;
   height: 64px;
   margin: 0 auto 1.5rem;
-  border: 1px solid rgba(255, 100, 54, 0.35);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 35%, transparent);
   border-radius: 50%;
-  background: rgba(255, 100, 54, 0.12);
+  background: color-mix(in srgb, var(--color-ember-orange) 12%, transparent);
 }
 
 .empty-actions {
@@ -134,10 +134,10 @@
 
 /* Base .empty-cta comes from Predictions.css (page CSS is global). */
 .empty-cta.is-secondary {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 100, 54, 0.25);
-  color: #fff;
-  box-shadow: none;
+  background: rgb(var(--ink-rgb) / 0.04);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 25%, transparent);
+  color: var(--text-primary);
+  box-shadow: var(--shadow);
 }
 
 .empty-cta:focus-visible {

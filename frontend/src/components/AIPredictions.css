@@ -11,50 +11,13 @@
   font-family: var(--font-body, 'Inter', sans-serif);
 }
 
-/* ---------- Category Tabs ---------- */
-.predictions-tabs,
-.category-tabs {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  margin-bottom: 36px;
-  flex-wrap: wrap;
-}
-
-.predictions-tabs .tab-button,
-.category-tabs .tab-button {
-  padding: 10px 22px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 100, 54, 0.22);
-  border-radius: var(--radius-full, 9999px);
-  color: var(--color-stone, #8e8c94);
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.predictions-tabs .tab-button:hover,
-.category-tabs .tab-button:hover {
-  background: rgba(255, 100, 54, 0.15);
-  border-color: rgba(255, 100, 54, 0.5);
-  color: #fff;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(255, 100, 54, 0.25);
-}
-
-.predictions-tabs .tab-button.active,
-.category-tabs .tab-button.active {
-  background: linear-gradient(135deg, #ff6436, #e04a1c);
-  border-color: transparent;
-  color: #fff;
-  font-weight: 800;
-  box-shadow: 0 0 24px rgba(255, 100, 54, 0.5);
-  transform: translateY(-2px);
+/* ---------- Leader Tabs ---------- */
+/* Pill shape comes from PredictionModeToggle.css (.pm-toggle/.pm-tab), like the Game picks tabs. */
+.ai-stat-tabs {
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto 36px;
+  overflow-x: auto;
 }
 
 /* The cards are PlayerCard now (PlayerCard.css). These class names are also rendered by other
@@ -68,16 +31,16 @@
   font-family: var(--font-heading, 'Inter', sans-serif);
   font-size: 1.35rem;
   font-weight: 900;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 6px;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: -0.3px;
 }
 
 .player-details {
   font-family: var(--font-mono, monospace);
   font-size: 11px;
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone, var(--text-secondary));
   letter-spacing: 0.5px;
 }
 
@@ -91,9 +54,9 @@
 .stat-label {
   font-family: var(--font-mono, monospace);
   font-size: 9px;
-  color: var(--color-stone, #8e8c94);
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  color: var(--color-stone, var(--text-secondary));
+  text-transform: none;
+  letter-spacing: 0;
   font-weight: 700;
 }
 
@@ -105,13 +68,13 @@
 }
 
 .stat-value.positive {
-  color: #4caf50;
-  text-shadow: 0 0 14px rgba(76, 175, 80, 0.4);
+  color: var(--positive);
+  text-shadow: none;
 }
 
 .stat-value.negative {
-  color: #ef5350;
-  text-shadow: 0 0 14px rgba(239, 83, 80, 0.4);
+  color: var(--negative);
+  text-shadow: none;
 }
 
 /* Loading & Empty States */
@@ -120,9 +83,9 @@
 .ai-predictions-container .no-data {
   text-align: center;
   padding: 60px 20px;
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone, var(--text-secondary));
   font-family: var(--font-mono, monospace);
   font-size: 12px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }

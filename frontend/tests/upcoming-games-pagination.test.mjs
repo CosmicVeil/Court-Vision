@@ -117,8 +117,8 @@ test("Past Games is a third tab with its own page, pager and spinner, outside th
 
 test("the site calls the page Games now that it also holds past results", async () => {
   const { NAV_LINKS } = await import("../src/utils/siteNav.js");
-  assert.deepEqual(NAV_LINKS.find(link => link.to === "/games"), { to: "/games", label: "GAMES" });
-  assert.match(liveGamesSource, /<span className="lg-title-word" style=\{\{ '--word': 1 \}\}>GAMES<\/span>/);
+  assert.deepEqual(NAV_LINKS.find(link => link.to === "/games"), { to: "/games", label: "Games" });
+  assert.match(liveGamesSource, /<span className="lg-title-word" style=\{\{ '--word': 1 \}\}>Games<\/span>/);
 });
 
 test("Live Games leaves pagination to the shared pager and styles the roster button with site controls", () => {

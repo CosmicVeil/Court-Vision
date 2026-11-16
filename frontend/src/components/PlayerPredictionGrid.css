@@ -25,13 +25,13 @@
   font-family: var(--font-mono, monospace);
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--color-ember-orange, #ff6436);
   padding: 4px 12px;
   border-radius: var(--radius-full, 9999px);
-  background: rgba(255, 100, 54, 0.08);
-  border: 1px solid rgba(255, 100, 54, 0.25);
+  background: color-mix(in srgb, var(--color-ember-orange) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 25%, transparent);
 }
 
 /* ---------- Grid of Cards ---------- */
@@ -42,8 +42,8 @@
 }
 
 .player-pred-card {
-  background: linear-gradient(180deg, rgba(28, 28, 36, 0.85) 0%, rgba(16, 16, 22, 0.95) 100%);
-  border: 1px solid rgba(255, 100, 54, 0.16);
+  background: var(--surface);
+  border: 1px solid var(--border-glass);
   border-radius: 14px;
   padding: 16px;
   display: flex;
@@ -51,22 +51,22 @@
   justify-content: space-between;
   gap: 12px;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow);
 }
 
 .player-pred-card:hover {
-  border-color: rgba(255, 100, 54, 0.45);
+  border-color: color-mix(in srgb, var(--color-ember-orange) 45%, transparent);
   transform: translateY(-3px);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.7), 0 0 16px rgba(255, 100, 54, 0.15);
+  box-shadow: var(--shadow);
 }
 
 .player-pred-label {
   font-family: var(--font-mono, monospace);
   font-size: 10px;
   font-weight: 700;
-  color: var(--color-stone, #8e8c94);
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  color: var(--color-stone, var(--text-secondary));
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 /* ---------- Comparison Block ---------- */
@@ -75,8 +75,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: var(--surface-subtle);
+  border: 1px solid rgb(var(--ink-rgb) / 0.04);
   border-radius: 10px;
   padding: 10px 12px;
 }
@@ -92,26 +92,26 @@
   font-family: var(--font-mono, monospace);
   font-size: 1.35rem;
   font-weight: 800;
-  color: #ffffff;
+  color: var(--text-primary);
   line-height: 1.1;
 }
 
 .player-pred-val-box.predicted .player-pred-val {
   color: var(--color-ember-orange, #ff6436);
   font-weight: 900;
-  text-shadow: 0 0 12px rgba(255, 100, 54, 0.3);
+  text-shadow: none;
 }
 
 .player-pred-val-box .player-pred-unit {
   font-family: var(--font-mono, monospace);
   font-size: 9px;
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone, var(--text-secondary));
   letter-spacing: 0.5px;
   margin-top: 2px;
 }
 
 .player-pred-arrow {
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone, var(--text-secondary));
   font-size: 14px;
   font-weight: 800;
 }
@@ -137,13 +137,13 @@
 .player-pred-badge.up {
   background: rgba(76, 175, 80, 0.15);
   border: 1px solid rgba(76, 175, 80, 0.4);
-  color: #4caf50;
+  color: var(--positive);
 }
 
 .player-pred-badge.down {
   background: rgba(239, 83, 80, 0.15);
   border: 1px solid rgba(239, 83, 80, 0.4);
-  color: #ef5350;
+  color: var(--negative);
 }
 
 .player-pred-badge.flat {
@@ -153,4 +153,14 @@
 
 .badge-arrow {
   font-size: 11px;
+}
+
+/* Popup Game projections tab (PlayerNextGame): what the two numbers in each card are. */
+.player-next-game-note {
+  margin: -8px 0 16px;
+  color: var(--color-stone, var(--text-secondary));
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
 }

@@ -1,13 +1,13 @@
 // Primary site navigation, in the order the header shows it.
 export const NAV_LINKS = [
-  { to: '/stats', label: 'STATS' },
-  { to: '/standings', label: 'STANDINGS' },
-  { to: '/games', label: 'GAMES' },
-  { to: '/predictions', label: 'PREDICTIONS' },
-  { to: '/recommendations', label: 'RECOMMENDATIONS' },
-  { to: '/favourites', label: 'FAVOURITES' },
-  { to: '/contact', label: 'CONTACT' },
-  { to: '/privacy', label: 'PRIVACY' },
+  { to: '/stats', label: 'Stats' },
+  { to: '/standings', label: 'Standings' },
+  { to: '/games', label: 'Games' },
+  { to: '/predictions', label: 'Predictions' },
+  { to: '/recommendations', label: 'Recommendations' },
+  { to: '/favourites', label: 'Favourites' },
+  { to: '/contact', label: 'Contact' },
+  { to: '/privacy', label: 'Privacy' },
 ];
 
 export function getInitials(user) {

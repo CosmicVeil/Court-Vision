@@ -26,9 +26,9 @@
   margin-bottom: 12px;
   font-family: var(--font-heading, 'Inter', sans-serif);
   font-weight: 900;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: -0.5px;
-  color: #ffffff;
+  color: var(--text-primary);
   line-height: 1.08;
 }
 
@@ -40,7 +40,7 @@
 
 .recommendations-subtitle {
   font-size: clamp(15px, 1.8vw, 17px);
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone, var(--text-secondary));
   max-width: 650px;
   margin: 0 auto;
   line-height: 1.6;
@@ -56,15 +56,15 @@
   font-family: var(--font-heading, 'Inter', sans-serif);
   font-size: 1.8rem;
   font-weight: 800;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.5px;
-  color: #ffffff;
+  color: var(--text-primary);
   margin-bottom: 6px;
 }
 
 .spotlight-subheading {
   font-size: 14px;
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone, var(--text-secondary));
   margin-bottom: 28px;
 }
 
@@ -78,14 +78,14 @@
 }
 
 .spotlight-card {
-  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
-  border: 1px solid rgba(255, 100, 54, 0.18);
+  background: var(--surface);
+  border: 1px solid var(--border-glass);
   border-radius: var(--radius-xl, 20px);
   padding: 24px;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   position: relative;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--shadow);
   text-align: left;
   /* Tilt, spotlight, lift and the corner arrow: TiltCard.css, shared with PlayerCard. */
 }
@@ -127,7 +127,7 @@
 }
 
 .spotlight-stat-tag {
-  background: rgba(255, 100, 54, 0.15);
+  background: color-mix(in srgb, var(--color-ember-orange) 15%, transparent);
   border: 1px solid var(--color-ember-orange, #ff6436);
   color: var(--color-ember-orange, #ff6436);
   padding: 3px 10px;
@@ -135,14 +135,14 @@
   font-family: var(--font-mono, monospace);
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .spotlight-role-tag {
   font-family: var(--font-mono, monospace);
   font-size: 10px;
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone, var(--text-secondary));
   letter-spacing: 0.5px;
 }
 
@@ -150,15 +150,15 @@
   font-family: var(--font-heading, 'Inter', sans-serif);
   font-size: 1.4rem;
   font-weight: 900;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 6px;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .spotlight-team-badge {
   font-family: var(--font-mono, monospace);
   font-size: 11px;
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone, var(--text-secondary));
   margin-bottom: 16px;
 }
 
@@ -169,20 +169,20 @@
   font-family: var(--font-mono, monospace);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 1px;
+  letter-spacing: 0;
   margin-bottom: 20px;
 }
 
 .spotlight-growth-badge.positive {
   background: rgba(76, 175, 80, 0.15);
   border: 1px solid rgba(76, 175, 80, 0.4);
-  color: #4caf50;
+  color: var(--positive);
 }
 
 .spotlight-growth-badge.negative {
   background: rgba(239, 83, 80, 0.15);
   border: 1px solid rgba(239, 83, 80, 0.4);
-  color: #f87171;
+  color: var(--negative);
 }
 
 .spotlight-stats-list {
@@ -196,21 +196,21 @@
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--surface-subtle);
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid rgb(var(--ink-rgb) / 0.04);
 }
 
 .spotlight-stat-row.highlighted {
-  border-color: rgba(255, 100, 54, 0.35);
-  background: rgba(255, 100, 54, 0.08);
+  border-color: color-mix(in srgb, var(--color-ember-orange) 35%, transparent);
+  background: color-mix(in srgb, var(--color-ember-orange) 8%, transparent);
 }
 
 .stat-label {
   font-family: var(--font-mono, monospace);
   font-size: 11px;
   font-weight: 700;
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone, var(--text-secondary));
 }
 
 .spotlight-stat-comparison {
@@ -223,7 +223,7 @@
   font-family: var(--font-mono, monospace);
   font-size: 13px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .spotlight-stat-val.predicted {
@@ -232,7 +232,7 @@
 }
 
 .spotlight-stat-arrow {
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone, var(--text-secondary));
   font-size: 11px;
 }
 
@@ -242,24 +242,24 @@
   font-weight: 800;
 }
 
-.spotlight-stat-growth.positive { color: #4caf50; }
-.spotlight-stat-growth.negative { color: #f87171; }
+.spotlight-stat-growth.positive { color: var(--positive); }
+.spotlight-stat-growth.negative { color: var(--negative); }
 
 /* ---------- Basketball Insights & Trends Cards ---------- */
 .section-heading {
   font-family: var(--font-heading, 'Inter', sans-serif);
   font-size: 1.8rem;
   font-weight: 800;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.5px;
-  color: #ffffff;
+  color: var(--text-primary);
   text-align: center;
   margin-bottom: 6px;
 }
 
 .section-description {
   font-size: 14px;
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone, var(--text-secondary));
   text-align: center;
   margin-bottom: 36px;
 }
@@ -274,14 +274,14 @@
 }
 
 .recommendation-card {
-  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
-  border: 1px solid rgba(255, 100, 54, 0.18);
+  background: var(--surface);
+  border: 1px solid var(--border-glass);
   border-radius: var(--radius-xl, 20px);
   padding: 24px;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   position: relative;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -303,7 +303,7 @@
 }
 
 .category-badge {
-  background: rgba(255, 100, 54, 0.15);
+  background: color-mix(in srgb, var(--color-ember-orange) 15%, transparent);
   border: 1px solid var(--color-ember-orange, #ff6436);
   color: var(--color-ember-orange, #ff6436);
   padding: 3px 10px;
@@ -311,21 +311,21 @@
   font-family: var(--font-mono, monospace);
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .insight-title {
   font-family: var(--font-heading, 'Inter', sans-serif);
   font-size: 1.3rem;
   font-weight: 800;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 8px;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .recommendation-reason {
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone, var(--text-secondary));
   font-size: 13.5px;
   line-height: 1.5;
   margin-bottom: 14px;
@@ -343,23 +343,23 @@
   align-items: center;
   gap: 6px;
   padding: 8px 18px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 100, 54, 0.25);
+  background: rgb(var(--ink-rgb) / 0.04);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 25%, transparent);
   border-radius: var(--radius-full, 9999px);
-  color: #fff;
+  color: var(--text-primary);
   text-decoration: none;
   font-family: var(--font-mono, monospace);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .view-stats-link:hover {
-  background: rgba(255, 100, 54, 0.15);
+  background: color-mix(in srgb, var(--color-ember-orange) 15%, transparent);
   border-color: var(--color-ember-orange, #ff6436);
-  box-shadow: 0 0 16px rgba(255, 100, 54, 0.25);
+  box-shadow: var(--shadow);
 }
 
 .view-stats-link:focus-visible {
@@ -379,15 +379,15 @@
   font-family: var(--font-mono, monospace);
   font-size: 12px;
   font-weight: 900;
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+  background: rgb(var(--ink-rgb) / 0.06);
+  border: 1px solid rgb(var(--ink-rgb) / 0.12);
   padding: 4px 10px;
   border-radius: 6px;
 }
 
 .category-badge.team-code {
-  background: rgba(255, 100, 54, 0.15);
+  background: color-mix(in srgb, var(--color-ember-orange) 15%, transparent);
   border: 1px solid var(--color-ember-orange, #ff6436);
   color: var(--color-ember-orange, #ff6436);
   font-weight: 800;
@@ -403,21 +403,21 @@
   font-family: var(--font-mono, monospace);
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   padding: 3px 8px;
   border-radius: 6px;
 }
 
 .meta-badge-item.age {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--color-stone, #8e8c94);
+  background: rgb(var(--ink-rgb) / 0.04);
+  border: 1px solid rgb(var(--ink-rgb) / 0.1);
+  color: var(--color-stone, var(--text-secondary));
 }
 
 .meta-badge-item.position {
-  background: rgba(255, 100, 54, 0.1);
-  border: 1px solid rgba(255, 100, 54, 0.25);
+  background: color-mix(in srgb, var(--color-ember-orange) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 25%, transparent);
   color: var(--color-ember-orange, #ff6436);
 }
 
@@ -435,13 +435,13 @@
 .growth-callout.positive {
   background: rgba(76, 175, 80, 0.15);
   border: 1px solid rgba(76, 175, 80, 0.4);
-  color: #4caf50;
+  color: var(--positive);
 }
 
 .growth-callout.negative {
   background: rgba(239, 83, 80, 0.15);
   border: 1px solid rgba(239, 83, 80, 0.4);
-  color: #f87171;
+  color: var(--negative);
 }
 
 /* Stats Comparison Bars */
@@ -449,8 +449,8 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--surface-subtle);
+  border: 1px solid rgb(var(--ink-rgb) / 0.05);
   border-radius: 12px;
   padding: 14px;
 }
@@ -475,9 +475,9 @@
   gap: 4px 10px;
   margin-top: 12px;
   padding: 10px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgb(var(--ink-rgb) / 0.05);
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--surface-subtle);
 }
 
 .rec-fantasy-val {
@@ -491,7 +491,7 @@
 
 .rec-fantasy-so-far {
   flex-basis: 100%;
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone, var(--text-secondary));
   font-family: var(--font-mono, monospace);
   font-size: 10px;
   text-align: right;
@@ -501,8 +501,8 @@
   font-family: var(--font-mono, monospace);
   font-size: 10px;
   font-weight: 700;
-  color: var(--color-stone, #8e8c94);
-  text-transform: uppercase;
+  color: var(--color-stone, var(--text-secondary));
+  text-transform: none;
   letter-spacing: 0.5px;
 }
 
@@ -510,18 +510,18 @@
   font-family: var(--font-mono, monospace);
   font-size: 13px;
   font-weight: 800;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .bar-container.projected .bar-val {
   color: var(--color-ember-orange, #ff6436);
-  text-shadow: 0 0 10px rgba(255, 100, 54, 0.4);
+  text-shadow: none;
 }
 
 .bar-track {
   width: 100%;
   height: 6px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgb(var(--ink-rgb) / 0.06);
   border-radius: 9999px;
   overflow: hidden;
 }
@@ -540,12 +540,12 @@
 @keyframes bar-grow { from { scale: 0 1; } }
 
 .bar-fill.current {
-  background: rgba(255, 255, 255, 0.4);
+  background: rgb(var(--ink-rgb) / 0.4);
 }
 
 .bar-fill.projected {
-  background: linear-gradient(90deg, #ff6436, #ff8c69);
-  box-shadow: 0 0 10px rgba(255, 100, 54, 0.6);
+  background: var(--accent-fill);
+  box-shadow: var(--shadow);
   animation-delay: 0.12s;
 }
 
@@ -561,10 +561,10 @@
   max-width: 560px;
   padding: 2.5rem 2rem;
   text-align: center;
-  border: 1px solid rgba(255, 100, 54, 0.3);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 30%, transparent);
   border-radius: 16px;
-  background: linear-gradient(180deg, rgba(24, 24, 30, 0.9) 0%, rgba(14, 14, 18, 0.96) 100%);
-  box-shadow: 0 0 40px rgba(255, 100, 54, 0.12);
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
 .predictions-locked-icon {
@@ -581,7 +581,7 @@
 .predictions-locked-desc {
   margin: 0 auto 1.5rem;
   max-width: 44ch;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgb(var(--ink-rgb) / 0.7);
   line-height: 1.5;
 }
 
@@ -605,16 +605,16 @@
 
 .predictions-locked .empty-cta:hover {
   transform: translateY(-2px);
-  box-shadow: 0 0 28px rgba(255, 100, 54, 0.6);
+  box-shadow: var(--shadow);
 }
 
 .predictions-locked .prediction-auth-secondary {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 100, 54, 0.3);
+  color: var(--text-primary);
+  background: rgb(var(--ink-rgb) / 0.04);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 30%, transparent);
 }
 
 .predictions-locked .prediction-auth-secondary:hover {
-  background: rgba(255, 100, 54, 0.15);
+  background: color-mix(in srgb, var(--color-ember-orange) 15%, transparent);
   border-color: var(--color-ember-orange, #ff6436);
 }

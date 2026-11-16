@@ -52,7 +52,7 @@ test("Privacy page documents localStorage keys and distinguishes logout from cle
   assert.match(page, /id, first name, last name and email, used to show your profile/);
   assert.match(page, /players you favourited/);
   assert.match(page, /Logging out clears <code>authToken<\/code> and <code>user<\/code>/);
-  assert.match(page, /clear all three by clearing site data in your browser/);
+  assert.match(page, /clear these preferences by clearing site data in your browser/);
 });
 
 test("Privacy page describes account storage and third-party data handling", () => {
@@ -64,10 +64,11 @@ test("Privacy page describes account storage and third-party data handling", () 
   assert.match(page, /stored in our database only as a one-way hash/);
   assert.match(page, /deleted on logout or expire after 24 hours/);
   assert.doesNotMatch(page, /only in the server's memory/);
-  for (const provider of ["Google Fonts", "fonts.googleapis.com", "fonts.gstatic.com", "Vercel", "Render", "LinkedIn"]) {
+  for (const provider of ["Vercel", "Render", "LinkedIn"]) {
     assert.ok(page.includes(provider), `${provider} must be disclosed`);
   }
-  assert.match(page, /Google receives your IP address and browser information when the page loads/);
+  assert.match(page, /Inter and Barlow Condensed are served with the site/);
+  assert.match(page, /does not contact Google Fonts/);
   assert.match(page, /Vercel \(frontend\) and Render \(API\)/);
   assert.match(page, /may keep standard server logs, such as your IP address and request time/);
   assert.match(page, /public sources fetched by our server, not by your browser/);
@@ -79,7 +80,7 @@ test("Privacy page uses the Contact theme with readable prose and narrow-screen 
   const css = readPrivacy("Privacy.css");
   assert.match(page, /import "\.\/Privacy\.css"/);
   // PageHero renders the cv-section-badge eyebrow, the h1 with its ember accent, and the lead.
-  assert.match(page, /<PageHero\s+eyebrow="PRIVACY & COOKIES"\s+title="PRIVACY &"\s+accent="COOKIES"/);
+  assert.match(page, /<PageHero\s+eyebrow="PRIVACY & COOKIES"\s+title="Privacy &"\s+accent="Cookies"/);
   assert.match(page, /lead="A plain-English summary/);
   assert.match(page, /Last updated: October 18, 2026/);
   assert.match(page, /privacy-ambient-one/);
@@ -99,7 +100,7 @@ test("Privacy page uses the Contact theme with readable prose and narrow-screen 
 
 test("Privacy is linked next to Contact in the site nav and from the Contact footer", () => {
   const siteNav = readFrontend("src/utils/siteNav.js");
-  assert.match(siteNav, /\{ to: '\/contact', label: 'CONTACT' \},\s*\{ to: '\/privacy', label: 'PRIVACY' \}/);
+  assert.match(siteNav, /\{ to: '\/contact', label: 'Contact' \},\s*\{ to: '\/privacy', label: 'Privacy' \}/);
   const footer = readSource("Contact.jsx").match(/<footer className="contact-footer"[^>]*>([\s\S]*?)<\/footer>/)?.[1];
   assert.ok(footer);
   assert.match(footer, /<Link to="\/privacy">Privacy &amp; Cookies<\/Link>/);

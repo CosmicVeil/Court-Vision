@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import "./Home.css";
 import AIPredictions from "../components/AIPredictions";
+import NextGamePreview from "../components/NextGamePreview";
 import PlayerStatsModal from "../components/PlayerStatsModal";
 import ScrollReveal from "../components/ScrollReveal";
 import { isAuthenticated } from "../utils/auth";
@@ -241,7 +242,7 @@ function ModelAccuracy() {
 
 const STEPS = [
   { number: "01", title: "CREATE YOUR ACCOUNT", text: "Sign up in seconds and personalize your analytics feed with your favorite NBA franchises and players." },
-  { number: "02", title: "EXPLORE & ANALYZE", text: "Dig into live box scores, multi-season player stats, and our projections for this season." },
+  { number: "02", title: "EXPLORE & ANALYZE", text: "Dig into live box scores, multi-season player stats, our projections for this season and every player's line for his next game." },
   { number: "03", title: "STAY AHEAD", text: "Receive daily value recommendations, automated injury adjustments, and real-time game probabilities." },
 ];
 
@@ -272,6 +273,7 @@ const Home = () => {
   const [trendingSettled, setTrendingSettled] = useState(false);
   // Same idea for the projected-leader cards, which change with each tab.
   const [leadersContent, setLeadersContent] = useState('');
+  const [nextGameLoaded, setNextGameLoaded] = useState(false);
 
   // States for search and popup modal
   const [searchQuery, setSearchQuery] = useState("");
@@ -537,24 +539,26 @@ const Home = () => {
 
   // Autocomplete fetch logic
   useEffect(() => {
+    const controller = new AbortController();
+    setIsSearching(false);
     const delayDebounceFn = setTimeout(async () => {
       if (searchQuery.trim().length >= 2) {
         setIsSearching(true);
         try {
-          const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(searchQuery)}`));
+          const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(searchQuery)}`), { signal: controller.signal });
           const data = await response.json();
-          setSearchResults(data.players || []);
+          if (!controller.signal.aborted) setSearchResults(data.players || []);
         } catch (error) {
-          console.error("Error searching players:", error);
+          if (!controller.signal.aborted) console.error("Error searching players:", error);
         } finally {
-          setIsSearching(false);
+          if (!controller.signal.aborted) setIsSearching(false);
         }
       } else {
         setSearchResults([]);
       }
     }, 300);
 
-    return () => clearTimeout(delayDebounceFn);
+    return () => { clearTimeout(delayDebounceFn); controller.abort(); };
   }, [searchQuery]);
 
   return (
@@ -622,15 +626,15 @@ const Home = () => {
             {/* Back layer of 3D Net (BEHIND the ball) */}
             <svg className="cv-net-svg cv-net-back" viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
               <path d="M 12 20 Q 50 8 88 20" fill="none" stroke="#b83812" strokeWidth="4.5" />
-              <path d="M 16 20 Q 25 58 35 96" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.6" />
-              <path d="M 28 17 Q 34 56 42 96" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.6" />
-              <path d="M 42 14 Q 45 55 48 96" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.6" />
-              <path d="M 58 14 Q 55 55 54 96" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.6" />
-              <path d="M 72 17 Q 66 56 60 96" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.6" />
-              <path d="M 84 20 Q 75 58 67 96" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.6" />
-              <path d="M 19 36 Q 50 28 81 36" fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="1.2" />
-              <path d="M 24 55 Q 50 48 76 55" fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="1.2" />
-              <path d="M 29 74 Q 50 68 71 74" fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="1.2" />
+              <path d="M 16 20 Q 25 58 35 96" fill="none" stroke="var(--court-net)" strokeWidth="1.6" />
+              <path d="M 28 17 Q 34 56 42 96" fill="none" stroke="var(--court-net)" strokeWidth="1.6" />
+              <path d="M 42 14 Q 45 55 48 96" fill="none" stroke="var(--court-net)" strokeWidth="1.6" />
+              <path d="M 58 14 Q 55 55 54 96" fill="none" stroke="var(--court-net)" strokeWidth="1.6" />
+              <path d="M 72 17 Q 66 56 60 96" fill="none" stroke="var(--court-net)" strokeWidth="1.6" />
+              <path d="M 84 20 Q 75 58 67 96" fill="none" stroke="var(--court-net)" strokeWidth="1.6" />
+              <path d="M 19 36 Q 50 28 81 36" fill="none" stroke="var(--court-net)" strokeWidth="1.2" />
+              <path d="M 24 55 Q 50 48 76 55" fill="none" stroke="var(--court-net)" strokeWidth="1.2" />
+              <path d="M 29 74 Q 50 68 71 74" fill="none" stroke="var(--court-net)" strokeWidth="1.2" />
             </svg>
           </div>
 
@@ -646,15 +650,15 @@ const Home = () => {
             </div>
             <svg className="cv-net-svg cv-net-back" viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
               <path d="M 12 20 Q 50 8 88 20" fill="none" stroke="#b83812" strokeWidth="4.5" />
-              <path d="M 16 20 Q 25 58 35 96" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.6" />
-              <path d="M 28 17 Q 34 56 42 96" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.6" />
-              <path d="M 42 14 Q 45 55 48 96" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.6" />
-              <path d="M 58 14 Q 55 55 54 96" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.6" />
-              <path d="M 72 17 Q 66 56 60 96" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.6" />
-              <path d="M 84 20 Q 75 58 67 96" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.6" />
-              <path d="M 19 36 Q 50 28 81 36" fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="1.2" />
-              <path d="M 24 55 Q 50 48 76 55" fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="1.2" />
-              <path d="M 29 74 Q 50 68 71 74" fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="1.2" />
+              <path d="M 16 20 Q 25 58 35 96" fill="none" stroke="var(--court-net)" strokeWidth="1.6" />
+              <path d="M 28 17 Q 34 56 42 96" fill="none" stroke="var(--court-net)" strokeWidth="1.6" />
+              <path d="M 42 14 Q 45 55 48 96" fill="none" stroke="var(--court-net)" strokeWidth="1.6" />
+              <path d="M 58 14 Q 55 55 54 96" fill="none" stroke="var(--court-net)" strokeWidth="1.6" />
+              <path d="M 72 17 Q 66 56 60 96" fill="none" stroke="var(--court-net)" strokeWidth="1.6" />
+              <path d="M 84 20 Q 75 58 67 96" fill="none" stroke="var(--court-net)" strokeWidth="1.6" />
+              <path d="M 19 36 Q 50 28 81 36" fill="none" stroke="var(--court-net)" strokeWidth="1.2" />
+              <path d="M 24 55 Q 50 48 76 55" fill="none" stroke="var(--court-net)" strokeWidth="1.2" />
+              <path d="M 29 74 Q 50 68 71 74" fill="none" stroke="var(--court-net)" strokeWidth="1.2" />
             </svg>
           </div>
 
@@ -713,17 +717,17 @@ const Home = () => {
               <ellipse cx="50" cy="20" rx="38" ry="10" fill="rgba(255,100,54,0.15)" />
               <path d="M 12 20 Q 50 32 88 20" fill="none" stroke="#ff6436" strokeWidth="5" strokeLinecap="round" />
               <path d="M 12 20 Q 50 29 88 20" fill="none" stroke="#ffa385" strokeWidth="1.8" />
-              <path d="M 12 21 Q 20 60 34 98" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
-              <path d="M 24 25 Q 30 62 41 98" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
-              <path d="M 37 28 Q 40 64 47 98" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
-              <path d="M 50 29 Q 50 65 53 98" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
-              <path d="M 63 28 Q 60 64 59 98" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
-              <path d="M 76 25 Q 70 62 65 98" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
-              <path d="M 88 21 Q 80 60 72 98" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
-              <path d="M 15 40 Q 50 50 85 40" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.6" />
-              <path d="M 21 60 Q 50 70 79 60" fill="none" stroke="rgba(255,255,255,0.80)" strokeWidth="1.5" />
-              <path d="M 28 80 Q 50 88 73 80" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.4" />
-              <path d="M 34 98 Q 53 104 72 98" fill="none" stroke="#ffffff" strokeWidth="1.8" strokeDasharray="3 3" />
+              <path d="M 12 21 Q 20 60 34 98" fill="none" stroke="var(--court-net)" strokeWidth="2.2" strokeLinecap="round" />
+              <path d="M 24 25 Q 30 62 41 98" fill="none" stroke="var(--court-net)" strokeWidth="2.2" strokeLinecap="round" />
+              <path d="M 37 28 Q 40 64 47 98" fill="none" stroke="var(--court-net)" strokeWidth="2.2" strokeLinecap="round" />
+              <path d="M 50 29 Q 50 65 53 98" fill="none" stroke="var(--court-net)" strokeWidth="2.2" strokeLinecap="round" />
+              <path d="M 63 28 Q 60 64 59 98" fill="none" stroke="var(--court-net)" strokeWidth="2.2" strokeLinecap="round" />
+              <path d="M 76 25 Q 70 62 65 98" fill="none" stroke="var(--court-net)" strokeWidth="2.2" strokeLinecap="round" />
+              <path d="M 88 21 Q 80 60 72 98" fill="none" stroke="var(--court-net)" strokeWidth="2.2" strokeLinecap="round" />
+              <path d="M 15 40 Q 50 50 85 40" fill="none" stroke="var(--court-net)" strokeWidth="1.6" />
+              <path d="M 21 60 Q 50 70 79 60" fill="none" stroke="var(--court-net)" strokeWidth="1.5" />
+              <path d="M 28 80 Q 50 88 73 80" fill="none" stroke="var(--court-net)" strokeWidth="1.4" />
+              <path d="M 34 98 Q 53 104 72 98" fill="none" stroke="var(--court-net)" strokeWidth="1.8" strokeDasharray="3 3" />
             </svg>
           </div>
 
@@ -733,17 +737,17 @@ const Home = () => {
               <ellipse cx="50" cy="20" rx="38" ry="10" fill="rgba(255,100,54,0.15)" />
               <path d="M 12 20 Q 50 32 88 20" fill="none" stroke="#ff6436" strokeWidth="5" strokeLinecap="round" />
               <path d="M 12 20 Q 50 29 88 20" fill="none" stroke="#ffa385" strokeWidth="1.8" />
-              <path d="M 12 21 Q 20 60 34 98" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
-              <path d="M 24 25 Q 30 62 41 98" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
-              <path d="M 37 28 Q 40 64 47 98" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
-              <path d="M 50 29 Q 50 65 53 98" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
-              <path d="M 63 28 Q 60 64 59 98" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
-              <path d="M 76 25 Q 70 62 65 98" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
-              <path d="M 88 21 Q 80 60 72 98" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
-              <path d="M 15 40 Q 50 50 85 40" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.6" />
-              <path d="M 21 60 Q 50 70 79 60" fill="none" stroke="rgba(255,255,255,0.80)" strokeWidth="1.5" />
-              <path d="M 28 80 Q 50 88 73 80" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.4" />
-              <path d="M 34 98 Q 53 104 72 98" fill="none" stroke="#ffffff" strokeWidth="1.8" strokeDasharray="3 3" />
+              <path d="M 12 21 Q 20 60 34 98" fill="none" stroke="var(--court-net)" strokeWidth="2.2" strokeLinecap="round" />
+              <path d="M 24 25 Q 30 62 41 98" fill="none" stroke="var(--court-net)" strokeWidth="2.2" strokeLinecap="round" />
+              <path d="M 37 28 Q 40 64 47 98" fill="none" stroke="var(--court-net)" strokeWidth="2.2" strokeLinecap="round" />
+              <path d="M 50 29 Q 50 65 53 98" fill="none" stroke="var(--court-net)" strokeWidth="2.2" strokeLinecap="round" />
+              <path d="M 63 28 Q 60 64 59 98" fill="none" stroke="var(--court-net)" strokeWidth="2.2" strokeLinecap="round" />
+              <path d="M 76 25 Q 70 62 65 98" fill="none" stroke="var(--court-net)" strokeWidth="2.2" strokeLinecap="round" />
+              <path d="M 88 21 Q 80 60 72 98" fill="none" stroke="var(--court-net)" strokeWidth="2.2" strokeLinecap="round" />
+              <path d="M 15 40 Q 50 50 85 40" fill="none" stroke="var(--court-net)" strokeWidth="1.6" />
+              <path d="M 21 60 Q 50 70 79 60" fill="none" stroke="var(--court-net)" strokeWidth="1.5" />
+              <path d="M 28 80 Q 50 88 73 80" fill="none" stroke="var(--court-net)" strokeWidth="1.4" />
+              <path d="M 34 98 Q 53 104 72 98" fill="none" stroke="var(--court-net)" strokeWidth="1.8" strokeDasharray="3 3" />
             </svg>
           </div>
 
@@ -765,9 +769,9 @@ const Home = () => {
           <SectionHead
             id="home-search-title"
             eyebrow="PLAYER SEARCH"
-            title="SEARCH ANY"
-            accent="NBA ATHLETE"
-            lead="Instant telemetry, season trajectories, and AI-projected performance metrics"
+            title="Find a"
+            accent="player"
+            lead="Search any NBA player for projections, stats, and matchup analysis."
           />
 
           <div className="hero-search-wrapper" data-reveal style={revealDelay(1)}>
@@ -814,11 +818,40 @@ const Home = () => {
           <SectionHead
             id="home-trending-title"
             eyebrow="LIVE INTEL"
-            title="TRENDING"
-            accent="NOW"
+            title="Trending"
+            accent="now"
             lead="Live scores, upcoming matchups, and this week's standout performers"
           />
           <TrendingSection onPlayerClick={handlePlayerClick} onSettled={setTrendingSettled} />
+        </div>
+      </section>
+
+      <section className="home-section ai-section next-game-section" aria-labelledby="home-next-game-title">
+        <div className="ai-content">
+          <SectionHead
+            id="home-next-game-title"
+            eyebrow="PER-GAME MODEL"
+            title="Game"
+            accent="projections"
+            lead="Player projections based on recent form, rest, matchup odds and injuries. Updated daily."
+          />
+          <NextGamePreview onPlayerClick={handlePlayerClick} onLoaded={setNextGameLoaded} />
+        </div>
+      </section>
+
+      <section className="home-section ai-section" aria-labelledby="home-leaders-title">
+        <div className="ai-content">
+          <SectionHead
+            id="home-leaders-title"
+            eyebrow="OUR MODEL"
+            title="Projected"
+            accent="leaders"
+            lead="We use past seasons' stats to predict this season's top scorers, playmakers, rebounders and breakout players."
+          />
+          <div data-reveal style={revealDelay(1)}>
+            <AIPredictions onPlayerClick={handlePlayerClick} onContentChange={setLeadersContent} />
+          </div>
+          <ModelAccuracy />
         </div>
       </section>
 
@@ -827,9 +860,9 @@ const Home = () => {
           <SectionHead
             id="home-steps-title"
             eyebrow="WORKFLOW"
-            title="HOW IT"
-            accent="WORKS"
-            lead="Unlock the full power of AI-driven basketball predictive intelligence in three steps"
+            title="How it"
+            accent="works"
+            lead="Save your favourites, explore the stats, and find players to watch."
           />
           <ol className="steps-container">
             {STEPS.map((step, index) => (
@@ -848,30 +881,14 @@ const Home = () => {
         </div>
       </section>
 
-      <section className="home-section ai-section" aria-labelledby="home-leaders-title">
-        <div className="ai-content">
-          <SectionHead
-            id="home-leaders-title"
-            eyebrow="OUR MODEL"
-            title="PROJECTED"
-            accent="LEADERS"
-            lead="We use past seasons' stats to predict this season's top scorers, playmakers, rebounders and breakout players."
-          />
-          <ModelAccuracy />
-          <div data-reveal style={revealDelay(1)}>
-            <AIPredictions onPlayerClick={handlePlayerClick} onContentChange={setLeadersContent} />
-          </div>
-        </div>
-      </section>
-
       {/* One closing CTA for everyone; only the account link depends on login state. */}
       <section className="home-section home-cta" aria-labelledby="home-cta-title">
         <SectionHead
           id="home-cta-title"
           eyebrow="GET STARTED"
-          title="ELEVATE YOUR"
-          accent="COURT VISION"
-          lead="Live box scores, multi-season player stats and our projections for this season, all in one place."
+          title="Ready to"
+          accent="go deeper?"
+          lead="Live box scores, multi-season player stats, season projections and next-game predictions, all in one place."
         />
         <div className="home-cta-actions" data-reveal style={revealDelay(1)}>
           <Link to="/stats" className="cta-button primary large">START ANALYZING</Link>
@@ -881,7 +898,7 @@ const Home = () => {
         </div>
       </section>
 
-      <ScrollReveal scanKey={`${trendingSettled}:${leadersContent}`} />
+      <ScrollReveal scanKey={`${trendingSettled}:${leadersContent}:${nextGameLoaded}`} />
       <PlayerStatsModal player={selectedPlayer} loading={loadingPlayer} onClose={() => setSelectedPlayer(null)} />
     </div>
   );

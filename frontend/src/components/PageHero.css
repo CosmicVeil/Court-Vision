@@ -16,7 +16,7 @@
   font-family: var(--font-heading);
   font-size: clamp(var(--text-display-sm), 5vw, var(--text-display-md));
   font-weight: 900;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 /* Words rise in one after another, once, on first load. */

@@ -20,15 +20,15 @@
   text-align: center;
   padding: 40px 24px;
   font-family: var(--font-mono, monospace);
-  letter-spacing: 1px;
-  color: var(--color-stone, #8e8c94);
+  letter-spacing: 0;
+  color: var(--color-stone, var(--text-secondary));
 }
 
 .standings-error {
   color: #ff6436;
-  border: 1px solid rgba(255, 100, 54, 0.3);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 30%, transparent);
   border-radius: var(--radius-xl, 20px);
-  background: rgba(255, 100, 54, 0.06);
+  background: color-mix(in srgb, var(--color-ember-orange) 6%, transparent);
 }
 
 /* ---------- Controls (season selector) ---------- */
@@ -41,12 +41,12 @@
   max-width: 1320px;
   margin: 0 auto 22px;
   padding: 16px 20px;
-  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
-  border: 1px solid rgba(255, 100, 54, 0.18);
+  background: var(--surface);
+  border: 1px solid var(--border-glass);
   border-radius: var(--radius-xl, 20px);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--shadow);
 }
 
 .standings-season {
@@ -59,23 +59,23 @@
   font-family: var(--font-mono, monospace);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--color-stone, #8e8c94);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-stone, var(--text-secondary));
 }
 
 .standings-season select {
   appearance: none;
   -webkit-appearance: none;
-  background: rgba(255, 255, 255, 0.04);
-  color: #fff;
-  border: 1px solid rgba(255, 100, 54, 0.3);
+  background: rgb(var(--ink-rgb) / 0.04);
+  color: var(--text-primary);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 30%, transparent);
   border-radius: var(--radius-full, 9999px);
   padding: 9px 38px 9px 18px;
   font-family: var(--font-mono, monospace);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 1px;
+  letter-spacing: 0;
   cursor: pointer;
   transition: all 0.2s ease;
   /* Caret */
@@ -87,21 +87,21 @@
 .standings-season select:hover,
 .standings-season select:focus {
   border-color: var(--color-ember-orange, #ff6436);
-  background-color: rgba(255, 100, 54, 0.1);
+  background-color: color-mix(in srgb, var(--color-ember-orange) 10%, transparent);
   outline: none;
 }
 
 .standings-season select option {
-  background: #14141a;
-  color: #fff;
+  background: var(--surface);
+  color: var(--text-primary);
 }
 
 .standings-status {
   font-family: var(--font-mono, monospace);
   font-size: 11px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--color-stone, #8e8c94);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-stone, var(--text-secondary));
 }
 
 .standings-grid[aria-busy='true'] {
@@ -130,28 +130,28 @@
   font-family: var(--font-heading, 'Outfit', sans-serif);
   font-weight: 900;
   font-size: 20px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: #ffffff;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-primary);
   margin: 0 0 16px;
   padding-left: 4px;
 }
 
 /* ---------- Table ---------- */
 .standings-table-wrapper {
-  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
-  border: 1px solid rgba(255, 100, 54, 0.18);
+  background: var(--surface);
+  border: 1px solid var(--border-glass);
   border-radius: var(--radius-xl, 20px);
   overflow-x: auto;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--shadow);
 }
 
 .standings-table {
   width: 100%;
   border-collapse: collapse;
-  color: #fff;
+  color: var(--text-primary);
   min-width: 460px;
   table-layout: fixed;
 }
@@ -175,7 +175,7 @@
 }
 
 .standings-table thead {
-  background: rgba(255, 100, 54, 0.08);
+  background: color-mix(in srgb, var(--color-ember-orange) 8%, transparent);
 }
 
 .standings-table th {
@@ -185,8 +185,8 @@
   font-size: 10px;
   color: var(--color-ember-orange, #ff6436);
   letter-spacing: 0.5px;
-  text-transform: uppercase;
-  border-bottom: 1px solid rgba(255, 100, 54, 0.2);
+  text-transform: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-ember-orange) 20%, transparent);
   user-select: none;
   cursor: pointer;
   white-space: nowrap;
@@ -194,12 +194,12 @@
 }
 
 .standings-table th.sortable:hover {
-  background: rgba(255, 100, 54, 0.15);
-  color: #ffffff;
+  background: color-mix(in srgb, var(--color-ember-orange) 15%, transparent);
+  color: var(--text-primary);
 }
 
 .standings-table th.active {
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .sort-arrow {
@@ -210,7 +210,7 @@
 
 .standings-table td {
   padding: 10px 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgb(var(--ink-rgb) / 0.04);
   font-size: 12.5px;
   font-family: var(--font-mono, monospace);
   font-weight: 600;
@@ -227,12 +227,12 @@
 }
 
 .standings-table tbody tr:hover {
-  background: rgba(255, 100, 54, 0.08);
+  background: color-mix(in srgb, var(--color-ember-orange) 8%, transparent);
 }
 
 .rank-cell {
   font-weight: 800;
-  color: #ffffff;
+  color: var(--text-primary);
   position: relative;
 }
 
@@ -267,7 +267,7 @@
   font-family: var(--font-heading, 'Inter', sans-serif);
   font-weight: 800;
   font-size: 12.5px;
-  color: #ffffff;
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -276,7 +276,7 @@
 .team-tricode {
   display: none;
   font-size: 11px;
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone, var(--text-secondary));
 }
 
 /* ---------- Playoff / Play-In side rails ----------
@@ -301,8 +301,8 @@
 }
 
 /* ---------- Streak coloring ---------- */
-.streak-cell.positive { color: #4ade80; }
-.streak-cell.negative { color: #f87171; }
+.streak-cell.positive { color: var(--positive); }
+.streak-cell.negative { color: var(--negative); }
 
 /* ---------- Legend ---------- */
 .standings-legend {
@@ -313,7 +313,7 @@
   font-family: var(--font-mono, monospace);
   font-size: 11px;
   letter-spacing: 0.5px;
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone, var(--text-secondary));
 }
 
 .legend-rail {
@@ -333,6 +333,6 @@
 /* ---------- Small screens: swap full name for tricode ---------- */
 @media (max-width: 640px) {
   .team-name { display: none; }
-  .team-tricode { display: inline; font-weight: 800; color: #fff; }
+  .team-tricode { display: inline; font-weight: 800; color: var(--text-primary); }
   .team-cell { min-width: 0; gap: 8px; }
 }

@@ -1,3 +1,5 @@
+import ContentSkeleton from '../components/ContentSkeleton';
+import LockIcon from '../components/LockIcon';
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import PlayerStatsModal from '../components/PlayerStatsModal';
@@ -58,14 +60,18 @@ const RecommendationChart = () => {
     const API_BASE_URL = '/api';
 
     useEffect(() => {
+        // Switching stat (e.g. back/forward) starts a new fetch; ignore any answer for the old stat.
+        let cancelled = false;
         const fetchRecommendations = async () => {
             try {
                 setLoading(true);
                 setNeedsAuth(false);
+                setError(null);
                 const response = await fetch(`${API_BASE_URL}/recommendations/${stat}`, {
                     headers: authHeaders(),
                 });
 
+                if (cancelled) return;
                 if (response.status === 401) {
                     // Signed out or token expired: drop any stale token and prompt to sign in.
                     clearAuth();
@@ -78,36 +84,28 @@ const RecommendationChart = () => {
                 }
 
                 const data = await response.json();
+                if (cancelled) return;
                 const list = Array.isArray(data) ? data : (data?.[stat] ?? []);
                 setPlayers(list);
                 setError(null);
             } catch (err) {
+                if (cancelled) return;
                 console.error('Error fetching recommendations:', err);
                 setError(err.message);
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
 
         fetchRecommendations();
+        return () => { cancelled = true; };
     }, [stat]);
-
-    if (loading) {
-        return (
-            <div className="recommendations-wrapper">
-                <div className="spotlight-loader-wrap">
-                    <div className="spotlight-spinner"></div>
-                    <p className="spotlight-loader">Processing AI Trend Indexes...</p>
-                </div>
-            </div>
-        );
-    }
 
     if (needsAuth) {
         return (
             <div className="recommendations-wrapper">
                 <div className="predictions-locked" data-enter>
-                    <div className="predictions-locked-icon" aria-hidden="true">🔒</div>
+                    <div className="predictions-locked-icon" aria-hidden="true"><LockIcon /></div>
                     <h2 className="predictions-locked-title">Sign in to see full predictions</h2>
                     <p className="predictions-locked-desc">
                         Breakout recommendations are a free account feature. Create an account
@@ -191,7 +189,7 @@ const RecommendationChart = () => {
             </header>
 
             <div className="recommendations-content">
-                {players.length === 0 ? (
+                {loading ? <ContentSkeleton variant="recommendations" count={6} label="Loading recommendations…" /> : players.length === 0 ? (
                     <p className="section-description">No recommendations available yet.</p>
                 ) : (
                     <div className="recommendations-grid">

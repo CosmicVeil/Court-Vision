@@ -73,7 +73,8 @@ test('Stats and Predictions use PageHero, including while the first load is pend
     assert.doesNotMatch(page, /className="(stats|predictions)-header"/, file);
   }
   const stats = readSource('Stats.jsx');
-  assert.ok((stats.match(/\{hero\}/g) || []).length >= 3, 'loading, error and loaded views all show the hero');
+  assert.equal((stats.match(/\{hero\}/g) || []).length, 1, 'one persistent hero for every result state');
+  assert.ok(stats.indexOf('<FilterBar') < stats.indexOf('loading && players.length === 0'), 'loading must not replace the search controls');
 });
 
 test('box-score sort buttons are scoped, so they do not restyle the Stats sort buttons', () => {

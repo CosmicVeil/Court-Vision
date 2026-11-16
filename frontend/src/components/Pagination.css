@@ -17,26 +17,26 @@
   box-sizing: border-box;
   max-width: 100%;
   padding: calc(var(--space) * 4) calc(var(--space) * 7);
-  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
-  border: 1px solid rgba(255, 100, 54, 0.18);
+  background: var(--surface);
+  border: 1px solid var(--border-glass);
   border-radius: var(--radius-xl);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--shadow);
 }
 
 .pager-btn {
   min-height: 44px;
   padding: 0 calc(var(--space) * 6);
   background: transparent;
-  border: 1px solid rgba(255, 100, 54, 0.3);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 30%, transparent);
   border-radius: var(--radius-full, 9999px);
   color: var(--color-ember-orange, #ff6436);
   font-family: var(--font-mono, monospace);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   white-space: nowrap;
   cursor: pointer;
   transition: scale var(--duration-fast) var(--ease-brand), opacity var(--duration-base) var(--ease-brand);
@@ -47,8 +47,8 @@
 .pager-btn:disabled {
   opacity: .3;
   cursor: not-allowed;
-  border-color: rgba(255, 255, 255, 0.1);
-  color: var(--color-stone, #8e8c94);
+  border-color: rgb(var(--ink-rgb) / 0.1);
+  color: var(--color-stone, var(--text-secondary));
 }
 
 .pager-btn:focus-visible {
@@ -74,23 +74,23 @@
 
 .pager-page {
   margin-bottom: var(--space);
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone, var(--text-secondary));
   font-size: 13px;
   font-weight: 700;
-  letter-spacing: 1px;
+  letter-spacing: 0;
 }
 
 .pager-current { color: var(--color-ember-orange, #ff6436); }
-.pager-total { color: #fff; }
+.pager-total { color: var(--text-primary); }
 
 .pager-range {
-  color: var(--color-stone, #8e8c94);
+  color: var(--color-stone, var(--text-secondary));
   font-size: 11px;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .pager-btn:hover:not(:disabled) {
-    background: rgba(255, 100, 54, 0.12);
+    background: color-mix(in srgb, var(--color-ember-orange) 12%, transparent);
     border-color: var(--color-ember-orange, #ff6436);
   }
 }

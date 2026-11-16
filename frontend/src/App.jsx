@@ -11,6 +11,8 @@ import LiveGames from "./pages/LiveGames.jsx";
 import LiveGameDetail from "./pages/LiveGameDetail.jsx";
 import RecommendationChart from "./pages/RecommendationChart.jsx";
 import Predictions from "./pages/Predictions.jsx";
+import GamePredictions from "./pages/GamePredictions.jsx";
+import GameRecommendations from "./pages/GameRecommendations.jsx";
 import Contact from "./pages/Contact.jsx";
 import Privacy from "./pages/Privacy.jsx";
 import Profile from "./pages/Profile.jsx";
@@ -29,12 +31,15 @@ function App() {
           <Route path="/standings" element={<Standings />} />
           <Route path="/teams/:tricode" element={<Team />} />
           <Route path="/recommendations" element={<Recommendations />} />
+          {/* Static segment, so it wins over /recommendations/:stat below. */}
+          <Route path="/recommendations/games" element={<GameRecommendations />} />
           <Route path="/favourites" element={<Favourites />} />
           <Route path="/login" element={<Login />} />
           <Route path="/create-account" element={<SignUp />} />
           <Route path="/games" element={<LiveGames />} />
           <Route path="/games/:gameId" element={<LiveGameDetail />} />
           <Route path="/predictions" element={<Predictions />} />
+          <Route path="/predictions/games" element={<GamePredictions />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/profile" element={<Profile />} />

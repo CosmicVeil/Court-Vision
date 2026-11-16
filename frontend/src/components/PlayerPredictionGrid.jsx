@@ -6,9 +6,10 @@ import './PlayerPredictionGrid.css';
 const formatValue = (value) => (Number(value) || 0).toFixed(1);
 const BADGE_ARROWS = { up: '↗', down: '↘', flat: '→' };
 
-const PlayerPredictionGrid = ({ currentStats = {}, predictionStats = {} }) => (
+// groups: the season model's stats by default; the Game projections tab passes GAME_PREDICTION_GROUPS.
+const PlayerPredictionGrid = ({ currentStats = {}, predictionStats = {}, groups = PREDICTION_GROUPS }) => (
   <div className="player-prediction-groups">
-    {PREDICTION_GROUPS.map((group) => (
+    {groups.map((group) => (
       <section className="player-prediction-group" key={group.id}>
         <div className="player-prediction-group-header">
           <span className="cv-section-badge-mini">{group.label}</span>

@@ -24,7 +24,7 @@
   position: absolute;
   width: 480px;
   height: 480px;
-  background: radial-gradient(circle, rgba(255, 100, 54, 0.12), transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-ember-orange) 12%, transparent), transparent 70%);
   filter: blur(60px);
   pointer-events: none;
 }
@@ -60,8 +60,8 @@
 .privacy-disclaimer {
   padding: 28px 32px;
   margin-bottom: 24px;
-  background: rgba(255, 100, 54, 0.08);
-  border: 1px solid rgba(255, 100, 54, 0.45);
+  background: color-mix(in srgb, var(--color-ember-orange) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 45%, transparent);
   border-left: 4px solid var(--color-ember-orange, #ff6436);
   border-radius: var(--radius-xl, 20px);
   backdrop-filter: blur(20px);
@@ -76,12 +76,12 @@
 .privacy-card {
   min-width: 0;
   padding: 32px;
-  background: linear-gradient(180deg, rgba(24, 24, 30, 0.85) 0%, rgba(14, 14, 18, 0.95) 100%);
-  border: 1px solid rgba(255, 100, 54, 0.18);
+  background: var(--surface);
+  border: 1px solid var(--border-glass);
   border-radius: var(--radius-xl, 20px);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--shadow);
   overflow-wrap: anywhere;
 }
 
@@ -114,8 +114,8 @@
   font-size: 11px;
   font-weight: 700;
   color: var(--color-ember-orange, #ff6436);
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   margin-bottom: 6px;
 }
 
@@ -131,7 +131,7 @@
 .privacy-card code {
   font-family: var(--font-mono, monospace);
   font-size: 0.9em;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgb(var(--ink-rgb) / 0.05);
   border-radius: 4px;
   padding: 2px 4px;
   overflow-wrap: anywhere;
@@ -164,8 +164,8 @@
   gap: 16px;
   font-family: var(--font-mono, monospace);
   font-size: 11px;
-  letter-spacing: 1.5px;
-  color: var(--color-stone, #8e8c94);
+  letter-spacing: 0;
+  color: var(--color-stone, var(--text-secondary));
 }
 
 @media (max-width: 480px) {

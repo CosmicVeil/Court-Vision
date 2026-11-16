@@ -1,0 +1,131 @@
+/* Per-game picks page. Header, cards and the lock panel come from Recommendations.css; the stat
+   tabs reuse the Season / Game projections pill (PredictionModeToggle.css). */
+
+.gr-stat-tabs {
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto 28px;
+  overflow-x: auto;
+}
+
+.gr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.gr-column-title {
+  margin: 4px 0 4px;
+  font-family: var(--font-heading, 'Inter', sans-serif);
+  font-size: 1.25rem;
+  font-weight: 800;
+  text-transform: none;
+  color: var(--text-primary);
+}
+
+.gr-column-desc {
+  margin: 0 0 16px;
+  color: var(--color-stone, var(--text-secondary));
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.gr-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gr-row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgb(var(--ink-rgb) / 0.03);
+  border: 1px solid rgb(var(--ink-rgb) / 0.05);
+  border-radius: var(--radius-md, 10px);
+}
+
+.gr-rank {
+  color: var(--color-ember-orange, #ff6436);
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.gr-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.gr-name {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .gr-name:hover { color: var(--color-ember-orange, #ff6436); }
+}
+
+.gr-name:focus-visible {
+  outline: 2px solid var(--color-ember-orange);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.gr-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-stone, var(--text-secondary));
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  text-transform: none;
+}
+
+.gr-numbers {
+  display: grid;
+  justify-items: end;
+  gap: 1px;
+}
+
+.gr-predicted {
+  color: var(--text-primary);
+  font-family: var(--font-mono, monospace);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.gr-average {
+  color: var(--color-stone, var(--text-secondary));
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+}
+
+.gr-empty,
+.gr-footnote {
+  max-width: 760px;
+  margin: 24px auto 0;
+  color: var(--color-stone, var(--text-secondary));
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: center;
+}

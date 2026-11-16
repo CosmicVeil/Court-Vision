@@ -12,7 +12,7 @@ test("Home uses the shared reveal instead of its own observer and classes", () =
   assert.match(home, /import ScrollReveal from "\.\.\/components\/ScrollReveal"/);
   assert.match(home, /import \{ enterDelay, getRevealDelay \} from "\.\.\/utils\/scrollReveal"/);
   // The trending cards arrive after a fetch, so the scan reruns once it settles.
-  assert.match(home, /<ScrollReveal scanKey=\{`\$\{trendingSettled\}:\$\{leadersContent\}`\} \/>/);
+  assert.match(home, /<ScrollReveal scanKey=\{`\$\{trendingSettled\}:\$\{leadersContent\}:\$\{nextGameLoaded\}`\} \/>/);
   assert.match(home, /onSettled=\{setTrendingSettled\}/);
   assert.match(home, /onContentChange=\{setLeadersContent\}/);
   assert.match(home, /onSettled\(true\)/);
@@ -26,7 +26,7 @@ test("the hero's on-screen blocks enter on mount; the undefined heroReveal keyfr
 });
 
 test("sections below the intro share one heading anatomy and reveal in a stagger", () => {
-  assert.equal(home.match(/<SectionHead\b/g)?.length, 5);
+  assert.equal(home.match(/<SectionHead\b/g)?.length, 6);
   assert.match(home, /<div className="home-section-head" data-reveal>/);
   assert.match(home, /className="cv-section-badge" data-slot="eyebrow"/);
   assert.match(home, /data-slot="display-heading"/);
@@ -54,7 +54,7 @@ test("Home's interactive elements are keyboard reachable with the ember focus ri
   assert.match(home, /<button\s+type="button"\s+className="pra-open"/);
   assert.doesNotMatch(home, /clickable-pra-card/);
   for (const selector of [".cta-button:focus-visible", ".featured-link:focus-visible", ".pra-card:has(.pra-open:focus-visible)",
-    ".search-bar-container:has(.search-input-field:focus-visible)", ".predictions-tabs .tab-button:focus-visible"]) {
+    ".search-bar-container:has(.search-input-field:focus-visible)"]) {
     const at = css.indexOf(selector);
     assert.ok(at >= 0, `${selector} has a focus style`);
     assert.match(css.slice(at, css.indexOf("}", at)), /outline: 2px solid var\(--color-ember-orange\)/, selector);

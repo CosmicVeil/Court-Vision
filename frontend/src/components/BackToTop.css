@@ -17,12 +17,12 @@
   place-items: center;
   width: 3rem;
   height: 3rem;
-  border: 1px solid rgba(255, 100, 54, 0.35);
+  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 35%, transparent);
   border-radius: var(--radius-full);
-  background: rgba(14, 14, 18, 0.88);
+  background: var(--surface);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow);
   color: var(--color-ember-orange);
   font-size: var(--text-lg);
   cursor: pointer;

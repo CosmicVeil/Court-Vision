@@ -1,6 +1,10 @@
+import ContentSkeleton from "./ContentSkeleton";
+import ResultRegion from "./ResultRegion";
 import React, { useEffect, useRef, useState } from "react";
 import { API_ENDPOINTS } from "../config/api";
+import PillNav from "./PillNav";
 import PlayerCard from "./PlayerCard";
+import "./PredictionModeToggle.css";
 import { getLeaderCardStats } from "../utils/playerCard";
 import "./AIPredictions.css";
 
@@ -128,21 +132,14 @@ const AIPredictions = ({ onPlayerClick, onContentChange, lazy = true }) => {
 
   return (
     <div className="ai-predictions-container" ref={containerRef}>
-      <div className="predictions-tabs">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* Same pill tabs as the Game picks stat switch (GameRecommendations.jsx). */}
+      <PillNav className="pm-toggle ai-stat-tabs" tabClassName="pm-tab" label="Projection leaders" idPrefix="ai"
+        panelId="ai-panel" items={tabs} value={activeTab} onChange={setActiveTab} />
 
-      <div className="predictions-content">
+      <ResultRegion changeKey={contentKey} className="predictions-content" id="ai-panel" role="tabpanel"
+        aria-labelledby={`ai-tab-${activeTab}`}>
         {waitingToLoad || loading ? (
-          <div className="loading">Loading AI predictions...</div>
+          <ContentSkeleton count={10} label="Loading player projections…" />
         ) : error ? (
           <div className="error">{error}</div>
         ) : activeTabData && activeTabData.data && activeTabData.data.length > 0 ? (
@@ -167,7 +164,7 @@ const AIPredictions = ({ onPlayerClick, onContentChange, lazy = true }) => {
         ) : (
           <div className="no-data">No predictions available for {activeTabData?.label}.</div>
         )}
-      </div>
+      </ResultRegion>
     </div>
   );
 };

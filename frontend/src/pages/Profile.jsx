@@ -6,6 +6,7 @@ import { clearAuth, getUser, isAuthenticated, setScoring } from '../utils/auth';
 import { SCORING_STATS, scoringFormula } from '../utils/fantasy';
 import { enterDelay } from '../utils/scrollReveal';
 import './Profile.css';
+import AppearancePreferences from '../components/AppearancePreferences';
 
 // Account settings. Today that is fantasy scoring: a platform preset or custom points per stat,
 // saved to the account (PUT /api/profile/scoring) and mirrored onto the stored user, which is
@@ -97,8 +98,9 @@ function Profile() {
     return (
       <main className="profile-page">
         <div className="profile-shell">
-          <PageHero eyebrow="PROFILE" title="YOUR" accent="PROFILE" lead={expired ? 'Your session expired. Log in again to see your scoring.'
+          <PageHero eyebrow="PROFILE" title="Your" accent="profile" lead={expired ? 'Your session expired. Log in again to see your scoring.'
             : 'Sign in to choose how fantasy points are scored.'} />
+          <AppearancePreferences />
           <section className="profile-card profile-signin" data-enter style={enterDelay(1)}>
             <p>Your fantasy scoring is saved to your account, so it follows you to every device.</p>
             <Link to="/login" className="profile-button">Log in</Link>
@@ -113,11 +115,12 @@ function Profile() {
       <div className="profile-shell">
         <PageHero
           eyebrow="PROFILE"
-          title="YOUR"
-          accent="PROFILE"
+          title="Your"
+          accent="profile"
           lead={user ? `${user.first_name} ${user.last_name} · ${user.email}` : undefined}
         />
 
+        <AppearancePreferences />
         <section className="profile-card" aria-labelledby="profile-scoring-title" data-enter style={enterDelay(1)}>
           <p className="profile-eyebrow">FANTASY</p>
           <h2 id="profile-scoring-title">Scoring</h2>
