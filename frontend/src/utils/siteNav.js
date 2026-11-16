@@ -6,7 +6,8 @@ export const NAV_LINKS = [
   { to: '/predictions', label: 'Predictions' },
   { to: '/recommendations', label: 'Recommendations' },
   { to: '/favourites', label: 'Favourites' },
-  { to: '/contact', label: 'Contact' },
+  // Contact page temporarily hidden; restore this entry (and the route in App.jsx) to bring it back.
+  // { to: '/contact', label: 'Contact' },
   { to: '/privacy', label: 'Privacy' },
 ];
 
