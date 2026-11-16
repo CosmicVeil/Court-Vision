@@ -1,72 +1,26 @@
 import ContentSkeleton from '../components/ContentSkeleton';
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { applyFavoriteTeams, getFavorites, normalizeFavoritePlayer, removeFavorite } from '../utils/favorites';
 import { isAuthenticated } from '../utils/auth';
 import { buildApiUrl } from '../config/api';
 import PageHero from '../components/PageHero';
 import PlayerCard from '../components/PlayerCard';
-import PlayerStatsModal from '../components/PlayerStatsModal';
 import ScrollReveal from '../components/ScrollReveal';
 import { getFavouritesHeroStats } from '../utils/pageHero';
 import { getFavouriteCardStats } from '../utils/playerCard';
-import { samePlayerName } from '../utils/playerNames';
+import { playerPath } from '../utils/playerPage';
 import './Favourites.css';
 import { enterDelay } from '../utils/scrollReveal';
 
 const Favourites = () => {
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
-  const [loadingPlayer, setLoadingPlayer] = useState(false);
   const authenticated = isAuthenticated();
+  const navigate = useNavigate();
 
-  // Dismiss modal on Escape
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') setSelectedPlayer(null);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  const handlePlayerClick = async (player) => {
-    setLoadingPlayer(true);
-    try {
-      const pName = player.name || '';
-      const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(pName)}`));
-      const data = await response.json();
-      const match = (data.players || []).find(p => samePlayerName(p.name, player.name));
-      if (match) {
-        setSelectedPlayer(match);
-      } else {
-        setSelectedPlayer({
-          name: player.name,
-          team: player.team || 'UNK',
-          position: player.position || 'UNK',
-          current_stats: {
-            ppg: player.stats?.ppg_last ?? 0,
-            rpg: player.stats?.rpg_last ?? 0,
-            apg: player.stats?.apg_last ?? 0,
-            spg: player.stats?.spg_last ?? 0,
-            bpg: player.stats?.bpg_last ?? 0,
-            tov: player.stats?.tov_last ?? 0,
-            mpg: player.stats?.minutes ?? 0,
-            fg_pct: player.stats?.fg_pct_last ?? 0,
-            fg3_pct: player.stats?.fg3_pct_last ?? 0,
-            ft_pct: player.stats?.ft_pct_last ?? 0,
-            games_played: player.stats?.games_played ?? 0,
-            minutes: 0
-          },
-          ml_stats: null,
-          history: {}
-        });
-      }
-    } catch (err) {
-      console.error('Error fetching player details:', err);
-    } finally {
-      setLoadingPlayer(false);
-    }
+  const handlePlayerClick = (player) => {
+    navigate(playerPath(player), { state: { player } });
   };
 
   useEffect(() => {
@@ -225,7 +179,6 @@ const Favourites = () => {
       )}
 
       <ScrollReveal scanKey={favorites} />
-      <PlayerStatsModal player={selectedPlayer} loading={loadingPlayer} onClose={() => setSelectedPlayer(null)} />
     </div>
   );
 };

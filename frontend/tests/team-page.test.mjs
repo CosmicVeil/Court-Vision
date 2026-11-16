@@ -398,13 +398,13 @@ test('FPTS header describes the saved scoring while displaying the API total unc
   assert.equal(title(), fanDuel, 'signed-out users ignore a stale saved scoring preference');
 });
 
-test('roster selection fetches existing modal details with fallback and close handling', () => {
+// The detail fetch, its fallbacks and aborting now live on the player page (player-page.test.mjs).
+test('roster selection opens the player page with the roster row as its placeholder', () => {
   assert.match(team, /<Roster roster=\{roster\} onSelect=\{selectPlayer\}/);
-  assert.match(team, /setPlayer\(await fetchPlayerDetails\(fallback, controller\.signal\)\)/);
-  assert.match(team, /reason\.name !== 'AbortError'\) setPlayer\(buildPlayerFallback\(fallback\)\)/);
+  assert.match(team, /<Leaders roster=\{roster\} onSelect=\{selectPlayer\}/);
   assert.match(team, /pts: selected\.ppg, reb: selected\.rpg, ast: selected\.apg/);
-  assert.match(team, /<PlayerStatsModal player=\{player\} loading=\{playerLoading\} onClose=\{closePlayer\}/);
-  assert.match(team, /const closePlayer[\s\S]*?playerRequestRef\.current\?\.abort\(\)[\s\S]*?setPlayerLoading\(false\)[\s\S]*?setPlayer\(null\)/);
+  assert.match(team, /navigate\(playerPath\(player\), \{ state: \{ player \} \}\)/);
+  assert.doesNotMatch(team, /PlayerStatsModal|fetchPlayerDetails|closePlayer/);
 });
 
 test('complete season games render links, venue, scores and chronological running records', () => {
@@ -584,46 +584,35 @@ test('listed player renders zero games and nine unavailable stats', () => {
 });
 
 // Capture callbacks from the actual page with inert hooks; no effects, DOM or network run.
-// Its real fetchPlayerDetails and buildPlayerFallback remain bundled and execute normally.
 function teamCallbacks() {
   const callbacks = [];
-  const stateWrites = [];
+  const navigateCalls = [];
   const { default: Team } = loadFrontendModule('src/pages/Team.jsx', [], {
     react: { ...React,
-      useState: initial => {
-        const writes = [];
-        stateWrites.push(writes);
-        return [initial, value => writes.push(value)];
-      },
+      useState: initial => [initial, () => {}],
       useEffect: () => {},
-      useRef: value => ({ current: value }),
       useCallback: callback => { callbacks.push(callback); return callback; },
     },
-    'react-router-dom': { ...Router, useParams: () => ({ tricode: 'lal' }) },
+    'react-router-dom': { ...Router, useParams: () => ({ tricode: 'lal' }), useNavigate: () => (...args) => navigateCalls.push(args) },
   });
   Team();
-  return { selectPlayer: callbacks[1], playerWrites: stateWrites[2], loadingWrites: stateWrites[3] };
+  return { callbacks, navigateCalls };
 }
 
-test('team selection preserves every roster fallback stat on failed or unmatched detail requests', async t => {
-  for (const response of ['network failure', 'http failure', 'no match']) {
-    const fetchMock = t.mock.method(globalThis, 'fetch', async () => {
-      if (response === 'network failure') throw new Error('offline');
-      return { ok: response !== 'http failure', json: async () => ({ players: [] }) };
-    });
-    const { selectPlayer, playerWrites, loadingWrites } = teamCallbacks();
-    await selectPlayer(Object.freeze({ ...rosterPlayer }));
-    assert.deepEqual(playerWrites.at(-1), {
-      id: 2544, name: 'Test Player', team: 'LAL', position: 'F', age: 25,
-      current_stats: { ppg: 22.26, rpg: 5.14, apg: 6.78, spg: 1.26, bpg: 0.84,
-        fg_pct: 45.67, fg3_pct: 37.84, ft_pct: 81.26, games_played: 12, tov: 0, mpg: 0 },
-      ml_stats: null, injury: null, history: {},
-    }, response);
-    assert.equal(playerWrites[0], null);
-    assert.deepEqual(loadingWrites, [true, false]);
-    assert.equal(fetchMock.mock.calls.length, 1);
-    assert.equal(fetchMock.mock.calls[0].arguments[0], '/api/players/search-all?query=Test%20Player');
-    assert.ok(fetchMock.mock.calls[0].arguments[1].signal instanceof AbortSignal);
-    fetchMock.mock.restore();
-  }
+test('team selection opens the player page with every roster stat in its placeholder', () => {
+  const { buildPlayerFallback } = loadFrontendModule('src/utils/playerDetails.js');
+  const { callbacks, navigateCalls } = teamCallbacks();
+  assert.equal(callbacks.length, 1, 'selectPlayer is the only callback');
+  callbacks[0](Object.freeze({ ...rosterPlayer }));
+  assert.equal(navigateCalls.length, 1);
+  const [path, { state }] = navigateCalls[0];
+  assert.equal(path, '/players/2544');
+  // The player page builds its placeholder (and its no-match fallback) from this row.
+  assert.deepEqual(buildPlayerFallback(state.player), {
+    id: 2544, name: 'Test Player', team: 'LAL', position: 'F', age: 25,
+    current_stats: { ppg: 22.26, rpg: 5.14, apg: 6.78, spg: 1.26, bpg: 0.84,
+      fg_pct: 45.67, fg3_pct: 37.84, ft_pct: 81.26, games_played: 12, tov: 0, mpg: 0 },
+    ml_stats: null, injury: null, history: {},
+  });
+  assert.equal(globalThis.fetch.mock.calls.length, 0, 'Team itself no longer fetches player details');
 });

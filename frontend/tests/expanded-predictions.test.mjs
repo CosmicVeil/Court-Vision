@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { readSource } from "./helpers.mjs";
+import { readFrontend, readSource } from "./helpers.mjs";
 
 const configPath = new URL("../src/config/predictionStats.js", import.meta.url);
 const gridPath = new URL("../src/components/PlayerPredictionGrid.jsx", import.meta.url);
@@ -34,24 +34,27 @@ test("shared grid labels percentage changes as percentage points", () => {
 const consumers = [
   "Home.jsx",
   "Stats.jsx",
-  "PlayerStatsModal.jsx",
+  "PlayerProfile.jsx",
   "Favourites.jsx",
   "Recommendations.jsx",
   "RecommendationChart.jsx",
   "Predictions.jsx",
 ];
 
-test("every player popup uses the shared prediction grid", () => {
-  assert.match(readSource("PlayerStatsModal.jsx"), /PlayerPredictionGrid/);
-  for (const filename of consumers.filter(name => name !== "PlayerStatsModal.jsx")) {
+// The popout became the player page; its content lives in PlayerProfile.
+test("every player page link uses the shared prediction grid", () => {
+  assert.match(readSource("PlayerProfile.jsx"), /PlayerPredictionGrid/);
+  for (const filename of consumers.filter(name => name !== "PlayerProfile.jsx")) {
     const source = readSource(filename);
-    assert.match(source, /<PlayerStatsModal\b/, filename);
-    assert.doesNotMatch(source, /stats-modal-tab-btn/, `${filename} should not inline the popup`);
+    assert.match(source, /playerPath\(/, filename);
+    assert.doesNotMatch(source, /PlayerStatsModal/, filename);
+    assert.doesNotMatch(source, /stats-modal-tab-btn/, `${filename} should not inline the player profile`);
   }
 });
 
-test("player popup has a game log tab backed by the per-player games endpoint", () => {
-  assert.match(readSource("PlayerStatsModal.jsx"), /\['games', 'Game Log'\][\s\S]*<PlayerGameLog playerId=\{player\.id\}/);
+test("player page has a game log tab backed by the per-player games endpoint", () => {
+  assert.match(readFrontend("src/utils/playerPage.js"), /\{ id: 'games', label: 'Game Log' \}/);
+  assert.match(readSource("PlayerProfile.jsx"), /<PlayerGameLog playerId=\{player\.id\}/);
   assert.match(readSource("PlayerGameLog.jsx"), /players\/\$\{playerId\}\/games/);
 });
 
@@ -72,7 +75,7 @@ test("home AI panel exposes steals and blocks tabs", () => {
 });
 
 test("popup predictions compare against this season so far and work out the change themselves", () => {
-  const modal = readSource("PlayerStatsModal.jsx");
+  const modal = readSource("PlayerProfile.jsx");
   assert.match(modal, /Predicted · change vs this season/);
   assert.match(modal, /currentStats=\{player\.ml_stats\.so_far_stats\}/);
   assert.doesNotMatch(modal, /improvements=/, "the model's improvements are measured against last season");

@@ -62,7 +62,7 @@ test('Stats accepts 2027 in the URL and lists its season first', () => {
 });
 
 test('Career History marks only in-progress rows with the existing tag', () => {
-  const source = readSource('PlayerStatsModal.jsx');
+  const source = readSource('PlayerProfile.jsx');
   assert.match(source, /season.in_progress && <span className="game-log-tag">In progress<\/span>/);
   assert.match(source, /Object.entries\(player.history \|\| \{\}\).reverse\(\)/);
 });
@@ -83,7 +83,7 @@ test('Recommendations adds the so-far row and preserves improvement calculations
   assert.match(source, /const impVal = player\[`\$\{statName\}_IMPROVEMENT`\] \|\| 0/);
 });
 
-test('missing age shows a dash in the modal and is hidden in search results', () => {
-  assert.match(readSource('PlayerStatsModal.jsx'), /<strong>Age:<\/strong> \{player\.age \?\? '—'\}/);
+test('missing age shows a dash on the player page and is hidden in search results', () => {
+  assert.match(readSource('PlayerProfile.jsx'), /<strong>Age:<\/strong> \{player\.age \?\? '—'\}/);
   assert.match(readSource('Home.jsx'), /\{player\.age != null && ` · Age \$\{player\.age\}`\}/);
 });

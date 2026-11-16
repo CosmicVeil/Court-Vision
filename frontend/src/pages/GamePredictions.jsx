@@ -1,7 +1,7 @@
 import ContentSkeleton from '../components/ContentSkeleton';
 import LockIcon from '../components/LockIcon';
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import GameMatchup from '../components/GameMatchup';
 import InjuryBadge from '../components/InjuryBadge';
@@ -10,7 +10,6 @@ import PageHero from '../components/PageHero';
 import Pagination from '../components/Pagination';
 import PillNav from '../components/PillNav';
 import PlayerCard from '../components/PlayerCard';
-import PlayerStatsModal from '../components/PlayerStatsModal';
 import PredictionModeToggle from '../components/PredictionModeToggle';
 import ScrollReveal from '../components/ScrollReveal';
 import StaleSlateNotice from '../components/StaleSlateNotice';
@@ -23,7 +22,7 @@ import {
   formatDayLabel, formatLine, formatSlateDate, formatSlateRange, formatTipoff, getDayTabs, getGameCardStats,
   getGamePredictionsHeroStats, groupGamesByDay, sortStatKey, teamsForGames, todayInEastern,
 } from '../utils/gamePredictions';
-import { samePlayerName } from '../utils/playerNames';
+import { playerPath } from '../utils/playerPage';
 import { scrollToIfAbove } from '../utils/scroll';
 import './Predictions.css';
 import './GamePredictions.css';
@@ -47,10 +46,9 @@ export default function GamePredictions() {
   const [error, setError] = useState(null);
   const [unavailable, setUnavailable] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
-  const [loadingPlayer, setLoadingPlayer] = useState(false);
   const gridRef = useRef(null);
   const resultsRef = useRef(null);
+  const navigate = useNavigate();
   useFlip(gridRef);
 
   // Each change aborts the previous request, so a slow older response never overwrites a newer one.
@@ -88,28 +86,9 @@ export default function GamePredictions() {
     return () => controller.abort();
   }, [page, searchTerm, team, gameId, day, sortBy, sortOrder]);
 
-  const handlePlayerClick = async player => {
-    setLoadingPlayer(true);
-    try {
-      const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(player.name)}`));
-      const body = await response.json();
-      const match = (body.players || []).find(p => samePlayerName(p.name, player.name));
-      setSelectedPlayer(match || {
-        name: player.name, team: player.team, position: player.position || 'UNK',
-        current_stats: {
-          ppg: player.last10_pts || 0, rpg: player.last10_reb || 0, apg: player.last10_ast || 0,
-          spg: player.last10_stl || 0, bpg: player.last10_blk || 0, tov: player.last10_tov || 0,
-          mpg: player.last10_minutes || 0, fg_pct: 0, fg3_pct: 0, ft_pct: 0, games_played: 0,
-          minutes: player.last10_minutes || 0,
-        },
-        ml_stats: null,
-        history: {},
-      });
-    } catch (err) {
-      console.error('Error fetching player details:', err);
-    } finally {
-      setLoadingPlayer(false);
-    }
+  // playerPath uses the row's NBA id and ignores espn_id.
+  const handlePlayerClick = player => {
+    navigate(playerPath(player), { state: { player } });
   };
 
   const predictions = data?.predictions || [];
@@ -298,8 +277,6 @@ export default function GamePredictions() {
           )}
         </>
       )}
-
-      <PlayerStatsModal player={selectedPlayer} loading={loadingPlayer} onClose={() => setSelectedPlayer(null)} />
     </div>
   );
 }

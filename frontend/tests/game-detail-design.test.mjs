@@ -74,7 +74,10 @@ test('the detail page adopts the scoreboard, leaders, momentum and live dock', (
   for (const pattern of [/<GameScoreboard/, /getGameLeaders/, /getPeriodBreakdown/, /<SyncDock/, /<ScrollReveal/, /getScoreChanges/,
     /data-slot="stat-strip"/, /onClick=\{\(\) => selectPlayer\(leader\.player\)\}/, /lg-detail-page/]) assert.match(page, pattern);
   // Behaviour kept from before.
-  for (const pattern of [/LIVE_GAMES_REFRESH_MS/, /GAME NOT FOUND/, /UNABLE TO LOAD GAME/, /<BoxScore/, /PlayerStatsModal/]) assert.match(page, pattern);
+  for (const pattern of [/LIVE_GAMES_REFRESH_MS/, /GAME NOT FOUND/, /UNABLE TO LOAD GAME/, /<BoxScore/]) assert.match(page, pattern);
+  // Players open the player page instead of the old popout.
+  assert.match(page, /<BoxScore game=\{game\} onPlayerClick=\{selectPlayer\} \/>/);
+  assert.match(page, /navigate\(playerPath\(selected\), \{ state: \{ player: selected \} \}\)/);
   const board = read('src/components/GameScoreboard.jsx');
   // Changes are computed where the data is fetched; the scoreboard only displays them.
   for (const pattern of [/data-slot="display-heading"/, /scoreChanges/, /formatPeriod/, /data-score-pop/]) assert.match(board, pattern);

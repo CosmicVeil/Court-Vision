@@ -40,6 +40,18 @@ test('account pages, single games, login-only charts and unknown URLs are noinde
   }
 });
 
+test('player pages share a player title and stay out of the index', () => {
+  for (const path of ['/players/2544', '/players/2544/', '/players/by-name/LeBron%20James', '/players/by-name/%ZZ']) {
+    const meta = getPageMeta(path);
+    assert.equal(meta.title, 'NBA Player – Stats, Game Log & Predictions | CourtVision', path);
+    assert.equal(meta.noindex, true, path);
+    assert.equal(meta.canonical, null, path);
+  }
+  for (const path of ['/players', '/players/1/extra', '/players/by-name']) {
+    assert.equal(getPageMeta(path).title, 'Page Not Found | CourtVision', path);
+  }
+});
+
 test('a malformed team URL is a noindex page, not a crash', () => {
   assert.equal(getPageMeta('/teams/%ZZ').noindex, true);
   assert.equal(getPageMeta('/teams/%E0%A4%A').title, 'Team Not Found | CourtVision');

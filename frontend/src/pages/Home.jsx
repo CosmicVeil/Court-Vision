@@ -1,13 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./Home.css";
 import AIPredictions from "../components/AIPredictions";
 import NextGamePreview from "../components/NextGamePreview";
-import PlayerStatsModal from "../components/PlayerStatsModal";
 import ScrollReveal from "../components/ScrollReveal";
 import { isAuthenticated } from "../utils/auth";
 import { buildApiUrl } from "../config/api";
-import { samePlayerName } from "../utils/playerNames";
+import { playerPath } from "../utils/playerPage";
 import { extractWeeklyPraPlayer, formatPraGameDate } from "../utils/weeklyPra";
 import { getAccuracyHighlights } from "../utils/predictionAccuracy";
 import { enterDelay, getRevealDelay } from "../utils/scrollReveal";
@@ -78,7 +77,7 @@ function PRACard({ player, onPlayerClick, index }) {
           <button
             type="button"
             className="pra-open"
-            onClick={() => onPlayerClick && onPlayerClick({ name: player.name, team: player.team, position: player.position })}
+            onClick={() => onPlayerClick && onPlayerClick({ id: player.id, name: player.name, team: player.team, position: player.position })}
           >
             {player.name}
           </button>
@@ -275,59 +274,25 @@ const Home = () => {
   const [leadersContent, setLeadersContent] = useState('');
   const [nextGameLoaded, setNextGameLoaded] = useState(false);
 
-  // States for search and popup modal
+  // States for search
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
-  const [loadingPlayer, setLoadingPlayer] = useState(false);
   const searchContainerRef = useRef(null);
+  const navigate = useNavigate();
 
-  const handlePlayerClick = async (playerInput) => {
+  // Opens the player page. Cards hand over a name or a row (AI leader rows use upper-case keys);
+  // the row goes along in router state so the page can show it while the full profile loads.
+  const handlePlayerClick = (playerInput) => {
     if (!playerInput) return;
-    const playerName = typeof playerInput === 'string' ? playerInput : (playerInput.name || playerInput.PLAYER_NAME || '');
-    if (!playerName) return;
-    setLoadingPlayer(true);
-
-    const fallbackStats = typeof playerInput === 'object' ? {
-      ppg: playerInput.ppg || playerInput.PPG_LAST || playerInput.stats?.ppg_last || 0,
-      apg: playerInput.apg || playerInput.APG_LAST || playerInput.stats?.apg_last || 0,
-      rpg: playerInput.rpg || playerInput.RPG_LAST || playerInput.stats?.rpg_last || 0,
-      spg: playerInput.spg || playerInput.SPG_LAST || playerInput.stats?.spg_last || 0,
-      bpg: playerInput.bpg || playerInput.BPG_LAST || playerInput.stats?.bpg_last || 0,
-      tov: playerInput.tov || playerInput.TOV_LAST || playerInput.stats?.tov_last || 0,
-      mpg: playerInput.mpg || playerInput.MINUTES || playerInput.stats?.minutes || 0,
-      fg_pct: playerInput.fg_pct || playerInput.FG_PCT_LAST || playerInput.stats?.fg_pct_last || 0,
-      fg3_pct: playerInput.fg3_pct || playerInput.FG3_PCT_LAST || playerInput.stats?.fg3_pct_last || 0,
-      ft_pct: playerInput.ft_pct || playerInput.FT_PCT_LAST || playerInput.stats?.ft_pct_last || 0,
-      games_played: playerInput.games_played || playerInput.GAMES_PLAYED || playerInput.stats?.games_played || 0,
-      minutes: playerInput.minutes || playerInput.stats?.minutes || 0
-    } : { ppg: 0, apg: 0, rpg: 0, spg: 0, bpg: 0, tov: 0, mpg: 0, fg_pct: 0, fg3_pct: 0, ft_pct: 0, games_played: 0, minutes: 0 };
-
-    setSelectedPlayer({
-      name: playerName,
-      team: typeof playerInput === 'object' ? (playerInput.team || playerInput.TEAM_ABBREVIATION || 'NBA') : 'NBA',
-      position: typeof playerInput === 'object' ? (playerInput.position || playerInput.POSITION || 'G/F') : 'G/F',
-      age: typeof playerInput === 'object' ? (playerInput.age || playerInput.AGE || '--') : '--',
-      current_stats: fallbackStats,
-      ml_stats: null,
-      history: {}
-    });
-
-    try {
-      const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(playerName)}`));
-      if (response.ok) {
-        const data = await response.json();
-        const match = (data.players || []).find(p => samePlayerName(p.name, playerName));
-        if (match) {
-          setSelectedPlayer(match);
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching player details:', err);
-    } finally {
-      setLoadingPlayer(false);
-    }
+    const player = typeof playerInput === 'string' ? { name: playerInput } : {
+      ...playerInput,
+      name: playerInput.name || playerInput.PLAYER_NAME,
+      team: playerInput.team || playerInput.TEAM || playerInput.TEAM_ABBREVIATION,
+      position: playerInput.position || playerInput.POSITION,
+    };
+    if (!player.name) return;
+    navigate(playerPath(player), { state: { player } });
   };
 
   // 3D Court Scroll Effect
@@ -529,7 +494,6 @@ const Home = () => {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
-        setSelectedPlayer(null);
         setSearchResults([]);
       }
     };
@@ -796,7 +760,7 @@ const Home = () => {
             {searchResults.length > 0 && (
               <div className="search-results-dropdown">
                 {searchResults.map((player) => (
-                  <button type="button" key={player.name} className="search-result-item" onClick={() => { setSelectedPlayer(player); setSearchResults([]); setSearchQuery(""); }}>
+                  <button type="button" key={player.name} className="search-result-item" onClick={() => { setSearchResults([]); setSearchQuery(""); handlePlayerClick(player); }}>
                     <span className="search-result-player-info">
                       <span className="search-result-player-name">{player.name}</span>
                       <span className="search-result-player-meta">{player.position}{player.age != null && ` · Age ${player.age}`}</span>
@@ -899,7 +863,6 @@ const Home = () => {
       </section>
 
       <ScrollReveal scanKey={`${trendingSettled}:${leadersContent}:${nextGameLoaded}`} />
-      <PlayerStatsModal player={selectedPlayer} loading={loadingPlayer} onClose={() => setSelectedPlayer(null)} />
     </div>
   );
 };
