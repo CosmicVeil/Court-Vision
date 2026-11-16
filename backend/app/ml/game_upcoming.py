@@ -8,6 +8,12 @@ each upcoming game gets a placeholder team row (no stats), so its shift-then-rol
 ends at the team's latest game, and each player ruled out on the injury report gets a
 synthetic did-not-play row, which is exactly how training sees an absence.
 
+A run can cover several days (scripts/generate_game_predictions_cache.py predicts the next few
+game days). Rolling form is as of the first day for every game: a later game's windows cannot
+include the earlier games in the window, because they have not been played. Rest is per game,
+though: a team's earlier game in the window counts as the player's previous game, so a
+scheduled back-to-back is flagged as one.
+
 Pure functions only (no database, no network): scripts/generate_game_predictions_cache.py
 loads the rows and calls build_upcoming_frame().
 """
@@ -143,6 +149,12 @@ def build_upcoming_frame(games: List[Dict], history: Iterable[Dict], team_rows: 
     absent = _absent_players(injuries, form, teams)
     absent_ids = {player["espn_player_id"] for player in absent}
 
+    # Each team's game dates in the window, for rest days measured from its previous scheduled game.
+    schedule = {}
+    for game in games:
+        for side in ("home", "away"):
+            schedule.setdefault(game[side], []).append(pd.Timestamp(game["game_date"]))
+
     rows, placeholders, synthetic_dnps = [], [], []
     for game in games:
         game_date = pd.Timestamp(game["game_date"])
@@ -155,7 +167,9 @@ def build_upcoming_frame(games: List[Dict], history: Iterable[Dict], team_rows: 
                           & (form["games_before"] >= MIN_PRIOR_GAMES)
                           & form["in_rotation"]
                           & ~form["espn_player_id"].isin(absent_ids)]
+            earlier = [day for day in schedule[team] if day < game_date]
             for player in roster.to_dict("records"):
+                rest = _rest(player, game_date, earlier)
                 nba_id = player["nba_player_id"]
                 nba_id = int(nba_id) if pd.notna(nba_id) else None
                 injury = injuries.get(nba_id) if nba_id is not None else None
@@ -166,6 +180,9 @@ def build_upcoming_frame(games: List[Dict], history: Iterable[Dict], team_rows: 
                     "nba_player_id": nba_id, "player_name": player["player_name"],
                     "team": team, "opponent": opponent, "game_date": game_date,
                     "is_home": float(is_home),
+                    # Counting the window's earlier games as played, as the player is expected to.
+                    "games_before": player["games_before"] + len(earlier),
+                    "rest_days": rest, "back_to_back": float(rest == 1),
                     "team_spread": (spread if is_home else -spread) if spread is not None else np.nan,
                     "over_under": _float(game.get("over_under")),
                     "position": player["position"],
@@ -190,6 +207,13 @@ def build_upcoming_frame(games: List[Dict], history: Iterable[Dict], team_rows: 
     # Training games always have box-score rows, so "nobody out" is 0 there, not missing.
     frame[ABSENCE_FEATURES] = frame[ABSENCE_FEATURES].fillna(0.0)
     return frame[columns].sort_values(["game_date", "game_id", "team", "player_name"]).reset_index(drop=True)
+
+
+def _rest(player: Dict, game_date: pd.Timestamp, earlier: List[pd.Timestamp]) -> float:
+    """Days since the player's previous game: his team's latest earlier game in the window, if
+    any, else his latest archived one (player_form's rest_days is measured to the first day)."""
+    previous = max(earlier) if earlier else player["last_played"]
+    return float((game_date - previous).days)
 
 
 def _float(value) -> Optional[float]:

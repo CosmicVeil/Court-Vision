@@ -164,3 +164,11 @@
   letter-spacing: 0;
   text-transform: none;
 }
+
+/* Day tabs in the popup's Game projections tab: one per game the player is predicted for. */
+.player-next-game-days {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 0 16px;
+  overflow-x: auto;
+}

@@ -22,6 +22,58 @@ export function formatSlateDate(value) {
   return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
 
+// Today's calendar date in US Eastern, "YYYY-MM-DD": the day the API counts slates by.
+export function todayInEastern(now = new Date()) {
+  return now.toLocaleDateString('en-CA', { timeZone: ET });
+}
+
+// A slate day relative to today: "Today", "Tomorrow", else "Wed, Nov 18".
+export function formatDayLabel(value, today = todayInEastern()) {
+  if (value && value === today) return 'Today';
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(today || '');
+  if (value && match) {
+    const next = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]) + 1, 12));
+    if (value === next.toISOString().slice(0, 10)) return 'Tomorrow';
+  }
+  return formatSlateDate(value);
+}
+
+// Every day covered, as "Mon, Nov 16" or "Nov 16 – Nov 18".
+export function formatSlateRange(dates) {
+  const days = (dates || []).filter(Boolean);
+  if (days.length <= 1) return formatSlateDate(days[0]);
+  const short = value => formatSlateDate(value).replace(/^\w+, /, '');
+  return `${short(days[0])} – ${short(days[days.length - 1])}`;
+}
+
+// Day tabs for a multi-day slate, nearest first, with an optional "All days" tab (id '').
+export function getDayTabs(dates, { all = false, today } = {}) {
+  const tabs = (dates || []).map(date => ({ id: date, label: formatDayLabel(date, today) }));
+  return all ? [{ id: '', label: 'All days' }, ...tabs] : tabs;
+}
+
+// Games grouped by day, nearest day first; games without a date go with the slate's first day.
+export function groupGamesByDay(games, fallbackDate = '') {
+  const groups = new Map();
+  for (const game of games || []) {
+    const date = game.game_date || fallbackDate;
+    if (!groups.has(date)) groups.set(date, []);
+    groups.get(date).push(game);
+  }
+  return [...groups].sort(([a], [b]) => a.localeCompare(b)).map(([date, dayGames]) => ({ date, games: dayGames }));
+}
+
+// One of a player's later games, compacted for a line under his card: day, and PTS / REB / AST.
+export function getLaterGameLine(game, today) {
+  return {
+    day: formatDayLabel(game?.game_date, today),
+    stats: ['pts', 'reb', 'ast'].map(key => ({
+      key, label: gameStat(key).unit,
+      value: finite(game?.[`predicted_${key}`]) === null ? PLACEHOLDER : formatStat(game[`predicted_${key}`]),
+    })),
+  };
+}
+
 // Betting line in the usual form: the favourite and its spread, plus the total.
 // spread is the home team's line, so a negative one means the home team is favoured.
 export function formatLine(game) {
@@ -92,11 +144,12 @@ export function getGameModelEdge(accuracy) {
   };
 }
 
-export function getGamePredictionsHeroStats({ ready, slateDate, games, total, sort, order } = {}) {
+// slateDates: every day covered; day: the one picked, if any.
+export function getGamePredictionsHeroStats({ ready, slateDate, slateDates, day, games, total, sort, order } = {}) {
   const arrow = order === 'asc' ? '↑' : '↓';
   const sortLabel = sort === 'name' ? 'Name' : `${sort?.startsWith('diff_') ? 'Δ ' : ''}${gameStat(sortStatKey(sort)).unit}`;
   const rows = [
-    ['slate', 'Slate', formatSlateDate(slateDate)],
+    ['slate', 'Slate', day ? formatSlateDate(day) : formatSlateRange(slateDates?.length ? slateDates : [slateDate])],
     ['games', 'Games', String(games ?? 0)],
     ['players', 'Players', (Number(total) || 0).toLocaleString('en-US')],
     ['sort', 'Sorted by', `${sortLabel} ${arrow}`],

@@ -1,10 +1,13 @@
-"""Predict every player's line for the next slate of games and write data/game_predictions_cache.json.
+"""Predict every player's line for the next few days of games and write data/game_predictions_cache.json.
 
-Run from backend/:  python scripts/generate_game_predictions_cache.py [--arch xgboost] [--date YYYY-MM-DD]
+Run from backend/:  python scripts/generate_game_predictions_cache.py [--arch xgboost] [--date YYYY-MM-DD] [--days N]
 Needs DATABASE_URL (game archive) and a trained model (scripts/train_game_model.py).
 
-The slate is the first day, from --date (default: today, US Eastern) up to a week ahead,
-that has games not yet started. Ruled-out players come from ESPN's injury report.
+The slate is the first SLATE_DAYS days, from --date (default: today, US Eastern) up to a week
+ahead, that have games not yet started. Every day is predicted from the archive as it stands
+before the first one (see app/ml/game_upcoming.py), and the run repeats daily, so later days
+are re-predicted with fresher form as they get closer. Ruled-out players come from ESPN's
+injury report.
 """
 import argparse
 import json
@@ -27,6 +30,8 @@ from app.services import injuries, live_games
 from app.services.game_predictions import build_cache, parse_scoreboard_event
 
 LOOKAHEAD_DAYS = 7
+# Game days per run. Days further out are predicted from older form, so they are less accurate.
+SLATE_DAYS = 3
 _ET = ZoneInfo("America/New_York")
 
 
@@ -48,17 +53,24 @@ def write_json_atomically(path, data):
         raise
 
 
-def find_slate(start: date):
-    """(slate date, games) for the first day with unstarted games, or (None, [])."""
+def find_slate(start: date, days: int = SLATE_DAYS):
+    """(first day, games) for the first `days` days with unstarted games, or (None, []).
+
+    Off-days don't count, so the window still holds `days` game days (within LOOKAHEAD_DAYS)."""
+    found = []
     for offset in range(LOOKAHEAD_DAYS + 1):
         day = start + timedelta(days=offset)
         data = live_games._get(live_games._SCOREBOARD, params={"dates": day.strftime("%Y%m%d")}) or {}
         games = [game for game in map(parse_scoreboard_event, data.get("events", [])) if game]
+        for game in games:
+            game["game_date"] = day
         if games:
-            for game in games:
-                game["game_date"] = day
-            return day, games
-    return None, []
+            found.append(games)
+            if len(found) == days:
+                break
+    if not found:
+        return None, []
+    return found[0][0]["game_date"], [game for games in found for game in games]
 
 
 def load_archive(conn, before: date):
@@ -77,10 +89,11 @@ def main(argv=None):
     parser.add_argument("--arch", choices=game_architectures.available(),
                         default=game_architectures.default_architecture(), help="model architecture")
     parser.add_argument("--date", type=date.fromisoformat, help="first day to look for games (default: today ET)")
+    parser.add_argument("--days", type=int, default=SLATE_DAYS, help=f"game days to predict (default: {SLATE_DAYS})")
     args = parser.parse_args(argv)
 
     model = GameStatModel.load(model_file(args.arch))
-    slate_date, games = find_slate(args.date or datetime.now(_ET).date())
+    slate_date, games = find_slate(args.date or datetime.now(_ET).date(), max(args.days, 1))
     if not games:
         print(f"No unstarted games in the next {LOOKAHEAD_DAYS} days; cache left unchanged.")
         return 0
@@ -101,8 +114,8 @@ def main(argv=None):
     cache = build_cache(slate_date.isoformat(), games, frame, predictions, model, report, previous=previous)
 
     write_json_atomically(output, cache)
-    print(f"Predicted {len(cache['players'])} players across {len(games)} games on {slate_date} "
-          f"with {args.arch}; wrote {output}")
+    print(f"Predicted {len(cache['players'])} player-games across {len(games)} games on "
+          f"{', '.join(cache['slate_dates'])} with {args.arch}; wrote {output}")
     return 0
 
 

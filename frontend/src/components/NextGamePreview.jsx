@@ -6,12 +6,12 @@ import InjuryBadge from './InjuryBadge';
 import PlayerCard from './PlayerCard';
 import { buildApiUrl } from '../config/api';
 import {
-  formatSlateDate, formatTipoff, getGameCardStats, getGameModelEdge,
+  formatDayLabel, formatSlateDate, formatTipoff, getGameCardStats, getGameModelEdge,
 } from '../utils/gamePredictions';
 
 const PREVIEW_COUNT = 4;
 
-// Home teaser for the per-game model: the slate's top projected scorers and the model's held-out
+// Home teaser for the per-game model: the nearest game day's top projected scorers and the model's held-out
 // edge. Uses the public preview of /api/game-predictions, so it works signed out. onLoaded(true) lets the page rescan for the cards' reveal
 // targets; pass a state setter, so it is stable and the fetch runs once.
 export default function NextGamePreview({ onPlayerClick, onLoaded }) {
@@ -20,7 +20,8 @@ export default function NextGamePreview({ onPlayerClick, onLoaded }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    const params = new URLSearchParams({ limit: String(PREVIEW_COUNT), sort_by: 'predicted_pts', sort_order: 'desc' });
+    // date=next: only the nearest day, so the teaser never leads with a game days away.
+    const params = new URLSearchParams({ limit: String(PREVIEW_COUNT), sort_by: 'predicted_pts', sort_order: 'desc', date: 'next' });
     fetch(buildApiUrl(`game-predictions?${params}`), { signal: controller.signal })
       .then(response => (response.ok ? response.json() : null))
       .then(body => { setData(body); onLoaded?.(true); })
@@ -31,6 +32,8 @@ export default function NextGamePreview({ onPlayerClick, onLoaded }) {
 
   const players = data?.predictions || [];
   const edge = getGameModelEdge(data?.accuracy);
+  const day = data?.date || data?.slate_date;
+  const dayLabel = formatDayLabel(day);
   const actions = (
     <div className="home-cta-actions next-game-actions" data-reveal>
       <Link to="/predictions/games" className="cta-button primary">ALL GAME PROJECTIONS</Link>
@@ -45,7 +48,7 @@ export default function NextGamePreview({ onPlayerClick, onLoaded }) {
   return (
     <div className="next-game-preview">
       <p className="next-game-meta" data-reveal data-numeric>
-        {formatSlateDate(data.slate_date)} · {data.games?.length || 0} games
+        {dayLabel}{dayLabel !== formatSlateDate(day) && ` · ${formatSlateDate(day)}`} · {data.games?.length || 0} games
         {edge?.pointsEdge > 0 && <> · <strong>{edge.pointsEdge}% closer</strong> on points than a player's last-10 average</>}
       </p>
       <div className="pc-grid" data-defer>

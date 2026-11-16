@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFrontend, readSource } from "./helpers.mjs";
 import {
-  formatLine, formatSlateDate, formatTipoff, getGameCardStats, getGameModelEdge,
-  getGamePredictionsHeroStats, getPickLine, sortStatKey, teamsForGames,
+  formatDayLabel, formatLine, formatSlateDate, formatSlateRange, formatTipoff, getDayTabs, getGameCardStats,
+  getGameModelEdge, getGamePredictionsHeroStats, getLaterGameLine, getPickLine, groupGamesByDay, sortStatKey,
+  teamsForGames, todayInEastern,
 } from "../src/utils/gamePredictions.js";
 
 const player = {
@@ -132,4 +133,55 @@ test("team filter lists only the selected game's teams", () => {
   const page = readSource("GamePredictions.jsx");
   assert.match(page, /options: teamOptions/);
   assert.match(page, /team: team && !teamsForGames\(games, nextGameId\)\.includes\(team\) \? '' : team/);
+});
+
+test("slate days are named relative to today in US Eastern time", () => {
+  assert.equal(formatDayLabel("2026-11-15", "2026-11-15"), "Today");
+  assert.equal(formatDayLabel("2026-11-16", "2026-11-15"), "Tomorrow");
+  assert.equal(formatDayLabel("2026-12-01", "2026-11-30"), "Tomorrow");       // across a month end
+  assert.equal(formatDayLabel("2026-11-18", "2026-11-15"), "Wed, Nov 18");
+  assert.equal(formatDayLabel(null, "2026-11-15"), "—");
+  // 03:30 UTC on the 16th is still the evening of the 15th in New York.
+  assert.equal(todayInEastern(new Date("2026-11-16T03:30:00Z")), "2026-11-15");
+});
+
+test("multi-day slates get a range, day tabs and games grouped nearest day first", () => {
+  assert.equal(formatSlateRange(["2026-11-16", "2026-11-17", "2026-11-18"]), "Nov 16 – Nov 18");
+  assert.equal(formatSlateRange(["2026-11-16"]), "Mon, Nov 16");
+  assert.deepEqual(getDayTabs(["2026-11-16", "2026-11-17"], { all: true, today: "2026-11-16" }),
+    [{ id: "", label: "All days" }, { id: "2026-11-16", label: "Today" }, { id: "2026-11-17", label: "Tomorrow" }]);
+  assert.deepEqual(getDayTabs(["2026-11-18"], { today: "2026-11-16" }), [{ id: "2026-11-18", label: "Wed, Nov 18" }]);
+  const groups = groupGamesByDay([
+    { game_id: "c", game_date: "2026-11-17" }, { game_id: "a", game_date: "2026-11-16" }, { game_id: "old" },
+  ], "2026-11-16");
+  assert.deepEqual(groups.map(g => [g.date, g.games.map(game => game.game_id)]),
+    [["2026-11-16", ["a", "old"]], ["2026-11-17", ["c"]]]);
+});
+
+test("a later game is one compact line: day and PTS / REB / AST", () => {
+  const line = getLaterGameLine({ game_date: "2026-11-17", predicted_pts: 21.04, predicted_reb: 7, predicted_ast: null }, "2026-11-16");
+  assert.equal(line.day, "Tomorrow");
+  assert.deepEqual(line.stats.map(stat => [stat.label, stat.value]), [["PTS", "21.0"], ["REB", "7.0"], ["AST", "—"]]);
+});
+
+test("hero strip shows the whole range, or the picked day", () => {
+  const base = { ready: true, games: 25, total: 400, sort: "predicted_pts", order: "desc" };
+  assert.equal(getGamePredictionsHeroStats({ ...base, slateDates: ["2026-11-16", "2026-11-18"] })[0].value, "Nov 16 – Nov 18");
+  assert.equal(getGamePredictionsHeroStats({ ...base, slateDates: ["2026-11-16", "2026-11-18"], day: "2026-11-18" })[0].value, "Wed, Nov 18");
+});
+
+test("pages show every predicted day and lead with the nearest", () => {
+  const page = readSource("GamePredictions.jsx");
+  assert.match(page, /if \(day\) params\.append\('date', day\)/);
+  assert.match(page, /getDayTabs\(slateDates, \{ all: true, today \}\)/);
+  assert.match(page, /className=\{`gp-slate-day \$\{index > 0 \? 'is-later' : ''\}`\}/);
+  assert.match(page, /<LaterGames games=\{player\.later_games\} \/>/);
+  const popup = readSource("PlayerNextGame.jsx");
+  assert.match(popup, /games\.find\(game => game\.game_id === gameId\) \|\| games\[0\]/);   // nearest by default
+  assert.match(popup, /\{games\.length > 1 && \(\s*<PillNav/);                              // tabs only for 2+ games
+  assert.match(popup, /label: formatDayLabel\(game\.game_date \|\| data\.slate_date\)/);
+  assert.match(readSource("NextGamePreview.jsx"), /date: 'next'/);
+  const picks = readSource("GameRecommendations.jsx");
+  assert.match(picks, /items=\{getDayTabs\(data\.slate_dates\)\}/);
+  assert.match(picks, /\}, \[day\]\);/);
 });

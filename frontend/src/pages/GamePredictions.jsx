@@ -5,8 +5,10 @@ import { Link } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import GameMatchup from '../components/GameMatchup';
 import InjuryBadge from '../components/InjuryBadge';
+import LaterGames from '../components/LaterGames';
 import PageHero from '../components/PageHero';
 import Pagination from '../components/Pagination';
+import PillNav from '../components/PillNav';
 import PlayerCard from '../components/PlayerCard';
 import PlayerStatsModal from '../components/PlayerStatsModal';
 import PredictionModeToggle from '../components/PredictionModeToggle';
@@ -18,8 +20,8 @@ import { GAME_PREDICTION_STATS } from '../config/gamePredictionStats';
 import { buildApiUrl } from '../config/api';
 import { authHeaders, clearAuth, isAuthenticated } from '../utils/auth';
 import {
-  formatLine, formatSlateDate, formatTipoff, getGameCardStats, getGamePredictionsHeroStats,
-  sortStatKey, teamsForGames,
+  formatDayLabel, formatLine, formatSlateDate, formatSlateRange, formatTipoff, getDayTabs, getGameCardStats,
+  getGamePredictionsHeroStats, groupGamesByDay, sortStatKey, teamsForGames, todayInEastern,
 } from '../utils/gamePredictions';
 import { samePlayerName } from '../utils/playerNames';
 import { scrollToIfAbove } from '../utils/scroll';
@@ -28,7 +30,8 @@ import './GamePredictions.css';
 
 // "Above average" sorts rank by projection minus the last-10 average.
 const DIFF_SORTS = ['pts', 'pra', 'fantasy'];
-const LIST_DEFAULTS = { q: '', team: '', game: '', sort: 'predicted_pts', order: 'desc', page: 1 };
+// day: one slate day ("YYYY-MM-DD"), or '' for every day the cache covers.
+const LIST_DEFAULTS = { q: '', team: '', game: '', day: '', sort: 'predicted_pts', order: 'desc', page: 1 };
 const LIST_ALLOWED = {
   sort: ['name', ...GAME_PREDICTION_STATS.map(stat => `predicted_${stat.key}`), ...DIFF_SORTS.map(key => `diff_${key}`)],
   order: ['asc', 'desc'],
@@ -37,7 +40,7 @@ const PAGE_SIZE = 12;
 
 export default function GamePredictions() {
   const [query, updateQuery] = useListQuery(LIST_DEFAULTS, LIST_ALLOWED);
-  const { q: searchTerm, team, game: gameId, sort: sortBy, order: sortOrder, page } = query;
+  const { q: searchTerm, team, game: gameId, day, sort: sortBy, order: sortOrder, page } = query;
   const [searchDraft, setSearchDraft] = useState(searchTerm);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -59,6 +62,7 @@ export default function GamePredictions() {
     if (searchTerm) params.append('search', searchTerm);
     if (team) params.append('team', team);
     if (gameId) params.append('game_id', gameId);
+    if (day) params.append('date', day);
 
     setLoading(true);
     fetch(buildApiUrl(`game-predictions?${params}`), { signal: controller.signal, headers: authHeaders() })
@@ -82,7 +86,7 @@ export default function GamePredictions() {
       .catch(err => { if (!controller.signal.aborted) setError(err.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [page, searchTerm, team, gameId, sortBy, sortOrder]);
+  }, [page, searchTerm, team, gameId, day, sortBy, sortOrder]);
 
   const handlePlayerClick = async player => {
     setLoadingPlayer(true);
@@ -110,11 +114,17 @@ export default function GamePredictions() {
 
   const predictions = data?.predictions || [];
   const games = data?.games || [];
+  const slateDates = data?.slate_dates || [];
+  const today = todayInEastern();
+  // A day the cache no longer covers (it passed, or an old link) shows every day instead.
+  const activeDay = slateDates.includes(day) ? day : '';
+  const dayGroups = groupGamesByDay(games, data?.slate_date);
   const totalPlayers = data?.pagination?.total || 0;
   const isPreview = data ? Boolean(data.preview) : !isAuthenticated();
   const leadStat = sortStatKey(sortBy);
   const teamOptions = teamsForGames(games, gameId);
   // Picking a game drops a team filter for a team not in it, which would otherwise match nobody.
+  const selectDay = nextDay => updateQuery({ day: nextDay, game: '', team: '', page: 1 });
   const selectGame = nextGameId => updateQuery({
     game: nextGameId,
     team: team && !teamsForGames(games, nextGameId).includes(team) ? '' : team,
@@ -139,26 +149,47 @@ export default function GamePredictions() {
         accent="projections"
         lead="Player projections based on recent form, rest, matchup odds and injuries."
         stats={getGamePredictionsHeroStats({
-          ready: Boolean(data) && !error, slateDate: data?.slate_date, games: games.length,
+          ready: Boolean(data) && !error, slateDate: data?.slate_date, slateDates, day: activeDay, games: games.length,
           total: totalPlayers, sort: sortBy, order: sortOrder,
         })}
       />
 
       <StaleSlateNotice data={data} />
 
+      {slateDates.length > 1 && (
+        <PillNav className="pm-toggle gp-day-tabs" tabClassName="pm-tab" label="Game day" idPrefix="gp-day"
+          items={getDayTabs(slateDates, { all: true, today })} value={activeDay} onChange={selectDay} />
+      )}
+
       {games.length > 0 && (
-        <section className="gp-slate" aria-label={`Games on ${formatSlateDate(data.slate_date)}`}>
-          {games.map(game => {
-            const active = gameId === game.game_id;
-            return (
-              <button key={game.game_id} type="button" className={`gp-game ${active ? 'is-active' : ''}`}
-                aria-pressed={active} onClick={() => selectGame(active ? '' : game.game_id)}>
-                <span className="gp-game-teams"><GameMatchup game={game} size="lg" /></span>
-                <span className="gp-game-meta" data-numeric>{formatTipoff(game.tipoff)}</span>
-                {formatLine(game) && <span className="gp-game-meta" data-numeric>{formatLine(game)}</span>}
-              </button>
-            );
-          })}
+        <section className="gp-slate"
+          aria-label={`Games on ${activeDay ? formatSlateDate(activeDay) : formatSlateRange(slateDates)}`}>
+          {/* Nearest day first and at full strength; later days are toned down (is-later). */}
+          {dayGroups.map((group, index) => (
+            <div key={group.date} className={`gp-slate-day ${index > 0 ? 'is-later' : ''}`}>
+              {(slateDates.length > 1 || dayGroups.length > 1) && (
+                <h2 className="gp-slate-day-title" data-numeric>
+                  {formatDayLabel(group.date, today)}
+                  {formatDayLabel(group.date, today) !== formatSlateDate(group.date) && (
+                    <span> · {formatSlateDate(group.date)}</span>
+                  )}
+                </h2>
+              )}
+              <div className="gp-slate-games">
+                {group.games.map(game => {
+                  const active = gameId === game.game_id;
+                  return (
+                    <button key={game.game_id} type="button" className={`gp-game ${active ? 'is-active' : ''}`}
+                      aria-pressed={active} onClick={() => selectGame(active ? '' : game.game_id)}>
+                      <span className="gp-game-teams"><GameMatchup game={game} size="lg" /></span>
+                      <span className="gp-game-meta" data-numeric>{formatTipoff(game.tipoff)}</span>
+                      {formatLine(game) && <span className="gp-game-meta" data-numeric>{formatLine(game)}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </section>
       )}
 
@@ -214,7 +245,10 @@ export default function GamePredictions() {
         <div className="no-results">No players matched your search.</div>
       ) : (
         <>
-          <p className="gp-results-caption">Projection · change vs last 10 games</p>
+          <p className="gp-results-caption">
+            Projection · change vs last 10 games
+            {slateDates.length > 1 && ' · later days use form as of today and update every morning'}
+          </p>
           <div className="pc-grid" ref={gridRef} data-results aria-busy={loading}>
             {predictions.map((player, index) => {
               const { main, extra } = getGameCardStats(player, leadStat);
@@ -230,11 +264,13 @@ export default function GamePredictions() {
                   headerAside={
                   <p className="pc-matchup" data-numeric>
                     <GameMatchup player={player} size="md" />
-                    <span>{formatTipoff(player.tipoff)}</span>
+                    <span>{slateDates.length > 1 && `${formatDayLabel(player.game_date, today)} · `}{formatTipoff(player.tipoff)}</span>
                     <InjuryBadge injury={player.injury} />
                   </p>
                   }
-                />
+                >
+                  <LaterGames games={player.later_games} />
+                </PlayerCard>
               );
             })}
           </div>
