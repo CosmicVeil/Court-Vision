@@ -234,6 +234,8 @@ For script options, endpoint access rules, database tables, feature construction
 
 Do not commit `backend/.env` or any other credentials. Configure `DATABASE_URL` and deployment secrets in the hosting provider or GitHub Actions settings.
 
+To report a security vulnerability, see [SECURITY.md](SECURITY.md). Please don't open a public issue.
+
 ## Data and prediction disclaimer
 
 CourtVision is an independent analytics project and is not affiliated with the NBA, its teams, ESPN, NBA.com, or Basketball Reference. Statistics and predictions may be delayed, incomplete, or incorrect. The site is for informational and educational use and should not be treated as financial or betting advice.

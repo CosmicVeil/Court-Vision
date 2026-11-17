@@ -4,6 +4,9 @@ import secrets
 
 from flask import Flask
 from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
+
+from app.config import cors_origins, trusted_proxy_hops
 
 
 def add_security_headers(response):
@@ -23,9 +26,14 @@ def create_app(load_data: bool = True) -> Flask:
     from app.api import register_routes
 
     app = Flask(__name__)
+    hops = trusted_proxy_hops()
+    if hops:
+        # Behind Render, remote_addr is its proxy; take the client IP Cloudflare appended to
+        # X-Forwarded-For (rate limiting keys on it). Entries further left are client-supplied.
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=hops)
     CORS(app, resources={
         r"/api/*": {
-            "origins": "*",
+            "origins": cors_origins(),
             "methods": ["GET", "POST", "PUT", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization", "X-Fantasy-Scoring"],
             "supports_credentials": False

@@ -80,7 +80,7 @@ test('default head tags come from DEFAULT_META and carry no canonical or og:url'
   assert.equal(tags.find(t => t.attrs?.name === 'description').attrs.content, DEFAULT_META.description);
   const html = read('index.html');
   assert.doesNotMatch(html, /<title>|rel="canonical"|og:url/, 'a static canonical would point every URL at /');
-  assert.match(read('vite.config.js'), /plugins: \[react\(\), seo\(\)\]/);
+  assert.match(read('vite.config.js'), /plugins: \[react\(\), seo\(\)[,\]]/);
 });
 
 test('PageMeta drops og:url along with the canonical on noindex pages', () => {

@@ -12,6 +12,12 @@
       "runtimeExecutable": "bash",
       "runtimeArgs": ["-c", "cd frontend && npm run dev"],
       "port": 5173
+    },
+    {
+      "name": "frontend-preview",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd frontend && npm run build && npx vite preview --port 4173 --strictPort"],
+      "port": 4173
     }
   ]
 }
