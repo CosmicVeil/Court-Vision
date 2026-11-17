@@ -70,7 +70,7 @@ Both together: `./start_app.sh` from the repo root.
 - `backend/app/scraping/` — Basketball Reference + NBA.com scraper
 - `backend/data/` — `.pkl` datasets, trained model, `predictions_cache.json` (what production serves)
 - `frontend/src/pages/` — one component per route; `components/` shared UI; `config/` API endpoints and stat definitions
-- `.ai-workflow/` — local Claude-plan → Codex-code → Claude-review pipeline (see its SETUP.md)
+- `.ai-workflow/` — local Claude plan + code → Codex review pipeline (see its SETUP.md)
 
 ## Conventions and gotchas
 
