@@ -242,7 +242,7 @@ export default function GamePredictions() {
                   ctaLabel="Player stats"
                   headerAside={
                   <p className="pc-matchup" data-numeric>
-                    <GameMatchup player={player} size="md" />
+                    <GameMatchup player={player} size="md" gameId={player.game_id} />
                     <span>{slateDates.length > 1 && `${formatDayLabel(player.game_date, today)} · `}{formatTipoff(player.tipoff)}</span>
                     <InjuryBadge injury={player.injury} />
                   </p>

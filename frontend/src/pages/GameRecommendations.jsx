@@ -139,7 +139,7 @@ export default function GameRecommendations() {
                                   {player.name}
                                 </button>
                                 <span className="gr-meta" data-numeric>
-                                  <GameMatchup player={player} /> · {formatTipoff(player.tipoff)}
+                                  <GameMatchup player={player} gameId={player.game_id} /> · {formatTipoff(player.tipoff)}
                                   <InjuryBadge injury={player.injury} />
                                 </span>
                               </div>

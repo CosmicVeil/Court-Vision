@@ -63,7 +63,7 @@ export default function NextGamePreview({ onPlayerClick, onLoaded }) {
             ctaLabel="Player stats"
           >
             <p className="pc-matchup" data-numeric>
-              <GameMatchup player={player} size="md" />
+              <GameMatchup player={player} size="md" gameId={player.game_id} />
               <span>{formatTipoff(player.tipoff)}</span>
               <InjuryBadge injury={player.injury} />
             </p>
