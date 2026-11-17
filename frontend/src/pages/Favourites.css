@@ -133,11 +133,19 @@
 }
 
 /* Base .empty-cta comes from Predictions.css (page CSS is global). */
-.empty-cta.is-secondary {
-  background: rgb(var(--ink-rgb) / 0.04);
-  border: 1px solid color-mix(in srgb, var(--color-ember-orange) 25%, transparent);
-  color: var(--text-primary);
-  box-shadow: var(--shadow);
+/* Outlined orange, so it reads on the dark panel but stays secondary to the solid
+   LOG IN button. Scoped to .empty-actions to outrank the global [data-theme] rule
+   in theme.css that would otherwise force this button's text to near-black. */
+.empty-actions .empty-cta.is-secondary {
+  background: color-mix(in srgb, var(--color-ember-orange) 18%, transparent);
+  border: 2px solid var(--color-ember-orange, #ff6436);
+  color: var(--color-ember-orange, #ff6436);
+  box-shadow: none;
+}
+
+.empty-actions .empty-cta.is-secondary:hover {
+  background: color-mix(in srgb, var(--color-ember-orange) 30%, transparent);
+  border-color: var(--color-ember-orange, #ff6436);
 }
 
 .empty-cta:focus-visible {
