@@ -66,6 +66,8 @@ def get_game_predictions():
     weights = request_weights()
     day = _day(cache)
     rows = [game_predictions.enrich(row, weights) for row in cache['players']]
+    # Never project a player who is ruled out for his game (bug #141).
+    rows = game_predictions.drop_out_players(rows)
     rows = game_predictions.filter_rows(
         rows,
         search=sanitize_string(request.args.get('search', ''), 50),
@@ -114,6 +116,7 @@ def get_game_recommendations():
     day = _day(cache) or (cache.get('slate_dates') or [''])[0]
     weights = request_weights()
     rows = [game_predictions.enrich(row, weights) for row in cache['players'] if row.get('game_date') == day]
+    rows = game_predictions.drop_out_players(rows)
     return jsonify({
         **_slate(cache, day),
         'available': True,
@@ -139,7 +142,8 @@ def get_player_game_prediction(player_id):
         matches = [r for r in rows if normalize_player_name(r.get('name')) == name]
     weights = request_weights()
     matches = sorted(matches, key=lambda r: (r.get('game_date') or '', r.get('tipoff') or ''))
-    predictions = [game_predictions.enrich(row, weights) for row in matches]
+    predictions = game_predictions.drop_out_players(
+        [game_predictions.enrich(row, weights) for row in matches])
     return jsonify({
         **_slate(cache),
         'available': True,

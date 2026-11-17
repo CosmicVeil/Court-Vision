@@ -207,6 +207,40 @@ def enrich(row: Dict, weights=None) -> Dict:
     return row
 
 
+# ESPN statuses that mean the player will not suit up. Matches OUT_STATUSES in
+# app/ml/game_upcoming.py, which excludes them when the daily cache is built. This
+# request-time pass is the backstop for a stale cache or a status that flipped since.
+_OUT_STATUSES = {"out", "suspension"}
+
+
+def _is_out(injury) -> bool:
+    if not isinstance(injury, dict):
+        return False
+    status = str(injury.get("status") or "").strip().lower()
+    abbr = str(injury.get("status_abbr") or "").strip().lower()
+    return status in _OUT_STATUSES or abbr in {"out", "susp"}
+
+
+def drop_out_players(rows: List[Dict], report: Optional[Dict] = None) -> List[Dict]:
+    """Remove players ruled out for their game, re-checking the live injury report.
+
+    The daily cache already leaves out players who were out when it was built, but a
+    status can flip to OUT afterward, and the cache can be a day stale. Re-joining the
+    current report by NBA.com player id (the key the report uses) catches those, so an
+    out player never shows up in projections. report defaults to the live report.
+    """
+    if report is None:
+        from app.services.injuries import get_injuries
+        report = get_injuries()
+    kept = []
+    for row in rows:
+        live = report.get(row["id"]) if report and row.get("id") is not None else None
+        if _is_out(live) or _is_out(row.get("injury")):
+            continue
+        kept.append(row)
+    return kept
+
+
 def filter_rows(rows: List[Dict], search: str = "", team: str = "", game_id: str = "", day: str = "") -> List[Dict]:
     search = search.lower()
     return [row for row in rows

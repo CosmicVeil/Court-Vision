@@ -281,6 +281,24 @@ class RankingTests(unittest.TestCase):
         rows[0]["game_date"] = "2026-11-21"
         self.assertEqual([r["name"] for r in game_predictions.filter_rows(rows, day="2026-11-21")], ["b"])
 
+    def test_drop_out_players_removes_ruled_out(self):
+        # Bug #141: an out player must not appear in projections, whether the cache
+        # already flags him, his status flipped to out since the daily build, or he is
+        # suspended. Questionable and healthy players stay.
+        healthy = game_predictions.enrich(_row("healthy"))
+        flagged_out = game_predictions.enrich(_row("flagged", injury={"status": "Out", "status_abbr": "OUT"}))
+        questionable = game_predictions.enrich(_row("questionable", injury={"status": "Questionable", "status_abbr": "Q"}))
+        suspended = game_predictions.enrich(_row("suspended", injury={"status": "Suspension", "status_abbr": "SUSP"}))
+        flipped = game_predictions.enrich(_row("flipped"))  # clean in cache, out in the live report
+
+        report = {flipped["id"]: {"status": "Out", "status_abbr": "OUT"}}
+        kept = game_predictions.drop_out_players([healthy, flagged_out, questionable, suspended, flipped], report=report)
+        self.assertEqual([r["name"] for r in kept], ["healthy", "questionable"])
+
+    def test_drop_out_players_keeps_everyone_without_a_report(self):
+        rows = [game_predictions.enrich(_row("healthy"))]
+        self.assertEqual([r["name"] for r in game_predictions.drop_out_players(rows, report={})], ["healthy"])
+
 
 class BuildCacheTests(unittest.TestCase):
     def test_rows_carry_predictions_baselines_and_accuracy(self):
