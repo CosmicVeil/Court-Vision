@@ -180,6 +180,9 @@ class CorsTests(unittest.TestCase):
     def test_production_site_is_allowed(self):
         self.assertEqual(self._allowed_origin('https://courtvision.works'), 'https://courtvision.works')
 
+    def test_vite_preview_is_allowed(self):
+        self.assertEqual(self._allowed_origin('http://localhost:4173'), 'http://localhost:4173')
+
     def test_other_sites_are_not_allowed(self):
         self.assertIsNone(self._allowed_origin('https://evil.example'))
 
