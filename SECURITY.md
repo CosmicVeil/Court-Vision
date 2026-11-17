@@ -72,7 +72,7 @@ So reporters know what is already in place:
 - **Database queries** use parameterized SQL rather than string formatting.
 - **Secrets** (`DATABASE_URL`, `SECRET_KEY`) come from environment variables or the hosting provider's secret store. `backend/.env` is git-ignored and must never be committed.
 - **CORS** only allows the production site and local dev servers (`DEFAULT_CORS_ORIGINS` in `backend/app/config.py`). Set `CORS_ORIGINS` (comma-separated) to change the list, for example to add a preview deploy.
-- **Rate limiting:** login allows 10 attempts per 5 minutes and signup 5 per hour, per client IP (`backend/app/utils/rate_limit.py`). Over the limit, the API returns `429` with a `Retry-After` header. On Render, the client IP comes from the one trusted proxy hop in `X-Forwarded-For` (`TRUSTED_PROXY_HOPS`, default 1 on Render and 0 elsewhere).
+- **Rate limiting:** login allows 10 failed attempts per 5 minutes and signup 5 attempts per hour, per client IP (`backend/app/utils/rate_limit.py`). Successful logins and signups rejected for invalid input don't count. Over the limit, the API returns `429` with a `Retry-After` header. On Render, the client IP is the entry Cloudflare appended to `X-Forwarded-For`, two hops from the right (`TRUSTED_PROXY_HOPS`, default 2 on Render and 0 elsewhere).
 - **Content-Security-Policy:** production builds get a CSP `<meta>` tag (`frontend/src/config/csp.js`). Scripts run only from the site itself, hashed inline scripts, and Google Analytics. Requests and images can only go to the API, analytics, and the NBA/ESPN image CDNs. This limits what an injected script could do with the token.
 
 ### Known limitations

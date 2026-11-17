@@ -28,7 +28,7 @@ def create_app(load_data: bool = True) -> Flask:
     app = Flask(__name__)
     hops = trusted_proxy_hops()
     if hops:
-        # Behind Render's proxy, remote_addr is the proxy; take the client IP it appended to
+        # Behind Render, remote_addr is its proxy; take the client IP Cloudflare appended to
         # X-Forwarded-For (rate limiting keys on it). Entries further left are client-supplied.
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=hops)
     CORS(app, resources={

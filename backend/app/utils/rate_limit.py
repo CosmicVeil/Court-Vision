@@ -9,7 +9,7 @@ import time
 from collections import deque
 from functools import wraps
 
-from flask import jsonify, request
+from flask import jsonify, make_response, request
 
 
 class RateLimiter:
@@ -21,6 +21,7 @@ class RateLimiter:
         self._clock = clock
         self._hits = {}
         self._lock = threading.Lock()
+        self._next_prune = 0.0
 
     def hit(self, key: str):
         """Record a request for `key`. Returns (allowed, retry_after_seconds)."""
@@ -32,9 +33,18 @@ class RateLimiter:
             if len(hits) >= self.max_requests:
                 return False, max(1, math.ceil(hits[0] + self.window_seconds - now))
             hits.append(now)
-            if len(self._hits) > 10_000:
+            # At most once per window: when most keys are still active, pruning frees little.
+            if len(self._hits) > 10_000 and now >= self._next_prune:
                 self._prune(now)
+                self._next_prune = now + self.window_seconds
             return True, 0
+
+    def release(self, key: str):
+        """Take back the latest recorded hit for `key` (a request that turned out not to count)."""
+        with self._lock:
+            hits = self._hits.get(key)
+            if hits:
+                hits.pop()
 
     def _prune(self, now: float):
         """Drop keys with no hits inside the window so memory stays bounded."""
@@ -47,12 +57,17 @@ class RateLimiter:
             self._hits.clear()
 
 
-def rate_limit(limiter: RateLimiter):
-    """Route decorator: 429 with Retry-After once the client IP exceeds `limiter`."""
+def rate_limit(limiter: RateLimiter, counts=None):
+    """Route decorator: 429 with Retry-After once the client IP exceeds `limiter`.
+
+    `counts(status_code)` decides afterwards whether a request uses up the limit; the hit is
+    recorded first and released if not, so concurrent requests can't slip past the check.
+    """
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            allowed, retry_after = limiter.hit(request.remote_addr or 'unknown')
+            key = request.remote_addr or 'unknown'
+            allowed, retry_after = limiter.hit(key)
             if not allowed:
                 response = jsonify({
                     'success': False,
@@ -61,6 +76,9 @@ def rate_limit(limiter: RateLimiter):
                 response.status_code = 429
                 response.headers['Retry-After'] = str(retry_after)
                 return response
-            return f(*args, **kwargs)
+            response = make_response(f(*args, **kwargs))
+            if counts and not counts(response.status_code):
+                limiter.release(key)
+            return response
         return decorated_function
     return decorator

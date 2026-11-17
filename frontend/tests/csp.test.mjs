@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 import { apiOriginFrom, buildCsp, injectCsp, inlineScriptHashes } from '../src/config/csp.js';
 
 const directive = (policy, name) => policy.split('; ').find(part => part.startsWith(`${name} `));
@@ -44,4 +45,14 @@ test('CSP meta is injected after charset and before the first script', () => {
   const csp = out.indexOf('Content-Security-Policy');
   assert.ok(out.indexOf('charset') < csp && csp < out.indexOf('<script>'));
   assert.match(out, new RegExp(inlineScriptHashes(html)[0].replace(/[+/=]/g, '\\$&')));
+});
+
+test("the CSP allows api.js's production fallback when VITE_API_URL is unset", async () => {
+  const { PRODUCTION_API_URL } = await import("../src/config/apiUrl.js");
+  const api = readFileSync(new URL("../src/config/api.js", import.meta.url), "utf8");
+  const viteConfig = readFileSync(new URL("../vite.config.js", import.meta.url), "utf8");
+  assert.match(api, /return PRODUCTION_API_URL;/);
+  assert.doesNotMatch(api, /onrender\.com/);
+  assert.match(viteConfig, /VITE_API_URL \|\| PRODUCTION_API_URL/);
+  assert.match(buildCsp({ apiOrigin: apiOriginFrom(PRODUCTION_API_URL) }), /connect-src [^;]*https:\/\/court-vision-zxuj\.onrender\.com/);
 });
