@@ -22,6 +22,66 @@
   margin: 0 auto 32px;
 }
 
+/* Stats.css also styles .sorting-section, so the view toggle's spacing is scoped to this page. */
+.predictions-container .sorting-section {
+  flex-wrap: wrap;
+  gap: 12px 20px;
+}
+
+.predictions-container .view-btn:focus-visible {
+  outline: 2px solid var(--color-ember-orange, #ff6436);
+  outline-offset: 3px;
+}
+
+/* ---------- Table View (the Stats page table, from Stats.css) ---------- */
+/* Header sort and player-name buttons look like the text they replace. */
+.table-sort-btn,
+.table-row-open {
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+/* The whole header cell is the sort target: the button fills it and carries the cell's padding. */
+.predictions-container .players-table th.sortable {
+  padding: 0;
+}
+
+.table-sort-btn {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+}
+
+/* Stats.css makes every header look clickable; here only the sortable ones do. */
+.predictions-container .players-table th:not(.sortable) {
+  cursor: default;
+}
+
+.predictions-container .players-table th:not(.sortable):hover {
+  background: none;
+  color: var(--color-ember-orange, #ff6436);
+}
+
+.table-sort-btn:focus-visible,
+.table-row-open:focus-visible {
+  outline: 2px solid var(--color-ember-orange, #ff6436);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.players-table th[aria-sort] {
+  color: var(--text-primary);
+}
+
+.players-table .stat-cell .pc-delta {
+  display: block;
+}
+
 .sort-control-group {
   display: flex;
   align-items: center;

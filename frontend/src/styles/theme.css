@@ -156,7 +156,7 @@ input::placeholder, textarea::placeholder { color: var(--text-secondary); opacit
 .home-section-title .text-ember { color: inherit; }
 .featured-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 16px; }
 .model-accuracy-block { max-width: 1200px; }
-.court-search-container, .how-it-works-container { max-width: 1200px; text-align: left; }
+.how-it-works-container { max-width: 1200px; text-align: left; }
 .step-item { text-align: left; }
 .step-content h3, .pra-name { text-transform: none; letter-spacing: -.3px; }
 
@@ -317,7 +317,7 @@ input::placeholder, textarea::placeholder { color: var(--text-secondary); opacit
 :root { --content-width: 1308px; }
 .page-hero, .pc-grid, .fb, .sorting-section, .pm-toggle-wrap, .gp-slate, .gp-results-caption,
 .lg-content, .lg-hero, .recommendations-header, .ai-content, .ai-predictions-container,
-.featured-container, .court-search-container, .how-it-works-container, .model-accuracy-block { max-width: var(--content-width); }
+.featured-container, .how-it-works-container, .model-accuracy-block { max-width: var(--content-width); }
 .game-predictions-page .pc-head { min-height: 82px; }
 .gp-game .gm-joiner { color: inherit; }
 .pc-badge.is-accent { background: transparent; }
