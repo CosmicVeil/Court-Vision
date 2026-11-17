@@ -1,10 +1,16 @@
 from flask import Blueprint, jsonify, request
 
 from app.auth import create_token, invalidate_token, require_auth
+from app.config import LOGIN_RATE_LIMIT, SIGNUP_RATE_LIMIT
 from app.db import authenticate_user_from_json, create_user_from_json, get_user_by_id
 from app.utils.fantasy import describe_setting
+from app.utils.rate_limit import RateLimiter, rate_limit
 
 bp = Blueprint('auth', __name__, url_prefix='/api/auth')
+
+# Per-IP limits that slow password guessing and mass account creation.
+login_limiter = RateLimiter(*LOGIN_RATE_LIMIT)
+signup_limiter = RateLimiter(*SIGNUP_RATE_LIMIT)
 
 
 def _public_user(user):
@@ -13,6 +19,7 @@ def _public_user(user):
 
 
 @bp.route('/signup', methods=['POST'])
+@rate_limit(signup_limiter)
 def signup():
     try:
         success, user, message = create_user_from_json()
@@ -26,6 +33,7 @@ def signup():
 
 
 @bp.route('/login', methods=['POST'])
+@rate_limit(login_limiter)
 def login():
     try:
         success, user, message = authenticate_user_from_json()
