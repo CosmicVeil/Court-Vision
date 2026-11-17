@@ -1,6 +1,7 @@
 import process from 'node:process'
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { PRODUCTION_API_URL } from './src/config/apiUrl.js'
 import { apiOriginFrom, injectCsp } from './src/config/csp.js'
 import { buildSitemap, defaultHeadTags } from './src/config/seo.js'
 
@@ -23,8 +24,11 @@ const csp = (apiOrigin) => ({
 })
 
 // https://vite.dev/config/
+// The CSP must allow whichever API the build will call: VITE_API_URL, else api.js's fallback.
+const apiUrlFor = mode => loadEnv(mode, process.cwd(), 'VITE_').VITE_API_URL || PRODUCTION_API_URL
+
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), seo(), csp(apiOriginFrom(loadEnv(mode, process.cwd(), 'VITE_').VITE_API_URL))],
+  plugins: [react(), seo(), csp(apiOriginFrom(apiUrlFor(mode)))],
   server: {
     proxy: {
       '/api': {

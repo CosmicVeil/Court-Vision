@@ -54,12 +54,33 @@ class RateLimiterTests(unittest.TestCase):
         self.assertFalse(self.limiter.hit('a')[0])
         self.assertTrue(self.limiter.hit('b')[0])
 
+    def test_release_takes_back_the_latest_hit(self):
+        for _ in range(3):
+            self.limiter.hit('ip')
+        self.limiter.release('ip')
+        self.assertTrue(self.limiter.hit('ip')[0])
+        self.assertFalse(self.limiter.hit('ip')[0])
+        self.limiter.release('unknown-key')  # no-op, no error
+
+    def test_prune_runs_at_most_once_per_window_when_keys_stay_active(self):
+        limiter = RateLimiter(3, 60, clock=self.clock)
+        with patch.object(limiter, '_prune', wraps=limiter._prune) as prune:
+            for i in range(10_005):
+                limiter.hit(f'ip-{i}')
+            self.assertEqual(prune.call_count, 1)
+            self.clock.now += 60
+            limiter.hit('later')
+            self.assertEqual(prune.call_count, 2)
+
     def test_prune_drops_stale_keys(self):
         self.limiter.hit('old')
         self.clock.now += 61
         self.limiter.hit('new')
         self.limiter._prune(self.clock.now)
         self.assertEqual(list(self.limiter._hits), ['new'])
+
+
+VALID_SIGNUP = {'first_name': 'Ada', 'last_name': 'Lovelace', 'email': 'ada@example.com', 'password': 'secret123'}
 
 
 class AuthRouteRateLimitTests(unittest.TestCase):
@@ -88,13 +109,34 @@ class AuthRouteRateLimitTests(unittest.TestCase):
     def test_signup_is_limited_separately_from_login(self):
         max_requests = SIGNUP_RATE_LIMIT[0]
         with patch.object(auth_routes, 'create_user_from_json',
-                          return_value=(False, None, 'Email already registered')):
+                          return_value=(False, None, 'Email already in use')):
             for _ in range(max_requests):
-                self.client.post('/api/auth/signup', json={})
-            self.assertEqual(self.client.post('/api/auth/signup', json={}).status_code, 429)
+                self.client.post('/api/auth/signup', json=VALID_SIGNUP)
+            self.assertEqual(self.client.post('/api/auth/signup', json=VALID_SIGNUP).status_code, 429)
         with patch.object(auth_routes, 'authenticate_user_from_json',
                           return_value=(False, None, 'Invalid email or password')):
             self.assertEqual(self.client.post('/api/auth/login', json={}).status_code, 401)
+
+    def test_successful_logins_do_not_use_up_the_limit(self):
+        max_requests = LOGIN_RATE_LIMIT[0]
+        user = {'id': 1, 'email': 'ada@example.com'}
+        with patch.object(auth_routes, 'authenticate_user_from_json', return_value=(True, user, 'ok')), \
+                patch.object(auth_routes, 'create_token', return_value='token'), \
+                patch.object(auth_routes, '_public_user', return_value=user):
+            statuses = {self.client.post('/api/auth/login', json={}).status_code for _ in range(max_requests + 5)}
+        self.assertEqual(statuses, {200})
+
+    def test_invalid_signup_input_is_422_and_does_not_use_up_the_limit(self):
+        max_requests = SIGNUP_RATE_LIMIT[0]
+        with patch.object(auth_routes, 'create_user_from_json') as create:
+            short_password = {**VALID_SIGNUP, 'password': '123'}
+            statuses = {self.client.post('/api/auth/signup', json=short_password).status_code
+                        for _ in range(max_requests + 3)}
+            create.return_value = (False, None, 'Email already in use')
+            after = self.client.post('/api/auth/signup', json=VALID_SIGNUP).status_code
+        self.assertEqual(statuses, {422})
+        self.assertEqual(after, 400)  # the valid attempt still reached the database
+        self.assertEqual(create.call_count, 1)
 
     def test_spoofed_forwarded_for_ignored_without_trusted_proxy(self):
         max_requests = LOGIN_RATE_LIMIT[0]
@@ -107,21 +149,23 @@ class AuthRouteRateLimitTests(unittest.TestCase):
             blocked = client.post('/api/auth/login', json={}, headers={'X-Forwarded-For': '10.0.0.99'})
         self.assertEqual(blocked.status_code, 429)
 
-    def test_trusted_proxy_keys_on_forwarded_client_ip(self):
+    def test_render_keys_on_the_client_ip_cloudflare_appended(self):
+        # On Render: "<client-supplied...>, <client per Cloudflare>, <Cloudflare edge per Render>".
         max_requests = LOGIN_RATE_LIMIT[0]
-        with patch.dict(os.environ, {'TRUSTED_PROXY_HOPS': '1'}), \
+        with patch.dict(os.environ, {'TRUSTED_PROXY_HOPS': '2'}), \
                 patch.object(auth_routes, 'authenticate_user_from_json',
                              return_value=(False, None, 'Invalid email or password')):
             client = create_app(load_data=False).test_client()
             for _ in range(max_requests):
-                client.post('/api/auth/login', json={}, headers={'X-Forwarded-For': '203.0.113.1'})
+                client.post('/api/auth/login', json={}, headers={'X-Forwarded-For': '203.0.113.1, 104.22.17.40'})
             self.assertEqual(client.post('/api/auth/login', json={},
-                                         headers={'X-Forwarded-For': '203.0.113.1'}).status_code, 429)
-            # A client prepending a fake IP still gets keyed on what the proxy appended.
+                                         headers={'X-Forwarded-For': '203.0.113.1, 104.22.17.40'}).status_code, 429)
+            # A client prepending a fake IP still gets keyed on what Cloudflare appended.
             self.assertEqual(client.post('/api/auth/login', json={},
-                                         headers={'X-Forwarded-For': '1.2.3.4, 203.0.113.1'}).status_code, 429)
+                                         headers={'X-Forwarded-For': '1.2.3.4, 203.0.113.1, 104.22.17.40'}).status_code, 429)
+            # Another user behind the same Cloudflare edge has their own limit.
             self.assertEqual(client.post('/api/auth/login', json={},
-                                         headers={'X-Forwarded-For': '203.0.113.2'}).status_code, 401)
+                                         headers={'X-Forwarded-For': '203.0.113.2, 104.22.17.40'}).status_code, 401)
 
 
 class CorsTests(unittest.TestCase):
@@ -149,10 +193,16 @@ class CorsTests(unittest.TestCase):
 
 
 class TrustedProxyHopsTests(unittest.TestCase):
-    def test_one_hop_on_render_none_locally(self):
+    def test_malformed_override_falls_back_to_default(self):
+        for raw, expected in [('true', 2), ('', 2), (' 1 ', 1), ('-3', 0)]:
+            with patch.dict(os.environ, {'RENDER': 'true', 'TRUSTED_PROXY_HOPS': raw}), \
+                    patch('builtins.print'):
+                self.assertEqual(trusted_proxy_hops(), expected, raw)
+
+    def test_two_hops_on_render_none_locally(self):
         with patch.dict(os.environ, {'RENDER': 'true'}, clear=False):
             os.environ.pop('TRUSTED_PROXY_HOPS', None)
-            self.assertEqual(trusted_proxy_hops(), 1)
+            self.assertEqual(trusted_proxy_hops(), 2)
         with patch.dict(os.environ, {}, clear=False):
             os.environ.pop('RENDER', None)
             os.environ.pop('TRUSTED_PROXY_HOPS', None)

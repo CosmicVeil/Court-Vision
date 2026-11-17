@@ -2,6 +2,7 @@
  * API Configuration
  * Uses environment variables for flexible deployment
  */
+import { PRODUCTION_API_URL } from './apiUrl';
 
 // Get API URL from environment variable, fallback to localhost for development
 // Vite uses VITE_ prefix for environment variables
@@ -18,7 +19,7 @@ const getApiBaseUrl = () => {
   
   // Production fallback to the active Render backend
   // We use the absolute URL because Vercel proxying passes headers that break Render's ingress routing
-  return 'https://court-vision-zxuj.onrender.com/api';
+  return PRODUCTION_API_URL;
 };
 
 export const API_BASE_URL = getApiBaseUrl();

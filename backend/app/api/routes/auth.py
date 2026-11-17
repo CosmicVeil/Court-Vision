@@ -2,13 +2,15 @@ from flask import Blueprint, jsonify, request
 
 from app.auth import create_token, invalidate_token, require_auth
 from app.config import LOGIN_RATE_LIMIT, SIGNUP_RATE_LIMIT
-from app.db import authenticate_user_from_json, create_user_from_json, get_user_by_id
+from app.db import authenticate_user_from_json, create_user_from_json, get_user_by_id, parse_signup_json
 from app.utils.fantasy import describe_setting
 from app.utils.rate_limit import RateLimiter, rate_limit
 
 bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
-# Per-IP limits that slow password guessing and mass account creation.
+# Per-IP limits that slow password guessing and mass account creation. Login counts only failed
+# attempts; signup counts every attempt that reaches the database (new accounts and taken emails,
+# which would otherwise let anyone probe which emails are registered), but not invalid input.
 login_limiter = RateLimiter(*LOGIN_RATE_LIMIT)
 signup_limiter = RateLimiter(*SIGNUP_RATE_LIMIT)
 
@@ -19,9 +21,12 @@ def _public_user(user):
 
 
 @bp.route('/signup', methods=['POST'])
-@rate_limit(signup_limiter)
+@rate_limit(signup_limiter, counts=lambda status: status != 422)
 def signup():
     try:
+        valid, _, message = parse_signup_json()
+        if not valid:
+            return jsonify({'success': False, 'message': message}), 422
         success, user, message = create_user_from_json()
         if success:
             token = create_token(user['id'])
@@ -33,7 +38,7 @@ def signup():
 
 
 @bp.route('/login', methods=['POST'])
-@rate_limit(login_limiter)
+@rate_limit(login_limiter, counts=lambda status: status != 200)
 def login():
     try:
         success, user, message = authenticate_user_from_json()

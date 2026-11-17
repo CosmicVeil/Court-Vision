@@ -51,9 +51,18 @@ def cors_origins() -> list:
 
 def trusted_proxy_hops() -> int:
     """How many reverse proxies sit in front of the app and append to X-Forwarded-For.
-    Render has one; locally there are none, so the client's own header is never trusted."""
-    default = '1' if os.environ.get('RENDER') in ('true', '1') else '0'
-    return int(os.environ.get('TRUSTED_PROXY_HOPS', default))
+    On Render a request passes Cloudflare (which appends the client IP) and then Render's proxy
+    (which appends the Cloudflare edge IP), so the client is 2 hops from the right. Locally there
+    are none, so the client's own header is never trusted. A malformed override falls back."""
+    default = 2 if os.environ.get('RENDER') in ('true', '1') else 0
+    raw = os.environ.get('TRUSTED_PROXY_HOPS', '').strip()
+    if not raw:
+        return default
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        print(f"Ignoring TRUSTED_PROXY_HOPS={raw!r} (not a whole number); using {default}")
+        return default
 
 
 def is_low_memory() -> bool:
