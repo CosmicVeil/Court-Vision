@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { buildApiUrl } from '../config/api';
 import { getScoring } from '../utils/auth';
 import { fptsTitle } from '../utils/fantasy';
 import { currentSeasonLabel, defaultSeason, formatAbsence, formatSeasonTeams, playerSeasons } from '../utils/gameLog';
+import { getGameDetailPath } from '../utils/liveGames';
 import './PlayerGameLog.css';
 
 // Matches the backend clamp and fits a full season including preseason, play-in, and playoffs.
@@ -24,6 +26,7 @@ const seasonTag = type => {
 };
 
 export default function PlayerGameLog({ playerId, history }) {
+  const navigate = useNavigate();
   const [selectedSeason, setSelectedSeason] = useState(() => defaultSeason(history));
   // Keyed by player and season so switching shows the loading state.
   const [result, setResult] = useState({ playerId: null, season: selectedSeason, status: 'loading', data: null });
@@ -60,6 +63,11 @@ export default function PlayerGameLog({ playerId, history }) {
   const absenceMessage = isLoading ? '' : formatAbsence(result.data?.absence, selectedSeason, result.data?.teams);
   // The API scored fpts with the user's Profile preset (sent as a header), so the tooltip names it.
   const fptsHeader = fptsTitle(getScoring());
+  // The date cell holds the real link (keyboard, new tab); the row click is a mouse shortcut that skips text selection.
+  const openGame = (event, gameId) => {
+    if (event.target.closest('a') || window.getSelection()?.toString()) return;
+    navigate(getGameDetailPath(gameId));
+  };
 
   return (
     <div className="game-log">
@@ -129,8 +137,8 @@ export default function PlayerGameLog({ playerId, history }) {
               <thead><tr><th>Date</th><th>Team</th><th>Opp</th><th>Result</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>TOV</th><th>FG</th><th>3PT</th><th>FT</th><th>+/-</th><th title={fptsHeader}>FPTS</th></tr></thead>
               <tbody>
                 {games.map(game => (
-                  <tr key={game.game_id}>
-                    <td>{formatDate(game.date)}{seasonTag(game.season_type)}</td>
+                  <tr key={game.game_id} className="game-log-row" onClick={event => openGame(event, game.game_id)}>
+                    <td><Link to={getGameDetailPath(game.game_id)} className="game-log-game-link">{formatDate(game.date)}</Link>{seasonTag(game.season_type)}</td>
                     <td className="game-log-team">{game.team && game.team !== 'UNK' ? game.team : '—'}</td>
                     <td>{game.is_home ? 'vs' : '@'} {game.opponent}</td>
                     <td><span className={game.result === 'W' ? 'game-log-win' : 'game-log-loss'}>{game.result}</span> {game.score}</td>
