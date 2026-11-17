@@ -9,7 +9,7 @@ import unittest
 
 RUNNER = Path(__file__).with_name('pipeline.py')
 FAKE = '''#!/usr/bin/env python3
-import json, os, pathlib, sys
+import json, os, pathlib, re, sys
 name=pathlib.Path(sys.argv[0]).name
 args=sys.argv[1:]
 if args[:2]==['login','status']:
@@ -43,12 +43,13 @@ if name=='codex':  # code review
     sys.exit(0)
 if mode=='quota':
     print('Usage limit reached'); sys.exit(1)
-if '--json-schema' in args:
-    print(json.dumps({'structured_output':{'plan':'Change value.txt and verify it.'},'is_error':False}))
-else:  # implementation or fix round
-    pathlib.Path(os.environ['FAKE_PROMPTS']+'.claude-code-args').write_text(json.dumps(args))
-    pathlib.Path('value.txt').write_text('changed')
-    print(json.dumps({'result':'Implemented task','is_error':False,'permission_denials':[]}))
+# Plan + implementation, or a fix round. Only the first session is asked to write the plan.
+pathlib.Path(os.environ['FAKE_PROMPTS']+'.claude-code-args').write_text(json.dumps(args))
+target=re.search(r'write your plan to: (.+)', prompt)
+if target and not os.environ.get('FAKE_NOPLAN'):
+    pathlib.Path(target.group(1).strip()).write_text('Change value.txt and verify it.')
+pathlib.Path('value.txt').write_text('changed')
+print(json.dumps({'result':'Implemented task','is_error':False,'permission_denials':[]}))
 '''
 
 class PipelineTests(unittest.TestCase):
@@ -108,7 +109,7 @@ class PipelineTests(unittest.TestCase):
         first=json.loads((path.parent/'review-0.result.json').read_text())
         self.assertFalse(first['approved'])
         self.assertEqual(first['findings'],['[P1] Correct value.txt \u2014 value.txt:1-1\nIt must say fixed.'])
-        fix=[x for x in self.prompts().split('---\n') if x.strip()][3]
+        fix=[x for x in self.prompts().split('---\n') if x.strip()][2]
         self.assertIn('Correct value.txt',fix)
     def test_nits_do_not_block_approval(self):
         p=self.invoke('nit'); self.assertEqual(p.returncode,0,p.stderr)
@@ -119,7 +120,7 @@ class PipelineTests(unittest.TestCase):
     def test_claude_implements_and_codex_reviews(self):
         p=self.invoke(); self.assertEqual(p.returncode,0,p.stderr)
         order=[x.split(':')[0] for x in self.prompts().split('---\n') if x.strip()]
-        self.assertEqual(order,['claude','claude','codex'])  # plan, code, review
+        self.assertEqual(order,['claude','codex'])  # plan + code in one session, then review
         review=json.loads(Path(str(self.root/'prompts')+'.codex-args').read_text())
         self.assertEqual(review[:4],['-a','never','exec','review'])
         self.assertIn('sandbox_mode="read-only"',review)
@@ -128,6 +129,29 @@ class PipelineTests(unittest.TestCase):
         allowed=code[code.index('--allowedTools')+1]
         self.assertIn('Bash(npm *)',allowed); self.assertNotIn('Bash(*)',allowed)
         self.assertIn('Bash(git rm *)',allowed); self.assertNotIn('Bash(rm *)',allowed)
+    def test_coding_session_writes_the_plan(self):
+        p=self.invoke('fix'); self.assertEqual(p.returncode,0,p.stderr)
+        _,s=self.state(); run=Path(s['run'])  # the resolved path the prompts use
+        self.assertEqual((run/'plan.md').read_text(),'Change value.txt and verify it.')
+        code,review,fix,_=[x for x in self.prompts().split('---\n') if x.strip()]
+        self.assertIn('write your plan to: '+str(run/'plan.md'),code)
+        self.assertIn('Out of scope (not planned)',code)
+        self.assertIn(str(run/'plan.md'),review)
+        # Fix rounds follow the saved plan instead of planning again.
+        self.assertNotIn('write your plan to',fix)
+        self.assertIn('Plan:\nChange value.txt and verify it.',fix)
+    def test_missing_plan_stops_before_checks(self):
+        p=self.invoke(FAKE_NOPLAN='1'); self.assertEqual(p.returncode,2)
+        self.assertIn('did not write a plan',p.stderr)
+        self.assertEqual(self.state()[1]['stage'],'code')
+        self.assertNotIn('codex:',self.prompts())
+    def test_legacy_plan_stage_resumes_as_code(self):
+        p=self.invoke('quota'); self.assertEqual(p.returncode,2)
+        path,s=self.state(); s['stage']='plan'; path.write_text(json.dumps(s))
+        p=subprocess.run([sys.executable,str(RUNNER),'--resume',str(path.parent)],
+            env=self.env,capture_output=True,text=True,timeout=60)
+        self.assertEqual(p.returncode,0,p.stderr)
+        self.assertEqual(self.state()[1]['stage'],'complete')
     def test_dirty_source_is_refused(self):
         (self.repo/'value.txt').write_text('user edits')
         p=self.invoke(); self.assertEqual(p.returncode,2)
@@ -136,7 +160,7 @@ class PipelineTests(unittest.TestCase):
         self.assertFalse((self.root/'repo-ai-runs').exists())
     def test_quota_resume(self):
         p=self.invoke('quota'); self.assertEqual(p.returncode,2)
-        path,s=self.state(); self.assertEqual(s['stage'],'plan')
+        path,s=self.state(); self.assertEqual(s['stage'],'code')
         p=subprocess.run([sys.executable,str(RUNNER),'--resume',str(path.parent)],
             env=self.env,capture_output=True,text=True,timeout=60)
         self.assertEqual(p.returncode,0,p.stderr)
@@ -161,7 +185,7 @@ class PipelineTests(unittest.TestCase):
         self.assertTrue((run/'repro.json').exists())
         self.assertIn('tests/repro.txt',(run/'diff-diagnosis-new-files.txt').read_text())
         order=[line.split(':')[0] for line in self.prompts().split('---\n') if line.strip()]
-        self.assertEqual(order[:3],['codex','claude','claude'])
+        self.assertEqual(order[:3],['codex','claude','codex'])
         self.assertTrue(self.prompts().startswith('codex: Diagnose this bug'))
         plan_prompt=self.prompts().split('---\n')[1]
         self.assertIn(str(run/'diagnosis.md'),plan_prompt)
@@ -169,10 +193,10 @@ class PipelineTests(unittest.TestCase):
     def test_every_agent_prompt_enforces_scope(self):
         p=self.invoke('fix',extra=['--bug']); self.assertEqual(p.returncode,0,p.stderr)
         prompts=[x for x in self.prompts().split('---\n') if x.strip()]
-        self.assertEqual(len(prompts),6)  # diagnose, plan, code, review, fix, review
+        self.assertEqual(len(prompts),5)  # diagnose, plan + code, review, fix, review
         for prompt in prompts:
             self.assertIn('STRICT SCOPE',prompt)
-        self.assertIn('Skip any finding that asks',prompts[4])
+        self.assertIn('Skip any finding that asks',prompts[3])
     def test_codex_model_and_reasoning_effort(self):
         config=json.loads(self.config.read_text())
         config.update(codex_model='gpt-6-astra',codex_reasoning_effort='high')
@@ -221,7 +245,7 @@ class PipelineTests(unittest.TestCase):
         prompts=[x for x in self.prompts().split('---\n') if x.strip()]
         for prompt in prompts:
             self.assertIn(str(run/'spec.md'),prompt)
-        self.assertIn('Work test-first',prompts[1])
+        self.assertIn('Work test-first',prompts[0])
     def test_unknown_base_or_spec_is_refused(self):
         p=self.invoke(extra=['--base','no-such-branch']); self.assertEqual(p.returncode,2)
         self.assertIn('Unknown base',p.stderr)
@@ -239,7 +263,7 @@ class PipelineTests(unittest.TestCase):
         self.config.write_text(json.dumps(config))
         p=self.invoke(); self.assertEqual(p.returncode,0,p.stderr)
         path,_=self.state(); run=path.parent
-        review=[x for x in self.prompts().split('---\n') if x.strip()][2]
+        review=[x for x in self.prompts().split('---\n') if x.strip()][1]
         self.assertIn(str(run/'screenshots'/'checks-0'/'frame.png'),review)
     def make_skill(self,name,extra=None):
         d=self.root/'skills-src'/name; d.mkdir(parents=True)
@@ -258,12 +282,12 @@ class PipelineTests(unittest.TestCase):
             self.assertTrue((run/'skills'/name/'SKILL.md').exists())
         self.assertTrue((run/'skills'/'review-anim'/'STANDARDS.md').exists())
         prompts=[x for x in self.prompts().split('---\n') if x.strip()]
-        diagnose,plan,code,review,fix,review2=prompts
+        diagnose,code,review,fix,review2=prompts
         skill=lambda n: str(run/'skills'/n/'SKILL.md')
         self.assertIn(skill('debugging'),diagnose); self.assertNotIn(skill('tdd'),diagnose)
         self.assertIn(skill('tdd'),code); self.assertNotIn(skill('receiving'),code)
         self.assertIn(skill('receiving'),fix); self.assertNotIn(skill('tdd'),fix)
-        self.assertIn(skill('review-anim'),review); self.assertNotIn(skill('review-anim'),plan)
+        self.assertIn(skill('review-anim'),review); self.assertNotIn(skill('review-anim'),code)
         self.assertIn('No one is available',code)
     def test_missing_skill_is_refused_before_run_folder(self):
         config=json.loads(self.config.read_text())

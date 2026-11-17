@@ -40,17 +40,38 @@ const soFarShooting = player => SHOOTING.map(({ key, label }) => {
   return { key, label, value: value === null ? '—' : formatStat(value, percent) };
 });
 
+// Each predicted stat with its change vs this season so far: shared by the cards and the table.
+const predictedStats = (player, keys) => keys.map(key => {
+  const stat = PREDICTION_STATS.find(item => item.key === key);
+  return {
+    key,
+    label: stat.unit,
+    value: formatStat(player?.[stat.predictedField], stat.changeUnit === 'pp' ? percent : undefined),
+    delta: getStatDelta(player?.[`so_far_${key}`], player?.[stat.predictedField]),
+  };
+});
+
 export function getPredictionCardStats(player) {
-  const main = PREDICTION_CARD_MAIN.map(key => {
-    const stat = PREDICTION_STATS.find(item => item.key === key);
-    return {
-      key,
-      label: stat.unit,
-      value: formatStat(player?.[stat.predictedField]),
-      delta: getStatDelta(player?.[`so_far_${key}`], player?.[stat.predictedField]),
-    };
-  });
-  return { main, extra: soFarShooting(player) };
+  return { main: predictedStats(player, PREDICTION_CARD_MAIN), extra: soFarShooting(player) };
+}
+
+// The Predictions table view: one column per predicted per-game stat plus fantasy points. `field`
+// is the predicted field, which is also the page's sort key for that column.
+const TABLE_KEYS = ['ppg', 'apg', 'rpg', 'spg', 'bpg', 'fantasy'];
+const toTableColumn = stat => ({ key: stat.key, label: stat.unit, field: stat.predictedField });
+export const PREDICTION_TABLE_COLUMNS = TABLE_KEYS.map(key => toTableColumn(PREDICTION_STATS.find(item => item.key === key)));
+
+// Sorting by a predicted stat the table doesn't show (TOV, MPG, shooting) adds that stat's column,
+// so the order on screen is always explained by a visible, marked column.
+export function getPredictionTableColumns(sortBy) {
+  const sorted = PREDICTION_STATS.find(stat => stat.predictedField === sortBy);
+  return sorted && !TABLE_KEYS.includes(sorted.key)
+    ? [...PREDICTION_TABLE_COLUMNS, toTableColumn(sorted)]
+    : PREDICTION_TABLE_COLUMNS;
+}
+
+export function getPredictionTableRow(player, columns = PREDICTION_TABLE_COLUMNS) {
+  return predictedStats(player, columns.map(column => column.key)).map(({ key, value, delta }) => ({ key, value, delta }));
 }
 
 // The home "Projected leaders" panel gets the model's raw rows (PREDICTED_PPG, …) plus the API's

@@ -1,11 +1,11 @@
-# CourtVision: Claude plan → Claude code → Codex review
+# CourtVision: Claude plan + code → Codex review
 
-This is a local, on-demand pipeline. Give it one task; it works directly in this checkout, prepares dependencies, records baseline checks, asks Claude to plan, asks a second Claude session to implement, runs checks, and asks Codex (`codex exec review`, its built-in code review) to review the actual changes. Claude can address findings up to twice. It leaves the changes uncommitted for you to review in your editor, plus the evidence.
+This is a local, on-demand pipeline. Give it one task; it works directly in this checkout, prepares dependencies, records baseline checks, asks one Claude session to write a plan and then implement it, runs checks, and asks Codex (`codex exec review`, its built-in code review) to review the actual changes. Claude can address findings up to twice. It leaves the changes uncommitted for you to review in your editor, plus the evidence.
 
 There are two workflows:
 
-- **Feature workflow** (default): setup → baseline → Claude plan → Claude code → checks → Codex review → Claude fixes.
-- **Bug workflow** (`--bug`): setup → baseline → **Codex diagnosis** → **reproduction checks** → Claude plan → Claude code → checks → Codex review → Claude fixes. Codex tests and reviews the code to find what causes the error before anyone plans a fix.
+- **Feature workflow** (default): setup → baseline → Claude plan + code → checks → Codex review → Claude fixes.
+- **Bug workflow** (`--bug`): setup → baseline → **Codex diagnosis** → **reproduction checks** → Claude plan + code → checks → Codex review → Claude fixes. Codex tests and reviews the code to find what causes the error before anyone plans a fix.
 
 ## Start on this Mac
 
@@ -52,7 +52,7 @@ Every agent prompt tells the agent to change only what the task asks for: no ref
 
 ## Design specs, starting branches and check scripts
 
-- `--spec path/to/spec.md` copies a design spec into the run folder; the planner, the implementer and the Codex reviewer must all follow it.
+- `--spec path/to/spec.md` copies a design spec into the run folder; Claude (planning and coding) and the Codex reviewer must both follow it.
 - `--base <branch>` creates a new branch (named by `--branch`, or `ai/<timestamp>`) from that branch or commit and switches to it before the run.
 - Check commands can use `{workflow_dir}`, `{run_dir}` and `{checkout}`, and get `AI_RUN_DIR` and `AI_CHECK_LABEL` in their environment. Put controller-owned check scripts in `.ai-workflow/checks/` and reference them with `{workflow_dir}` so the agents can't edit them. A check that saves PNGs to `$AI_RUN_DIR/screenshots/$AI_CHECK_LABEL/` has them passed to the reviewer.
 - The implementer's prompt includes two working rules adapted from the Superpowers skills: work test-first, and never report something as done without running the command that proves it.
@@ -91,12 +91,11 @@ The animation skills used in Atlas (`fixing-motion-performance`, `review-animati
 1. Creates the run folder `CourtVision-ai-runs/<timestamp>/` alongside CourtVision for evidence. The work itself happens in this checkout, on the current branch (or a new one with `--branch`/`--base`).
 2. Runs the configured `setup` commands in the checkout (`npm ci` in `frontend/`, which reinstalls `node_modules`, and `backend/.venv`). This requires network access; stop a running Vite dev server first if `npm ci` disturbs it.
 3. Records baseline results for every configured check.
-4. Claude reads the code and produces `plan.md` with acceptance criteria.
-5. A second Claude session edits the checkout with Read, Glob, Grep, Edit and Write plus an allow-listed shell (`claude_bash` in the config; defaults to npm, node, npx, the venv Python, `git diff`, `git status`, `git rm` and `ls`; deletions go through `git rm` so only tracked files can be removed and Git can restore them). It runs in `dontAsk` mode, so anything outside that list is denied rather than prompting; denials are appended to its report. It must add or update tests for everything it builds or changes (the plan lists them, and the reviewer treats missing tests as a finding).
-6. The controller runs configured checks and saves logs. Codex runs `codex exec review` in a read-only sandbox with instructions naming the task, plan, diff, new files and check results. Codex review prints findings as `- [P0..P3] title — file:line`; the controller parses those. P0–P2 block approval, P3 nits are recorded as `non_blocking` (change the cut-off with `review_block_priority`). An empty review stops the run instead of counting as approval. (`codex review --uncommitted` cannot take custom instructions, and review mode ignores `--output-schema`, which is why the prompt names the diff and the result is parsed from text.)
-7. Up to two fix/review rounds run. Success requires both zero unresolved review findings and every required check passing. Otherwise the run ends with `needs-attention` and exit code 2.
+4. One Claude session plans and implements. It first reads the code and writes `plan.md` (acceptance criteria, files, tests, out-of-scope notes) into the run folder, then implements it; the run stops if no plan was written. Fix rounds follow the saved plan. The session edits the checkout with Read, Glob, Grep, Edit and Write plus an allow-listed shell (`claude_bash` in the config; defaults to npm, node, npx, the venv Python, `git diff`, `git status`, `git rm` and `ls`; deletions go through `git rm` so only tracked files can be removed and Git can restore them). It runs in `dontAsk` mode, so anything outside that list is denied rather than prompting; denials are appended to its report. It must add or update tests for everything it builds or changes (the plan lists them, and the reviewer treats missing tests as a finding).
+5. The controller runs configured checks and saves logs. Codex runs `codex exec review` in a read-only sandbox with instructions naming the task, plan, diff, new files and check results. Codex review prints findings as `- [P0..P3] title — file:line`; the controller parses those. P0–P2 block approval, P3 nits are recorded as `non_blocking` (change the cut-off with `review_block_priority`). An empty review stops the run instead of counting as approval. (`codex review --uncommitted` cannot take custom instructions, and review mode ignores `--output-schema`, which is why the prompt names the diff and the result is parsed from text.)
+6. Up to two fix/review rounds run. Success requires both zero unresolved review findings and every required check passing. Otherwise the run ends with `needs-attention` and exit code 2.
 
-The planner receives only Read, Glob and Grep tools in safe mode; the implementer gets edit tools and the allow-listed shell, also in safe mode. Its hooks, plugins and custom instructions are disabled by that mode; prompts explicitly ask it to read applicable AGENTS.md/CLAUDE.md. The implementer is instructed not to commit/push/merge/deploy. No controller step performs these actions. This is a personal local development workflow, not a hostile-code sandbox or proof of correctness. Run it only against projects you trust.
+Claude runs in safe mode with edit tools and the allow-listed shell. Its hooks, plugins and custom instructions are disabled by that mode; prompts explicitly ask it to read applicable AGENTS.md/CLAUDE.md. The implementer is instructed not to commit/push/merge/deploy. No controller step performs these actions. This is a personal local development workflow, not a hostile-code sandbox or proof of correctness. Run it only against projects you trust.
 
 ## CourtVision verification
 
@@ -113,7 +112,7 @@ The terminal prints the run folder. It contains:
 
 - `state.json`: task, mode (`feature` or `bug`), configuration snapshot, base commit, branch and checkpoint.
 - `diagnosis.md`, `diff-diagnosis.patch`, `diff-diagnosis-new-files.txt`, `repro.json`: bug mode only.
-- `plan.md`: Claude's plan.
+- `plan.md`: Claude's plan, written by the coding session before it edits code.
 - `baseline*.log` / `checks-*.log`: check evidence.
 - `code.log`, `code.md`, `fix-*.log`: implementation output.
 - `diff-*.patch`, `diff-*-new-files.txt`: tracked changes and new-file inventory.
@@ -187,4 +186,4 @@ This setup uses `claude -p` without `--bare`: the currently documented bare mode
 
 ## Validation performed during setup
 
-Offline integration tests use fake AI executables and real temporary Git repos to verify in-place runs, repair-loop limits, failed-check gating, empty-review rejection, review-finding parsing (P3 nits non-blocking), Claude-implements/Codex-reviews wiring, dirty-source handling, checkpoint resumption, per-check `cwd`, strict-scope prompts, and the bug workflow (diagnosis before planning, the test-paths guard, empty reports). No live model task has been run: Claude Code still requires subscription sign-in, and no implementation task was supplied. The offline tests validate controller behavior, not model quality or live-provider availability.
+Offline integration tests use fake AI executables and real temporary Git repos to verify in-place runs, repair-loop limits, failed-check gating, empty-review rejection, review-finding parsing (P3 nits non-blocking), Claude plans and implements in one session (plan written, missing plan stops the run, older runs at the `plan` stage resume as `code`)/Codex-reviews wiring, dirty-source handling, checkpoint resumption, per-check `cwd`, strict-scope prompts, and the bug workflow (diagnosis before planning, the test-paths guard, empty reports). No live model task has been run: Claude Code still requires subscription sign-in, and no implementation task was supplied. The offline tests validate controller behavior, not model quality or live-provider availability.

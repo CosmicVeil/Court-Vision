@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Local Claude plan + implementation -> Codex code review, with an optional Codex bug
-diagnosis stage before planning (--bug). Standard library only."""
+"""Local Claude plan + implementation (one session) -> Codex code review, with an optional
+Codex bug diagnosis stage before planning (--bug). Standard library only."""
 import argparse
 import datetime
 import fnmatch
@@ -133,27 +133,8 @@ def claude_args(state, tools, allowed):
     return args
 
 
-def claude(state, prompt, schema, name):
-    """Read-only Claude with a structured result (the planner)."""
-    root = Path(state['run'])
-    log = root / f'{name}.json'
-    args = claude_args(state, 'Read,Glob,Grep', 'Read,Glob,Grep') + ['--json-schema', json.dumps(schema)]
-    if execute(args, state['checkout'], log, state['config']['agent_timeout_seconds'], prompt):
-        raise Stop(f'Claude failed. See {log}. No automatic retry or API fallback.')
-    try:
-        payload = json.loads(log.read_text())
-        if payload.get('is_error') or payload.get('permission_denials'):
-            raise ValueError('Claude reported an error or denied tool request')
-        result = payload['structured_output']
-        if not isinstance(result, dict):
-            raise ValueError('Missing structured result')
-        return result
-    except (ValueError, KeyError) as e:
-        raise Stop(f'Invalid Claude result in {log}: {e}')
-
-
 def claude_code(state, prompt, name):
-    """Claude with edit tools and an allow-listed shell (implementation and fix rounds)."""
+    """Claude with edit tools and an allow-listed shell (plan + implementation, and fix rounds)."""
     root = Path(state['run'])
     log = root / f'{name}.json'
     bash = state['config'].get('claude_bash', DEFAULT_CLAUDE_BASH)
@@ -308,6 +289,25 @@ are wrong; they should fail in repro.json and pass after the fix.
 '''
 
 
+def plan_note(state, name):
+    """The first coding session writes the plan itself; fix rounds follow the saved plan."""
+    root = Path(state['run'])
+    if name != 'code':
+        return f"Plan:\n{(root / 'plan.md').read_text()}\n"
+    verify = ('Verify the diagnosis against the source before relying on it. If it is wrong or '
+              'unconfirmed, say so in the plan and plan from the real cause.\n'
+              if state.get('mode') == 'bug' else '')
+    return f'''Plan first, then implement. Before editing any project file, read the relevant source
+and write your plan to: {root / 'plan.md'}
+The plan is the reviewer's checklist. Include: a concise implementation plan, acceptance criteria,
+files to change, verification, and the specific tests to add or update (file, cases) so every new
+or changed behavior is covered. Identify pre-existing baseline failures separately and flag them
+as blockers instead of fixing them. List related issues you notice under
+"Out of scope (not planned)" instead of planning them.
+{verify}Then implement the plan. If you change course while implementing, update plan.md to match.
+'''
+
+
 def code(state, instructions, name):
     root = Path(state['run'])
     prompt = f'''Work on this task: {state['task']}
@@ -322,11 +322,13 @@ Do not commit, push, merge, deploy, modify git history, or change other checkout
 Do not weaken checks or edit workflow control files. Do not read secrets.
 Project constraints: {state['config'].get('constraints', '')}
 {DISCIPLINE}
-{skills_note(state, 'fix' if name.startswith('fix-') else 'code')}{spec_note(state)}{bug_evidence(state)}Plan:\n{(root / 'plan.md').read_text()}
-{instructions}
+{skills_note(state, 'fix' if name.startswith('fix-') else 'code')}{spec_note(state)}{bug_evidence(state)}{plan_note(state, name)}{instructions}
 Run relevant checks and report changes, tests, and limitations honestly.
 '''
     claude_code(state, prompt, name)
+    plan = root / 'plan.md'
+    if not plan.exists() or not plan.read_text().strip():
+        raise Stop(f'Claude did not write a plan to {plan}. See {name}.md before resuming.')
 
 
 def diagnose(state):
@@ -394,33 +396,19 @@ def run(state):
         advance('baseline')
     if state['stage'] == 'baseline':
         checks(state, 'baseline')
-        advance('diagnose' if state.get('mode') == 'bug' else 'plan')
+        advance('diagnose' if state.get('mode') == 'bug' else 'code')
     if state['stage'] == 'diagnose':
         diagnose(state)
         advance('reproduce')
     if state['stage'] == 'reproduce':
         checks(state, 'repro')
-        advance('plan')
+        advance('code')
     if state['stage'] == 'plan':
-        result = claude(state, f'''Plan this task in the repository: {state['task']}
-Read relevant source and applicable AGENTS.md/CLAUDE.md. No implementation.
-Constraints: {state['config'].get('constraints', '')}
-{spec_note(state)}{bug_evidence(state)}Baseline checks: {(root / 'baseline.json').read_text()}
-Inspect baseline logs where needed. Identify pre-existing failures separately.
-Provide a concise implementation plan, acceptance criteria, files and verification.
-List the specific tests to add or update (file, cases) so every new or changed behavior is covered.
-Do not expand scope to unrelated baseline failures; flag them as blockers.
-{SCOPE} Plan only the changes the task asks for. List related issues you notice under
-"Out of scope (not planned)" instead of planning them.
-{"Verify the diagnosis against the source before relying on it. If it is wrong or unconfirmed, say so and plan from the real cause." if state.get('mode') == 'bug' else ''}
-''', {'type': 'object', 'properties': {'plan': {'type': 'string'}},
-      'required': ['plan'], 'additionalProperties': False}, 'plan')
-        if not isinstance(result.get('plan'), str) or not result['plan'].strip():
-            raise Stop('Planner produced an empty plan')
-        (root / 'plan.md').write_text(result['plan'] + '\n')
+        # Runs started before planning merged into the coding session resume here.
         advance('code')
     if state['stage'] == 'code':
-        code(state, 'Baseline results:\n' + (root / 'baseline.json').read_text(), 'code')
+        code(state, 'Baseline results (inspect the logs where needed):\n'
+             + (root / 'baseline.json').read_text(), 'code')
         advance('check')
     while state['stage'] in ('check', 'review', 'fix'):
         n = state['round']

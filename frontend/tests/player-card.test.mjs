@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFrontend as read, readSource } from './helpers.mjs';
 
-const { formatStat, getStatDelta, getPredictionCardStats, getLeaderCardStats, getSeasonCardStats, getChangedStatKeys } =
-  await import('../src/utils/playerCard.js').catch(() => ({}));
+const { formatStat, getStatDelta, getPredictionCardStats, getLeaderCardStats, getSeasonCardStats, getChangedStatKeys,
+  PREDICTION_TABLE_COLUMNS, getPredictionTableColumns, getPredictionTableRow } = await import('../src/utils/playerCard.js').catch(() => ({}));
 
 test('only values that differ from the previous render count as changed', () => {
   assert.equal(typeof getChangedStatKeys, 'function');
@@ -58,6 +58,61 @@ test('prediction cards for a player with no games this season show no change and
   assert.equal(main[0].value, '24.1');
   assert.ok(main.every(stat => stat.delta === null), 'last season is not a baseline');
   assert.deepEqual(extra.map(stat => stat.value), ['—', '—', '—']);
+});
+
+test('the predictions table has one sortable column per predicted per-game stat plus fantasy points', () => {
+  assert.ok(Array.isArray(PREDICTION_TABLE_COLUMNS));
+  assert.deepEqual(PREDICTION_TABLE_COLUMNS, [
+    { key: 'ppg', label: 'PPG', field: 'predicted_ppg' },
+    { key: 'apg', label: 'APG', field: 'predicted_apg' },
+    { key: 'rpg', label: 'RPG', field: 'predicted_rpg' },
+    { key: 'spg', label: 'SPG', field: 'predicted_spg' },
+    { key: 'bpg', label: 'BPG', field: 'predicted_bpg' },
+    { key: 'fantasy', label: 'FPTS', field: 'predicted_fantasy' },
+  ]);
+});
+
+test('a predictions table row shows each predicted value with its change vs this season so far', () => {
+  assert.equal(typeof getPredictionTableRow, 'function');
+  assert.deepEqual(getPredictionTableRow({
+    predicted_ppg: 24.1, ppg_last: 10, so_far_ppg: 22.3,
+    predicted_apg: 5, so_far_apg: 5.02,
+    predicted_rpg: 7.2, so_far_rpg: 8,
+    predicted_spg: 1.26, so_far_spg: 1,
+    predicted_bpg: 0.4, bpg_last: 2, so_far_bpg: null,
+    predicted_fantasy: 41.3, so_far_fantasy: 38.04,
+  }), [
+    { key: 'ppg', value: '24.1', delta: { text: '+1.8', direction: 'up' } },
+    { key: 'apg', value: '5.0', delta: { text: '0.0', direction: 'flat' } },
+    { key: 'rpg', value: '7.2', delta: { text: '−0.8', direction: 'down' } },
+    { key: 'spg', value: '1.3', delta: { text: '+0.3', direction: 'up' } },
+    { key: 'bpg', value: '0.4', delta: null },
+    { key: 'fantasy', value: '41.3', delta: { text: '+3.3', direction: 'up' } },
+  ]);
+});
+
+test('sorting the table by a stat it does not show appends that column; shown stats change nothing', () => {
+  assert.equal(getPredictionTableColumns('predicted_ppg'), PREDICTION_TABLE_COLUMNS);
+  assert.equal(getPredictionTableColumns('name'), PREDICTION_TABLE_COLUMNS);
+  assert.deepEqual(getPredictionTableColumns('predicted_tov').slice(-1),
+    [{ key: 'tov', label: 'TOV', field: 'predicted_tov' }]);
+  assert.equal(getPredictionTableColumns('predicted_fg3_pct').length, 7);
+});
+
+test('a table row for an extra shooting column shows a percent and its change in points', () => {
+  const columns = getPredictionTableColumns('predicted_fg_pct');
+  assert.deepEqual(getPredictionTableRow({ predicted_fg_pct: 48.26, so_far_fg_pct: 50 }, columns).at(-1),
+    { key: 'fg_pct', value: '48.3%', delta: { text: '−1.7', direction: 'down' } });
+});
+
+test('a predictions table row for a player with no games, or no data, has no changes and zeroed values', () => {
+  const noGames = getPredictionTableRow({ predicted_ppg: 24.1, ppg_last: 22.3, predicted_spg: 1.1, spg_last: 0.9 });
+  assert.deepEqual(noGames.map(stat => stat.value), ['24.1', '0.0', '0.0', '1.1', '0.0', '0.0']);
+  assert.ok(noGames.every(stat => stat.delta === null), 'last season is not a baseline');
+  for (const missing of [undefined, null, {}]) {
+    assert.deepEqual(getPredictionTableRow(missing).map(stat => [stat.value, stat.delta]),
+      Array(6).fill(['0.0', null]));
+  }
 });
 
 test('home leader cards lead with the tab\'s stat, map the raw model fields, and show shooting as percent', () => {
