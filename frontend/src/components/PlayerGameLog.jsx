@@ -63,8 +63,10 @@ export default function PlayerGameLog({ playerId, history }) {
   const absenceMessage = isLoading ? '' : formatAbsence(result.data?.absence, selectedSeason, result.data?.teams);
   // The API scored fpts with the user's Profile preset (sent as a header), so the tooltip names it.
   const fptsHeader = fptsTitle(getScoring());
-  // The date cell holds the real link (keyboard, new tab); the row click is a mouse shortcut that skips text selection.
+  // The date cell holds the real link (keyboard, new tab); the row click is a plain-click shortcut that
+  // skips text selection and modifier clicks, which the link handles as new-tab opens.
   const openGame = (event, gameId) => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     if (event.target.closest('a') || window.getSelection()?.toString()) return;
     navigate(getGameDetailPath(gameId));
   };

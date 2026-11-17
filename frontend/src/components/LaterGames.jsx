@@ -1,5 +1,7 @@
+import { Link } from 'react-router-dom';
 import { TeamLogo } from './GameMatchup';
 import { getLaterGameLine, todayInEastern } from '../utils/gamePredictions';
+import { getGameDetailPath } from '../utils/liveGames';
 import './LaterGames.css';
 
 // A player's later predicted games, one muted line each, under his nearest game (the card's
@@ -17,13 +19,13 @@ export default function LaterGames({ games, title = 'Later games' }) {
           return (
             <li key={game.game_id} className="later-game" data-numeric>
               <span className="later-game-day">{line.day}</span>
-              <span className="later-game-opp">
+              <Link to={getGameDetailPath(game.game_id)} className="later-game-opp" title="Open game">
                 <span className="gm-joiner">{game.is_home ? 'vs' : '@'}</span>
                 <span className="later-game-logo" aria-hidden="true">
                   <TeamLogo tricode={game.opponent} logo={game.opponent_logo} />
                 </span>
                 {game.opponent}
-              </span>
+              </Link>
               <span className="later-game-stats">
                 {line.stats.map(stat => (
                   <span key={stat.key}>{stat.value} <small>{stat.label}</small></span>

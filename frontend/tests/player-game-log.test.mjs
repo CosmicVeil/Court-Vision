@@ -196,4 +196,6 @@ test("each game links to its game page via the date link and a row click", () =>
   // Clicks on the link itself or while selecting text must not double-navigate.
   assert.match(gameLog, /event\.target\.closest\('a'\) \|\| window\.getSelection\(\)\?\.toString\(\)/);
   assert.match(gameLogCss, /\.game-log-row\s*\{\s*cursor:\s*pointer;/);
+  // Modifier and non-primary clicks are left to the date link (new tab), not hijacked into same-tab navigation.
+  assert.match(gameLog, /if \(event\.button !== 0 \|\| event\.metaKey \|\| event\.ctrlKey \|\| event\.shiftKey \|\| event\.altKey\) return;/);
 });

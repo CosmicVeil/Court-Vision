@@ -134,6 +134,13 @@ test("prediction matchups link to the game page, but the slate filter buttons do
   assert.match(readFrontend("src/components/GameMatchup.css"), /\.gm-link\s*\{[^}]*position:\s*relative;[^}]*z-index:\s*2;/);
 });
 
+test("later games link to their game page", () => {
+  const laterGames = readSource("LaterGames.jsx");
+  assert.match(laterGames, /<Link to=\{getGameDetailPath\(game\.game_id\)\} className="later-game-opp"/);
+  // The list sits above PlayerCard's stretched overlay, so the link receives the click.
+  assert.match(readFrontend("src/components/LaterGames.css"), /\.later-games\s*\{[^}]*position:\s*relative;[^}]*z-index:\s*1;/);
+});
+
 test("team filter lists only the selected game's teams", () => {
   const games = [{ game_id: "1", away: "DEN", home: "NOP" }, { game_id: "2", away: "DAL", home: "CLE" }];
   assert.deepEqual(teamsForGames(games), ["CLE", "DAL", "DEN", "NOP"]);
