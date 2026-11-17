@@ -33,6 +33,11 @@ test('inline script hashes match the exact script body and skip external scripts
   assert.deepEqual(inlineScriptHashes(html), [expected]);
 });
 
+test('an inline script with a data-src attribute is still hashed', () => {
+  assert.equal(inlineScriptHashes('<script data-src="x">init()</script>').length, 1);
+  assert.equal(inlineScriptHashes('<script\nsrc="/a.js"></script>').length, 0);
+});
+
 test('API origin is taken from VITE_API_URL with or without the /api suffix', () => {
   assert.equal(apiOriginFrom('https://court-vision.onrender.com/api'), 'https://court-vision.onrender.com');
   assert.equal(apiOriginFrom(''), null);

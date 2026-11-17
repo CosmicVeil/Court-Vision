@@ -32,8 +32,9 @@ export const buildCsp = ({ apiOrigin, inlineScriptHashes = [] }) => {
 };
 
 // sha256 hashes of the inline (no src) scripts in an HTML document, in CSP source format.
+// `\ssrc=` so attributes like data-src don't make an inline script look external.
 export const inlineScriptHashes = (html) =>
-  [...html.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)]
+  [...html.matchAll(/<script\b(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/gi)]
     .map(([, body]) => body)
     .filter(body => body.trim())
     .map(body => `sha256-${createHash('sha256').update(body).digest('base64')}`);

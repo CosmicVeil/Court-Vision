@@ -1,4 +1,4 @@
-import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { PRODUCTION_API_URL } from './src/config/apiUrl.js'
@@ -25,7 +25,9 @@ const csp = (apiOrigin) => ({
 
 // https://vite.dev/config/
 // The CSP must allow whichever API the build will call: VITE_API_URL, else api.js's fallback.
-const apiUrlFor = mode => loadEnv(mode, process.cwd(), 'VITE_').VITE_API_URL || PRODUCTION_API_URL
+// .env files live next to this config; resolve them from here, not from wherever the build was run.
+const frontendDir = fileURLToPath(new URL('.', import.meta.url))
+const apiUrlFor = mode => loadEnv(mode, frontendDir, 'VITE_').VITE_API_URL || PRODUCTION_API_URL
 
 export default defineConfig(({ mode }) => ({
   plugins: [react(), seo(), csp(apiOriginFrom(apiUrlFor(mode)))],

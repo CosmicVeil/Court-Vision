@@ -32,6 +32,8 @@ DEFAULT_CORS_ORIGINS = (
     'https://www.courtvision.works',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
+    'http://localhost:4173',  # vite preview (production build)
+    'http://127.0.0.1:4173',
 )
 
 # Rate limits per client IP: (max requests, window in seconds).
