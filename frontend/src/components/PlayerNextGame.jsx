@@ -72,7 +72,7 @@ export default function PlayerNextGame({ player, returnTo }) {
       )}
       <div id="png-day-panel" role={games.length > 1 ? 'tabpanel' : undefined}>
         <h3 className="secondary-stats-title">
-          {formatDayLabel(prediction.game_date || data.slate_date)} · <GameMatchup player={prediction} size="md" /> · {formatTipoff(prediction.tipoff)}
+          {formatDayLabel(prediction.game_date || data.slate_date)} · <GameMatchup player={prediction} size="md" gameId={prediction.game_id} /> · {formatTipoff(prediction.tipoff)}
         </h3>
         <p className="player-next-game-note">
           Last-10-game average → predicted

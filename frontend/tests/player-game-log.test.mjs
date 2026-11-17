@@ -18,7 +18,7 @@ test("season tags use the lookup, base class and modifier in the Date cell", () 
   assert.match(gameLog, /const tag = SEASON_TYPE_TAGS\[type\]/);
   assert.match(gameLog, /return tag && <span/);
   assert.match(gameLog, /className=\{`game-log-tag game-log-tag--\$\{tag\.modifier\}`\}>\{tag\.label\}/);
-  assert.match(gameLog, /<td>\{formatDate\(game\.date\)\}\{seasonTag\(game\.season_type\)\}<\/td>/);
+  assert.match(gameLog, /\{formatDate\(game\.date\)\}<\/Link>\{seasonTag\(game\.season_type\)\}<\/td>/);
   assert.doesNotMatch(gameLog, /season_type === 1 &&/);
 });
 
@@ -187,4 +187,15 @@ test("the Current label only marks the real current season", () => {
   assert.match(gameLog, /import \{[^}]*\bdefaultSeason\b[^}]*\} from '\.\.\/utils\/gameLog'/);
   assert.match(gameLog, /label: s === currentSeason \? `\$\{s\} \(Current\)` : s/);
   assert.doesNotMatch(gameLog, /availableSeasons\[0\]/);
+});
+
+test("each game links to its game page via the date link and a row click", () => {
+  assert.match(gameLog, /import \{ getGameDetailPath \} from '\.\.\/utils\/liveGames';/);
+  assert.match(gameLog, /<Link to=\{getGameDetailPath\(game\.game_id\)\} className="game-log-game-link">/);
+  assert.match(gameLog, /<tr key=\{game\.game_id\} className="game-log-row" onClick=\{event => openGame\(event, game\.game_id\)\}>/);
+  // Clicks on the link itself or while selecting text must not double-navigate.
+  assert.match(gameLog, /event\.target\.closest\('a'\) \|\| window\.getSelection\(\)\?\.toString\(\)/);
+  assert.match(gameLogCss, /\.game-log-row\s*\{\s*cursor:\s*pointer;/);
+  // Modifier and non-primary clicks are left to the date link (new tab), not hijacked into same-tab navigation.
+  assert.match(gameLog, /if \(event\.button !== 0 \|\| event\.metaKey \|\| event\.ctrlKey \|\| event\.shiftKey \|\| event\.altKey\) return;/);
 });
