@@ -1,5 +1,7 @@
-import { defineConfig } from 'vite'
+import process from 'node:process'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { apiOriginFrom, injectCsp } from './src/config/csp.js'
 import { buildSitemap, defaultHeadTags } from './src/config/seo.js'
 
 // SEO from one source (src/config/seo.js): default head tags into index.html, sitemap.xml into dist/.
@@ -11,9 +13,18 @@ const seo = () => ({
   },
 })
 
+// Content-Security-Policy <meta> for production builds only: the dev server relies on inline
+// scripts and a websocket that a strict policy would block. 'post' so inline scripts are final
+// before they are hashed.
+const csp = (apiOrigin) => ({
+  name: 'courtvision-csp',
+  apply: 'build',
+  transformIndexHtml: { order: 'post', handler: html => injectCsp(html, { apiOrigin }) },
+})
+
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [react(), seo()],
+export default defineConfig(({ mode }) => ({
+  plugins: [react(), seo(), csp(apiOriginFrom(loadEnv(mode, process.cwd(), 'VITE_').VITE_API_URL))],
   server: {
     proxy: {
       '/api': {
@@ -23,4 +34,4 @@ export default defineConfig({
       }
     }
   }
-})
+}))

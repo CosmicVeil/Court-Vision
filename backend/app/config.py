@@ -25,9 +25,35 @@ GAME_PREDICTIONS_CACHE_FILE = "game_predictions_cache.json"
 DEFAULT_PORT = 5001
 TOKEN_EXPIRY_HOURS = 24
 
+# Browser origins allowed to call /api/* (CORS). Override with a comma-separated CORS_ORIGINS,
+# e.g. to add a preview deploy's URL.
+DEFAULT_CORS_ORIGINS = (
+    'https://courtvision.works',
+    'https://www.courtvision.works',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+)
+
+# Rate limits per client IP: (max requests, window in seconds).
+LOGIN_RATE_LIMIT = (10, 5 * 60)
+SIGNUP_RATE_LIMIT = (5, 60 * 60)
+
 
 def data_path(filename: str) -> Path:
     return DATA_DIR / filename
+
+
+def cors_origins() -> list:
+    raw = os.environ.get('CORS_ORIGINS', '')
+    origins = [origin.strip().rstrip('/') for origin in raw.split(',') if origin.strip()]
+    return origins or list(DEFAULT_CORS_ORIGINS)
+
+
+def trusted_proxy_hops() -> int:
+    """How many reverse proxies sit in front of the app and append to X-Forwarded-For.
+    Render has one; locally there are none, so the client's own header is never trusted."""
+    default = '1' if os.environ.get('RENDER') in ('true', '1') else '0'
+    return int(os.environ.get('TRUSTED_PROXY_HOPS', default))
 
 
 def is_low_memory() -> bool:
