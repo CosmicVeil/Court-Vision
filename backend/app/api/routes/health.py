@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 
 from app import state
 from app.db import get_db
@@ -36,6 +36,36 @@ def healthz():
     minutes. Returning 200 is enough to keep Render's free tier from sleeping.
     """
     return jsonify({'status': 'ok'}), 200
+
+
+@bp.route('/api/debug/forwarded', methods=['GET'])
+def debug_forwarded():
+    """One-off diagnostic: report the proxy chain so the hop count can be confirmed.
+
+    Hit this once from a browser on the deployed site (over Cloudflare), then
+    read the Render logs for the "[forwarded]" line. Behind Render + Cloudflare,
+    X-Forwarded-For should hold two entries: the client's IP first, then a
+    Cloudflare address. remote_addr is the last proxy that spoke to the app.
+
+    If we later trust X-Forwarded-For (e.g. to log or rate-limit by real client
+    IP), wrap the app in werkzeug ProxyFix with x_for set to that hop count, or
+    prefer Cloudflare's CF-Connecting-IP, which is a single trusted client IP.
+    Remove this endpoint once the count is confirmed.
+    """
+    xff = request.headers.get('X-Forwarded-For', '')
+    hops = [h.strip() for h in xff.split(',') if h.strip()]
+    payload = {
+        'x_forwarded_for': xff,
+        'x_forwarded_for_hops': hops,
+        'hop_count': len(hops),
+        'cf_connecting_ip': request.headers.get('CF-Connecting-IP', ''),
+        'x_real_ip': request.headers.get('X-Real-IP', ''),
+        'remote_addr': request.remote_addr,
+        # access_route is XFF entries + remote_addr, the full chain Werkzeug sees.
+        'access_route': list(request.access_route),
+    }
+    print(f"[forwarded] {payload}", flush=True)
+    return jsonify(payload), 200
 
 
 @bp.route('/api/health', methods=['GET'])
