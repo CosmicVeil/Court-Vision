@@ -140,3 +140,9 @@
 .game-log-tag--post,
 .game-log-tag--playin { color: var(--color-ember-orange); border-color: color-mix(in srgb, var(--color-ember-orange) 45%, transparent); }
 
+
+.game-log-row { cursor: pointer; }
+.game-log-row:hover td { background: color-mix(in srgb, var(--color-ember-orange) 6%, transparent); }
+.game-log-game-link { color: inherit; text-decoration: none; }
+.game-log-row:hover .game-log-game-link,
+.game-log-game-link:focus-visible { color: var(--color-ember-orange); text-decoration: underline; }

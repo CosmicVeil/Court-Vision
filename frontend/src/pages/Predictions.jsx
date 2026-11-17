@@ -1,12 +1,12 @@
 import ContentSkeleton from '../components/ContentSkeleton';
+import FavouriteStar from '../components/FavouriteStar';
 import LockIcon from '../components/LockIcon';
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import PageHero from '../components/PageHero';
 import Pagination from '../components/Pagination';
 import PlayerCard from '../components/PlayerCard';
-import PlayerStatsModal from '../components/PlayerStatsModal';
 import PredictionModeToggle from '../components/PredictionModeToggle';
 import useFlip from '../hooks/useFlip';
 import useListQuery from '../hooks/useListQuery';
@@ -16,10 +16,13 @@ import { getFavorites, toggleFavorite } from '../utils/favorites';
 import { authHeaders, clearAuth, isAuthenticated } from '../utils/auth';
 import { buildApiUrl } from '../config/api';
 import { scrollToIfAbove } from '../utils/scroll';
-import { samePlayerName } from '../utils/playerNames';
+import { playerPath } from '../utils/playerPage';
 import { getPredictionsHeroStats } from '../utils/pageHero';
-import { getPredictionCardStats } from '../utils/playerCard';
+import { getPredictionCardStats, getPredictionTableColumns, getPredictionTableRow } from '../utils/playerCard';
 import { getSoFarStats } from '../utils/seasonSoFar';
+// The table view reuses the Stats page table (.players-table, .view-btn, …); loaded first so
+// Predictions.css still wins where the two share a class name.
+import './Stats.css';
 import './Predictions.css';
 
 const toNumber = (value) => Number(value) || 0;
@@ -45,17 +48,98 @@ const toFavoritePlayer = (player) => ({
 });
 
 // Everything the URL may carry for this list, with its default (only non-defaults show up).
-const LIST_DEFAULTS = { q: '', team: '', position: '', sort: 'predicted_ppg', order: 'desc', page: 1 };
+const LIST_DEFAULTS = { q: '', team: '', position: '', sort: 'predicted_ppg', order: 'desc', page: 1, view: 'cards' };
 const LIST_ALLOWED = {
   sort: ['name', ...PREDICTION_STATS.map((stat) => stat.predictedField)],
   order: ['asc', 'desc'],
+  view: ['cards', 'table'],
 };
 const PREDICTIONS_PAGE_SIZE = 12;
+
+const DELTA_ARROWS = { up: '↑', down: '↓', flat: '→' };
+const ARIA_SORT = { asc: 'ascending', desc: 'descending' };
+
+// A stat header sorts by its column highest first (Player sorts A to Z); clicking the active
+// column flips the order.
+const nextSortQuery = (sortBy, sortOrder, field) => (
+  sortBy === field
+    ? { order: sortOrder === 'asc' ? 'desc' : 'asc', page: 1 }
+    : { sort: field, order: field === 'name' ? 'asc' : 'desc', page: 1 }
+);
+
+// One row per player. The row opens the player page; the name is also a real button so keyboard
+// users can reach it (its click bubbles up to the row), and the star stops its own click.
+function PredictionsTable({ players, sortBy, sortOrder, loading, favoriteIds, onSort, onOpen, onToggleFavorite }) {
+  const columns = getPredictionTableColumns(sortBy);
+  const sortHeader = (field, label) => (
+    <th aria-sort={sortBy === field ? ARIA_SORT[sortOrder] : undefined} key={field} className="sortable">
+      <button type="button" className="table-sort-btn" onClick={() => onSort(field)}>
+        {label}
+        {sortBy === field && <span aria-hidden="true"> {sortOrder === 'asc' ? '↑' : '↓'}</span>}
+      </button>
+    </th>
+  );
+  return (
+    <div className="table-container" data-results aria-busy={loading}>
+      <div className="table-wrapper">
+        <table className="players-table">
+          <thead>
+            <tr>
+              {sortHeader('name', 'Player')}
+              <th>Team</th>
+              <th>Position</th>
+              <th>Age</th>
+              {columns.map((column) => sortHeader(column.field, column.label))}
+              <th className="favorite-header">Favorite</th>
+            </tr>
+          </thead>
+          <tbody>
+            {players.map((player, idx) => {
+              const isFavorite = favoriteIds.has(player.id);
+              return (
+                <tr key={player.id || idx} className="stats-row-clickable" onClick={() => onOpen(player)}>
+                  <td className="player-name-cell">
+                    <strong><button type="button" className="table-row-open">{player.name}</button></strong>
+                  </td>
+                  <td><span className="team-badge-table">{player.team}</span></td>
+                  <td><span className="position-badge-table">{player.position}</span></td>
+                  <td>{player.age}</td>
+                  {getPredictionTableRow(player, columns).map((stat) => (
+                    <td key={stat.key} className="stat-cell" data-numeric>
+                      {stat.value}
+                      {stat.delta && (
+                        <span className="pc-delta" data-direction={stat.delta.direction}>
+                          <span aria-hidden="true">{DELTA_ARROWS[stat.delta.direction]}</span> {stat.delta.text}
+                        </span>
+                      )}
+                    </td>
+                  ))}
+                  <td className="favorite-cell">
+                    <button
+                      type="button"
+                      className={`favorite-btn ${isFavorite ? 'favorited' : ''}`}
+                      onClick={(event) => { event.stopPropagation(); onToggleFavorite(event, player); }}
+                      title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                      aria-label={isFavorite ? `Remove ${player.name} from favorites` : `Add ${player.name} to favorites`}
+                      aria-pressed={isFavorite}
+                    >
+                      <FavouriteStar selected={isFavorite} />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 const Predictions = () => {
   const [query, updateQuery] = useListQuery(LIST_DEFAULTS, LIST_ALLOWED);
   const { q: searchTerm, team: selectedTeam, position: selectedPosition,
-    sort: sortBy, order: sortOrder, page: currentPage } = query;
+    sort: sortBy, order: sortOrder, page: currentPage, view: viewMode } = query;
   // The search box keeps its own draft so typing never waits on a router update.
   const [searchDraft, setSearchDraft] = useState(searchTerm);
   const [predictions, setPredictions] = useState([]);
@@ -65,8 +149,6 @@ const Predictions = () => {
   const [positions, setPositions] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
   const [totalPlayers, setTotalPlayers] = useState(0);
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
-  const [loadingPlayer, setLoadingPlayer] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState(new Set());
   const [showAuthModal, setShowAuthModal] = useState(false);
   // True when the server returned only the signed-out preview slice.
@@ -74,6 +156,7 @@ const Predictions = () => {
   const [sessionExpired, setSessionExpired] = useState(false);
   const gridRef = useRef(null);
   const resultsRef = useRef(null);
+  const navigate = useNavigate();
   useFlip(gridRef);
 
   const goToPage = (page) => {
@@ -105,46 +188,8 @@ const Predictions = () => {
     });
   };
 
-  // Dismiss modal on Escape
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') setSelectedPlayer(null);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  const handlePlayerClick = async (player) => {
-    setLoadingPlayer(true);
-    try {
-      const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(player.name)}`));
-      const data = await response.json();
-      const match = (data.players || []).find(p => samePlayerName(p.name, player.name));
-      if (match) {
-        setSelectedPlayer(match);
-      } else {
-        setSelectedPlayer({
-          name: player.name,
-          team: player.team || 'UNK',
-          position: player.position || 'UNK',
-          current_stats: {
-            ppg: player.ppg_last || 0,
-            rpg: player.rpg_last || 0,
-            apg: player.apg_last || 0,
-            spg: player.spg_last || 0, bpg: player.bpg_last || 0,
-            tov: player.tov_last || 0, mpg: player.mpg_last || 0,
-            fg_pct: player.fg_pct_last || 0, fg3_pct: player.fg3_pct_last || 0,
-            ft_pct: player.ft_pct_last || 0, games_played: 0, minutes: player.mpg_last || 0
-          },
-          ml_stats: null,
-          history: {}
-        });
-      }
-    } catch (err) {
-      console.error('Error fetching player details:', err);
-    } finally {
-      setLoadingPlayer(false);
-    }
+  const handlePlayerClick = (player) => {
+    navigate(playerPath(player), { state: { player } });
   };
 
 
@@ -249,6 +294,11 @@ const Predictions = () => {
     scrollToIfAbove(resultsRef.current);
   };
 
+  const handleColumnSort = (field) => {
+    updateQuery(nextSortQuery(sortBy, sortOrder, field));
+    scrollToIfAbove(resultsRef.current);
+  };
+
   const isNameSort = sortBy === 'name';
   const sortDirectionLabel = sortOrder === 'asc'
     ? (isNameSort ? 'A to Z' : 'Lowest to Highest')
@@ -261,8 +311,8 @@ const Predictions = () => {
 
   return (
     <div className="predictions-container">
-      {/* New cards arrive with each fetch, so the reveal rescans when the list changes. */}
-      <ScrollReveal scanKey={predictions} />
+      {/* New cards arrive with each fetch, so the reveal rescans when the list changes (cards only). */}
+      <ScrollReveal scanKey={viewMode === 'cards' ? predictions : null} />
       <PredictionModeToggle base="/predictions" value="season" />
       <PageHero
         eyebrow="OUR MODEL"
@@ -285,6 +335,24 @@ const Predictions = () => {
       />
 
       <div className="sorting-section" ref={resultsRef}>
+        <div className="view-mode-toggle">
+          <button
+            type="button"
+            className={`view-btn ${viewMode === 'table' ? 'active' : ''}`}
+            aria-pressed={viewMode === 'table'}
+            onClick={() => updateQuery({ view: 'table' })}
+          >
+            Table View
+          </button>
+          <button
+            type="button"
+            className={`view-btn ${viewMode === 'cards' ? 'active' : ''}`}
+            aria-pressed={viewMode === 'cards'}
+            onClick={() => updateQuery({ view: 'cards' })}
+          >
+            Card View
+          </button>
+        </div>
         <div className="sort-control-group">
           <label className="sort-label" htmlFor="prediction-sort-field">Sort by</label>
           <select
@@ -315,7 +383,7 @@ const Predictions = () => {
       </div>
 
       {loading && predictions.length === 0 ? (
-        <ContentSkeleton label="Loading season projections…" />
+        <ContentSkeleton variant={viewMode === 'table' ? 'table' : 'cards'} count={viewMode === 'table' ? 12 : 6} label="Loading season projections…" />
       ) : error ? (
         (() => {
           const serverUrl = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5001' : 'https://court-vision-zxuj.onrender.com');
@@ -331,6 +399,18 @@ const Predictions = () => {
         <div className="no-results">No player predictions matched your search criteria.</div>
       ) : (
         <>
+          {viewMode === 'table' ? (
+            <PredictionsTable
+              players={predictions}
+              sortBy={sortBy}
+              sortOrder={sortOrder}
+              loading={loading}
+              favoriteIds={favoriteIds}
+              onSort={handleColumnSort}
+              onOpen={handlePlayerClick}
+              onToggleFavorite={handleFavoriteToggle}
+            />
+          ) : (
           <div className="pc-grid" ref={gridRef} data-results aria-busy={loading}>
             {predictions.map((player, idx) => {
               const { main, extra } = getPredictionCardStats(player);
@@ -364,6 +444,7 @@ const Predictions = () => {
               );
             })}
           </div>
+          )}
 
           {isPreview ? (
             <div className="predictions-locked" data-enter>
@@ -394,8 +475,6 @@ const Predictions = () => {
           )}
         </>
       )}
-
-      <PlayerStatsModal player={selectedPlayer} loading={loadingPlayer} onClose={() => setSelectedPlayer(null)} />
 
       {showAuthModal && (
         <div className="stats-modal-backdrop" onClick={() => setShowAuthModal(false)}>

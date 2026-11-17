@@ -33,7 +33,8 @@ test("AI prediction list cards show the three main predicted stats", () => {
   // The fields themselves are covered by getPredictionCardStats in player-card.test.mjs.
   assert.match(source, /getPredictionCardStats\(player\)/);
   assert.match(source, /<PlayerCard\b[\s\S]*stats=\{main\}/);
-  assert.match(source, /<PlayerStatsModal\b/);
+  assert.match(source, /navigate\(playerPath\(player\)/);
+  assert.doesNotMatch(source, /PlayerStatsModal/);
   assert.doesNotMatch(source, /toPredictionPageStats/);
 });
 

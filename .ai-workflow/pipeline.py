@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Local Claude plan/review -> Codex implementation, with an optional Codex bug
-diagnosis stage before planning (--bug). Standard library only."""
+"""Local Claude plan + implementation (one session) -> Codex code review, with an optional
+Codex bug diagnosis stage before planning (--bug). Standard library only."""
 import argparse
 import datetime
 import fnmatch
 import glob
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import signal
@@ -115,54 +116,100 @@ def checks(state, label):
     return results
 
 
-def claude(state, prompt, schema, name):
-    root = Path(state['run'])
-    log = root / f'{name}.json'
-    # Read-only built-in tool set. No shell, edits, plugins, hooks or MCP servers.
+# Shell commands the implementing Claude may run (Claude Code permission patterns). dontAsk
+# mode denies everything else instead of waiting for a human who is not there. Deleting goes
+# through `git rm` rather than `rm`: it only removes tracked files, and Git can bring them back.
+DEFAULT_CLAUDE_BASH = ['npm *', 'node *', 'npx *', 'backend/.venv/bin/python *',
+                       '.venv/bin/python *', 'git diff *', 'git status *', 'git rm *', 'ls *']
+
+
+def claude_args(state, tools, allowed):
+    # No plugins, hooks or MCP servers; only the listed built-in tools.
     args = ['claude', '--safe-mode', '-p', '--permission-mode', 'dontAsk',
-            '--tools', 'Read,Glob,Grep', '--allowedTools', 'Read,Glob,Grep',
-            '--add-dir', str(root), '--output-format', 'json',
-            '--json-schema', json.dumps(schema), '--no-session-persistence']
+            '--tools', tools, '--allowedTools', allowed,
+            '--add-dir', state['run'], '--output-format', 'json', '--no-session-persistence']
     if state['config'].get('claude_model'):
         args += ['--model', state['config']['claude_model']]
+    return args
+
+
+def claude_code(state, prompt, name):
+    """Claude with edit tools and an allow-listed shell (plan + implementation, and fix rounds)."""
+    root = Path(state['run'])
+    log = root / f'{name}.json'
+    bash = state['config'].get('claude_bash', DEFAULT_CLAUDE_BASH)
+    allowed = ','.join(['Read', 'Glob', 'Grep', 'Edit', 'Write'] + [f'Bash({c})' for c in bash])
+    args = claude_args(state, 'Read,Glob,Grep,Edit,Write,Bash', allowed)
     if execute(args, state['checkout'], log, state['config']['agent_timeout_seconds'], prompt):
-        raise Stop(f'Claude failed. See {log}. No automatic retry or API fallback.')
+        raise Stop(f'Claude failed. See {log}. Inspect changes before resuming.')
     try:
         payload = json.loads(log.read_text())
-        if payload.get('is_error') or payload.get('permission_denials'):
-            raise ValueError('Claude reported an error or denied tool request')
-        result = payload['structured_output']
-        if not isinstance(result, dict):
-            raise ValueError('Missing structured result')
-        return result
-    except (ValueError, KeyError) as e:
+    except ValueError as e:
         raise Stop(f'Invalid Claude result in {log}: {e}')
+    if payload.get('is_error'):
+        raise Stop(f'Claude reported an error. See {log}. Inspect changes before resuming.')
+    report = str(payload.get('result') or '').strip()
+    # A denied command is not fatal here (Claude can work around it), but the reviewer should know.
+    denied = payload.get('permission_denials') or []
+    if denied:
+        report += '\n\nDenied tool requests:\n' + json.dumps(denied, indent=2)
+    (root / f'{name}.md').write_text(report + '\n')
+
+
+def codex_args(state, name):
+    args = ['codex', '-a', 'never', 'exec']
+    if name.startswith('review-'):
+        args.append('review')
+    args += ['--ignore-user-config', '-c', 'forced_login_method="chatgpt"']
+    # Diagnosis may add reproduction tests; review only reads.
+    args += ['-c', 'sandbox_mode="read-only"'] if name.startswith('review-') else ['--sandbox', 'workspace-write', '--color', 'never']
+    args += ['-o', str(Path(state['run']) / f'{name}.md')]
+    if state['config'].get('codex_model'):
+        args += ['--model', state['config']['codex_model']]
+    # --ignore-user-config skips ~/.codex/config.toml, so effort must be set here.
+    # A string applies to every stage; a map sets it per stage (diagnose, review).
+    effort = state['config'].get('codex_reasoning_effort')
+    if isinstance(effort, dict):
+        effort = effort.get('diagnose' if name == 'diagnosis' else 'review')
+    if effort:
+        args += ['-c', f'model_reasoning_effort="{effort}"']
+    return args + ['-']
 
 
 def codex(state, prompt, name):
     root = Path(state['run'])
-    args = ['codex', '-a', 'never', 'exec', '--ignore-user-config',
-            '-c', 'forced_login_method="chatgpt"', '--sandbox', 'workspace-write',
-            '--color', 'never', '-o', str(root / f'{name}.md')]
-    if state['config'].get('codex_model'):
-        args += ['--model', state['config']['codex_model']]
-    # --ignore-user-config skips ~/.codex/config.toml, so effort must be set here.
-    # A string applies to every stage; a map sets it per stage (diagnose, code, fix).
-    effort = state['config'].get('codex_reasoning_effort')
-    if isinstance(effort, dict):
-        stage = 'diagnose' if name == 'diagnosis' else 'fix' if name.startswith('fix-') else 'code'
-        effort = effort.get(stage)
-    if effort:
-        args += ['-c', f'model_reasoning_effort="{effort}"']
-    args += ['-']
-    if execute(args, state['checkout'], root / f'{name}.log',
+    if execute(codex_args(state, name), state['checkout'], root / f'{name}.log',
                state['config']['agent_timeout_seconds'], prompt):
         raise Stop(f'Codex failed. See {root / (name + ".log")}. Inspect before resuming.')
 
 
+# Codex's code review lists each finding as "- [P1] Title — path:line" followed by an
+# indented explanation. P0 is the most severe, P3 a nit.
+FINDING = re.compile(r'^\s*-\s*\[P([0-3])\]\s*(.+)$')
+
+
+def parse_review(text):
+    """[(priority, finding text)] from a Codex review, duplicates removed."""
+    findings, current = [], None
+    for line in text.splitlines():
+        match = FINDING.match(line)
+        if match:
+            current = [int(match.group(1)), match.group(2).strip()]
+            findings.append(current)
+        elif current and line.strip() and line[:1].isspace():
+            current[1] += '\n' + line.strip()
+        else:
+            current = None
+    unique = []
+    for priority, body in findings:
+        if (priority, body) not in unique:
+            unique.append((priority, body))
+    return unique
+
+
 def skill_dirs(config):
     """Every skill folder the config names, as {stage: [Path]} plus 'review'."""
-    stages = dict(config.get('codex_skills') or {})
+    stages = dict(config.get('stage_skills') or {})
     stages['review'] = config.get('review_skills') or []
     return {stage: [Path(os.path.expanduser(entry)) for entry in entries]
             for stage, entries in stages.items()}
@@ -242,6 +289,25 @@ are wrong; they should fail in repro.json and pass after the fix.
 '''
 
 
+def plan_note(state, name):
+    """The first coding session writes the plan itself; fix rounds follow the saved plan."""
+    root = Path(state['run'])
+    if name != 'code':
+        return f"Plan:\n{(root / 'plan.md').read_text()}\n"
+    verify = ('Verify the diagnosis against the source before relying on it. If it is wrong or '
+              'unconfirmed, say so in the plan and plan from the real cause.\n'
+              if state.get('mode') == 'bug' else '')
+    return f'''Plan first, then implement. Before editing any project file, read the relevant source
+and write your plan to: {root / 'plan.md'}
+The plan is the reviewer's checklist. Include: a concise implementation plan, acceptance criteria,
+files to change, verification, and the specific tests to add or update (file, cases) so every new
+or changed behavior is covered. Identify pre-existing baseline failures separately and flag them
+as blockers instead of fixing them. List related issues you notice under
+"Out of scope (not planned)" instead of planning them.
+{verify}Then implement the plan. If you change course while implementing, update plan.md to match.
+'''
+
+
 def code(state, instructions, name):
     root = Path(state['run'])
     prompt = f'''Work on this task: {state['task']}
@@ -256,11 +322,13 @@ Do not commit, push, merge, deploy, modify git history, or change other checkout
 Do not weaken checks or edit workflow control files. Do not read secrets.
 Project constraints: {state['config'].get('constraints', '')}
 {DISCIPLINE}
-{skills_note(state, 'fix' if name.startswith('fix-') else 'code')}{spec_note(state)}{bug_evidence(state)}Plan:\n{(root / 'plan.md').read_text()}
-{instructions}
+{skills_note(state, 'fix' if name.startswith('fix-') else 'code')}{spec_note(state)}{bug_evidence(state)}{plan_note(state, name)}{instructions}
 Run relevant checks and report changes, tests, and limitations honestly.
 '''
-    codex(state, prompt, name)
+    claude_code(state, prompt, name)
+    plan = root / 'plan.md'
+    if not plan.exists() or not plan.read_text().strip():
+        raise Stop(f'Claude did not write a plan to {plan}. See {name}.md before resuming.')
 
 
 def diagnose(state):
@@ -328,33 +396,19 @@ def run(state):
         advance('baseline')
     if state['stage'] == 'baseline':
         checks(state, 'baseline')
-        advance('diagnose' if state.get('mode') == 'bug' else 'plan')
+        advance('diagnose' if state.get('mode') == 'bug' else 'code')
     if state['stage'] == 'diagnose':
         diagnose(state)
         advance('reproduce')
     if state['stage'] == 'reproduce':
         checks(state, 'repro')
-        advance('plan')
+        advance('code')
     if state['stage'] == 'plan':
-        result = claude(state, f'''Plan this task in the repository: {state['task']}
-Read relevant source and applicable AGENTS.md/CLAUDE.md. No implementation.
-Constraints: {state['config'].get('constraints', '')}
-{spec_note(state)}{bug_evidence(state)}Baseline checks: {(root / 'baseline.json').read_text()}
-Inspect baseline logs where needed. Identify pre-existing failures separately.
-Provide a concise implementation plan, acceptance criteria, files and verification.
-List the specific tests to add or update (file, cases) so every new or changed behavior is covered.
-Do not expand scope to unrelated baseline failures; flag them as blockers.
-{SCOPE} Plan only the changes the task asks for. List related issues you notice under
-"Out of scope (not planned)" instead of planning them.
-{"Verify the diagnosis against the source before relying on it. If it is wrong or unconfirmed, say so and plan from the real cause." if state.get('mode') == 'bug' else ''}
-''', {'type': 'object', 'properties': {'plan': {'type': 'string'}},
-      'required': ['plan'], 'additionalProperties': False}, 'plan')
-        if not isinstance(result.get('plan'), str) or not result['plan'].strip():
-            raise Stop('Planner produced an empty plan')
-        (root / 'plan.md').write_text(result['plan'] + '\n')
+        # Runs started before planning merged into the coding session resume here.
         advance('code')
     if state['stage'] == 'code':
-        code(state, 'Baseline results:\n' + (root / 'baseline.json').read_text(), 'code')
+        code(state, 'Baseline results (inspect the logs where needed):\n'
+             + (root / 'baseline.json').read_text(), 'code')
         advance('check')
     while state['stage'] in ('check', 'review', 'fix'):
         n = state['round']
@@ -372,33 +426,32 @@ Do not expand scope to unrelated baseline failures; flag them as blockers.
             advance('review')
         if state['stage'] == 'review':
             patch, new = snapshot(state, f'diff-{n}')
-            verdict = claude(state, f'''Independently review the actual current changes for: {state['task']}
+            codex(state, f'''Review the uncommitted changes in this repository (git diff HEAD plus untracked
+files) for this task: {state['task']}
 Read applicable AGENTS.md/CLAUDE.md and relevant source. Do not edit anything.
 {skills_note(state, 'review')}
-Read plan: {root / 'plan.md'}
-Read diff: {patch}
-Read these new files as well (they are not in the diff):\n{new}
-Read baseline check results: {root / 'baseline.json'}
-Read current check results and relevant logs: {root / f'checks-{n}.json'}
-{spec_note(state)}{screenshot_note(state, f'checks-{n}')}{bug_evidence(state)}Assess correctness, regressions, security, tests and all acceptance criteria.
+Plan: {root / 'plan.md'}
+Diff: {patch}
+New files (not in the diff):\n{new}
+Baseline check results: {root / 'baseline.json'}
+Current check results and logs: {root / f'checks-{n}.json'}
+{spec_note(state)}{screenshot_note(state, f'checks-{n}')}{bug_evidence(state)}Assess correctness, regressions, security, tests and all acceptance criteria in the plan.
 {SCOPE}
-Changes the task did not ask for are an actionable finding: ask for them to be reverted.
-Never ask for out-of-scope work. Mention related issues outside the task in the summary only,
-not in findings.
-New or changed behavior without meaningful automated tests is an actionable finding, as are
-tests that would pass without the change or weakened/deleted existing assertions.
-Report actionable findings with file/line references where possible, distinguish baseline issues.
-Approved must be false if any required check fails, implementation is incomplete,
-there are unresolved findings, or evidence is insufficient. Findings=[] only if none.
-{"For this bug: a fix that does not address the diagnosed root cause, or regression tests that did not fail in repro.json and pass now (without a stated reason), is an actionable finding." if state.get('mode') == 'bug' else ''}
-''', {'type': 'object', 'properties': {'approved': {'type': 'boolean'},
-      'summary': {'type': 'string'}, 'findings': {'type': 'array', 'items': {'type': 'string'}}},
-      'required': ['approved', 'summary', 'findings'], 'additionalProperties': False}, f'review-{n}')
-            if (type(verdict.get('approved')) is not bool or
-                    not isinstance(verdict.get('summary'), str) or
-                    not isinstance(verdict.get('findings'), list) or
-                    not all(isinstance(x, str) for x in verdict['findings'])):
-                raise Stop('Invalid review shape; refusing to treat it as approval')
+Changes the task did not ask for are a finding: ask for them to be reverted.
+Never ask for out-of-scope work; mention related issues outside the task in prose only.
+New or changed behavior without meaningful automated tests is a finding, as are tests that
+would pass without the change or weakened/deleted existing assertions.
+A failing required check is a P1 finding unless it also fails in the baseline.
+{"For this bug: a fix that does not address the diagnosed root cause, or regression tests that did not fail in repro.json and pass now (without a stated reason), is a finding." if state.get('mode') == 'bug' else ''}
+''', f'review-{n}')
+            text = (root / f'review-{n}.md').read_text() if (root / f'review-{n}.md').exists() else ''
+            if not text.strip():
+                raise Stop(f'Codex produced an empty review; refusing to treat it as approval. See review-{n}.log.')
+            block = state['config'].get('review_block_priority', 2)
+            findings = parse_review(text)
+            verdict = {'approved': not any(p <= block for p, _ in findings), 'summary': text.strip(),
+                       'findings': [f'[P{p}] {b}' for p, b in findings if p <= block],
+                       'non_blocking': [f'[P{p}] {b}' for p, b in findings if p > block]}
             save(root / f'review-{n}.result.json', verdict)
             evidence = json.loads((root / f'checks-{n}.json').read_text())
             passed = all(x['exit_code'] == 0 for x in evidence if x['required'])

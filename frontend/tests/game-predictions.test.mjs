@@ -106,9 +106,8 @@ test("the popup's Game projections tab compares last-10 averages with the predic
   assert.equal(predictionStats.pts, 24.4);
   assert.equal(currentStats.reb, null);              // shown as "—", not 0
   assert.equal(predictionStats.fantasy, 40.2);
-  const modal = readSource("PlayerStatsModal.jsx");
-  assert.match(modal, /\['next-game', 'Game projections'\]/);
-  assert.match(modal, /<PlayerNextGame player=\{player\} returnTo=\{returnTo\} \/>/);
+  assert.match(readFrontend("src/utils/playerPage.js"), /\{ id: 'next-game', label: 'Game projections' \}/);
+  assert.match(readSource("PlayerProfile.jsx"), /<PlayerNextGame player=\{player\} returnTo=\{returnTo\} \/>/);
   assert.match(readSource("PlayerNextGame.jsx"), /groups=\{GAME_PREDICTION_GROUPS\}/);
 });
 
@@ -118,10 +117,28 @@ test("per-game views show team logos instead of tricodes", () => {
   assert.match(matchup, /onError=\{\(\) => setFailed\(true\)\}/);           // falls back to the tricode
   assert.match(readSource("GamePredictions.jsx"), /<GameMatchup game=\{game\} size="lg" \/>/);
   for (const file of ["GamePredictions.jsx", "NextGamePreview.jsx", "GameRecommendations.jsx"]) {
-    assert.match(readSource(file), /<GameMatchup player=\{player\}( size="md")? \/>/, file);
+    assert.match(readSource(file), /<GameMatchup player=\{player\}( size="md")? gameId=\{player\.game_id\} \/>/, file);
     assert.doesNotMatch(readSource(file), /formatMatchup|name: player\.name, team: player\.team, position: player\.position \}\}/, file);
   }
-  assert.match(readSource("PlayerNextGame.jsx"), /<GameMatchup player=\{prediction\} size="md" \/>/);
+  assert.match(readSource("PlayerNextGame.jsx"), /<GameMatchup player=\{prediction\} size="md" gameId=\{prediction\.game_id\} \/>/);
+});
+
+test("prediction matchups link to the game page, but the slate filter buttons do not", () => {
+  const matchup = readSource("GameMatchup.jsx");
+  assert.match(matchup, /if \(gameId\) \{/);
+  assert.match(matchup, /<Link to=\{getGameDetailPath\(gameId\)\} className=\{`gm gm--\$\{size\} gm-link`\}/);
+  assert.match(matchup, /return <span className=\{`gm gm--\$\{size\}`\}>\{content\}<\/span>;/);
+  // A link inside the strip's <button> would be invalid HTML.
+  assert.doesNotMatch(readSource("GamePredictions.jsx"), /<GameMatchup game=\{game\}[^>]*gameId/);
+  // Above PlayerCard's stretched overlay (.pc-open::after, z-index 1) so the click reaches the link.
+  assert.match(readFrontend("src/components/GameMatchup.css"), /\.gm-link\s*\{[^}]*position:\s*relative;[^}]*z-index:\s*2;/);
+});
+
+test("later games link to their game page", () => {
+  const laterGames = readSource("LaterGames.jsx");
+  assert.match(laterGames, /<Link to=\{getGameDetailPath\(game\.game_id\)\} className="later-game-opp"/);
+  // The list sits above PlayerCard's stretched overlay, so the link receives the click.
+  assert.match(readFrontend("src/components/LaterGames.css"), /\.later-games\s*\{[^}]*position:\s*relative;[^}]*z-index:\s*1;/);
 });
 
 test("team filter lists only the selected game's teams", () => {

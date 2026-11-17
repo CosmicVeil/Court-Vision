@@ -59,11 +59,11 @@ export default function NextGamePreview({ onPlayerClick, onLoaded }) {
             player={{ id: player.id ?? player.espn_id, name: player.name, position: player.position }}
             stats={getGameCardStats(player).main}
             statsLabel="Predicted · change vs last 10 games"
-            onOpen={() => onPlayerClick({ name: player.name, team: player.team, position: player.position })}
+            onOpen={() => onPlayerClick({ id: player.id, name: player.name, team: player.team, position: player.position })}
             ctaLabel="Player stats"
           >
             <p className="pc-matchup" data-numeric>
-              <GameMatchup player={player} size="md" />
+              <GameMatchup player={player} size="md" gameId={player.game_id} />
               <span>{formatTipoff(player.tipoff)}</span>
               <InjuryBadge injury={player.injury} />
             </p>

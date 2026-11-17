@@ -2,18 +2,17 @@ import ContentSkeleton from '../components/ContentSkeleton';
 import LockIcon from '../components/LockIcon';
 import FavouriteStar from '../components/FavouriteStar';
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { isFavorite, toggleFavorite, getFavorites } from '../utils/favorites';
 import { getScoring, isAuthenticated } from '../utils/auth';
 import { fptsTitle } from '../utils/fantasy';
 import { buildApiUrl } from '../config/api';
 import { scrollToIfAbove } from '../utils/scroll';
-import { samePlayerName } from '../utils/playerNames';
+import { playerPath } from '../utils/playerPage';
 import FilterBar from '../components/FilterBar';
 import PageHero from '../components/PageHero';
 import Pagination from '../components/Pagination';
 import PlayerCard from '../components/PlayerCard';
-import PlayerStatsModal from '../components/PlayerStatsModal';
 import useFlip from '../hooks/useFlip';
 import useListQuery from '../hooks/useListQuery';
 import ScrollReveal from '../components/ScrollReveal';
@@ -48,9 +47,8 @@ const Stats = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalPlayers, setTotalPlayers] = useState(0);
   const [favorites, setFavorites] = useState(new Set()); // Track favorites for re-renders
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
-  const [loadingPlayer, setLoadingPlayer] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const navigate = useNavigate();
   const gridRef = useRef(null);
   const resultsRef = useRef(null);
   useFlip(gridRef);
@@ -87,62 +85,11 @@ const Stats = () => {
     setFavorites(newFavorites);
   };
 
-  // Fetch full player details (multi-season + ML) when a row or card is clicked
-  const handlePlayerClick = async (player) => {
+  // A row or card opens the player page; the row is its placeholder while the full profile loads.
+  const handlePlayerClick = (player) => {
     if (!player) return;
-    setLoadingPlayer(true);
-
-    // Create an immediate baseline profile from the row/card data so modal opens instantly
-    const initialProfile = {
-      name: player.name || player.PLAYER_NAME || 'Unknown Player',
-      team: player.team || player.TEAM_ABBREVIATION || 'NBA',
-      position: player.position || player.POSITION || 'G/F',
-      age: player.age || player.AGE || '--',
-      current_stats: {
-        ppg: player.stats?.ppg_last || player.ppg || 0,
-        apg: player.stats?.apg_last || player.apg || 0,
-        rpg: player.stats?.rpg_last || player.rpg || 0,
-        spg: player.stats?.spg_last || player.spg || 0,
-        bpg: player.stats?.bpg_last || player.bpg || 0,
-        tov: player.stats?.tov_last || player.tov || 0,
-        mpg: player.stats?.minutes || player.minutes || 0,
-        fg_pct: player.stats?.fg_pct_last || player.fg_pct || 0,
-        fg3_pct: player.stats?.fg3_pct_last || player.fg3_pct || 0,
-        ft_pct: player.stats?.ft_pct_last || player.ft_pct || 0,
-        games_played: player.stats?.games_played || player.games_played || 0,
-        minutes: player.stats?.minutes || player.minutes || 0
-      },
-      ml_stats: null,
-      history: {}
-    };
-
-    setSelectedPlayer(initialProfile);
-
-    try {
-      const pName = player.name || player.PLAYER_NAME || '';
-      const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(pName)}`));
-      if (response.ok) {
-        const data = await response.json();
-        const match = (data.players || []).find(p => samePlayerName(p.name, player.name || player.PLAYER_NAME));
-        if (match) {
-          setSelectedPlayer(match);
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching full player details, using local data:', err);
-    } finally {
-      setLoadingPlayer(false);
-    }
+    navigate(playerPath(player), { state: { player } });
   };
-
-  // Dismiss modal on Escape
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') setSelectedPlayer(null);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
   useEffect(() => {
     fetchTeams();
@@ -520,8 +467,6 @@ const Stats = () => {
         pageSize={STATS_PAGE_SIZE}
         onPageChange={goToPage}
       />
-
-      <PlayerStatsModal player={selectedPlayer} loading={loadingPlayer} onClose={() => setSelectedPlayer(null)} />
 
       {/* Custom GUI Authentication Warning Modal */}
       {showAuthModal && (

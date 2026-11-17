@@ -26,7 +26,8 @@ test("the hero's on-screen blocks enter on mount; the undefined heroReveal keyfr
 });
 
 test("sections below the intro share one heading anatomy and reveal in a stagger", () => {
-  assert.equal(home.match(/<SectionHead\b/g)?.length, 6);
+  // Five: the "Find a player" section moved into the hero (see home-hero-search.test.mjs).
+  assert.equal(home.match(/<SectionHead\b/g)?.length, 5);
   assert.match(home, /<div className="home-section-head" data-reveal>/);
   assert.match(home, /className="cv-section-badge" data-slot="eyebrow"/);
   assert.match(home, /data-slot="display-heading"/);

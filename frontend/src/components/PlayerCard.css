@@ -239,4 +239,4 @@
   text-transform: none;
 }
 
-.pc-matchup span:first-child { color: var(--text-primary); }
+.pc-matchup > :first-child { color: var(--text-primary); }

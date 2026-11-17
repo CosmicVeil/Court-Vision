@@ -1,13 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./Home.css";
 import AIPredictions from "../components/AIPredictions";
 import NextGamePreview from "../components/NextGamePreview";
-import PlayerStatsModal from "../components/PlayerStatsModal";
 import ScrollReveal from "../components/ScrollReveal";
 import { isAuthenticated } from "../utils/auth";
 import { buildApiUrl } from "../config/api";
-import { samePlayerName } from "../utils/playerNames";
+import { playerPath } from "../utils/playerPage";
 import { extractWeeklyPraPlayer, formatPraGameDate } from "../utils/weeklyPra";
 import { getAccuracyHighlights } from "../utils/predictionAccuracy";
 import { enterDelay, getRevealDelay } from "../utils/scrollReveal";
@@ -78,7 +77,7 @@ function PRACard({ player, onPlayerClick, index }) {
           <button
             type="button"
             className="pra-open"
-            onClick={() => onPlayerClick && onPlayerClick({ name: player.name, team: player.team, position: player.position })}
+            onClick={() => onPlayerClick && onPlayerClick({ id: player.id, name: player.name, team: player.team, position: player.position })}
           >
             {player.name}
           </button>
@@ -266,6 +265,35 @@ const VISION_LETTERS = [
 // Horizontal center of the rim inside a hoop wrapper: half of .cv-net-svg's 86px width (Home.css).
 const RIM_CENTER_OFFSET = 43;
 
+// The hero UI (subtitle, search, buttons) fades out over the first 12% of the intro. Once it is
+// fully transparent it also stops taking clicks, so the invisible search can't be hit by accident.
+const heroUiVars = p => {
+  const opacity = Math.max(0, 1 - p / 0.12);
+  return { '--cv-ui-op': opacity, '--cv-ui-pointer': opacity > 0 ? 'auto' : 'none' };
+};
+
+// Room for the upward results between the fixed header and the search bar, less the 8px gap above
+// the bar and 8px of air under the header. Rounded down so the list never slides under the header.
+const heroResultsMaxHeight = (searchTop, headerHeight) => Math.max(0, Math.floor(searchTop - headerHeight - 16));
+
+// The stage starts under the fixed header, and the bar's height on screen depends on the viewport
+// and on whether the CTA row below it wraps, so the cap is measured (one read, one write) and
+// handed to Home.css as --hero-results-max.
+// What shows under the search bar: the results, a no-match note, or nothing. Dismissing the list
+// (Escape or a click outside) closes it rather than claiming the query matched no one.
+const searchDropdown = ({ query, isSearching, resultCount, open }) => {
+  if (!open) return null;
+  if (resultCount > 0) return 'results';
+  return query.trim().length >= 2 && !isSearching ? 'no-results' : null;
+};
+
+const fitHeroResults = (wrapper, view = window) => {
+  if (!wrapper) return;
+  const headerHeight = parseFloat(view.getComputedStyle(wrapper).getPropertyValue('--header-height')) || 0;
+  const max = heroResultsMaxHeight(wrapper.getBoundingClientRect().top, headerHeight);
+  wrapper.style.setProperty('--hero-results-max', `${max}px`);
+};
+
 const Home = () => {
   // The shared header owns login state; Home only reads it once to pick its closing CTA.
   const [isLoggedIn] = useState(() => isAuthenticated());
@@ -275,59 +303,27 @@ const Home = () => {
   const [leadersContent, setLeadersContent] = useState('');
   const [nextGameLoaded, setNextGameLoaded] = useState(false);
 
-  // States for search and popup modal
+  // States for search
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
-  const [loadingPlayer, setLoadingPlayer] = useState(false);
+  // Typing or focusing the bar opens the list; Escape or a click outside closes it.
+  const [resultsOpen, setResultsOpen] = useState(false);
   const searchContainerRef = useRef(null);
+  const navigate = useNavigate();
 
-  const handlePlayerClick = async (playerInput) => {
+  // Opens the player page. Cards hand over a name or a row (AI leader rows use upper-case keys);
+  // the row goes along in router state so the page can show it while the full profile loads.
+  const handlePlayerClick = (playerInput) => {
     if (!playerInput) return;
-    const playerName = typeof playerInput === 'string' ? playerInput : (playerInput.name || playerInput.PLAYER_NAME || '');
-    if (!playerName) return;
-    setLoadingPlayer(true);
-
-    const fallbackStats = typeof playerInput === 'object' ? {
-      ppg: playerInput.ppg || playerInput.PPG_LAST || playerInput.stats?.ppg_last || 0,
-      apg: playerInput.apg || playerInput.APG_LAST || playerInput.stats?.apg_last || 0,
-      rpg: playerInput.rpg || playerInput.RPG_LAST || playerInput.stats?.rpg_last || 0,
-      spg: playerInput.spg || playerInput.SPG_LAST || playerInput.stats?.spg_last || 0,
-      bpg: playerInput.bpg || playerInput.BPG_LAST || playerInput.stats?.bpg_last || 0,
-      tov: playerInput.tov || playerInput.TOV_LAST || playerInput.stats?.tov_last || 0,
-      mpg: playerInput.mpg || playerInput.MINUTES || playerInput.stats?.minutes || 0,
-      fg_pct: playerInput.fg_pct || playerInput.FG_PCT_LAST || playerInput.stats?.fg_pct_last || 0,
-      fg3_pct: playerInput.fg3_pct || playerInput.FG3_PCT_LAST || playerInput.stats?.fg3_pct_last || 0,
-      ft_pct: playerInput.ft_pct || playerInput.FT_PCT_LAST || playerInput.stats?.ft_pct_last || 0,
-      games_played: playerInput.games_played || playerInput.GAMES_PLAYED || playerInput.stats?.games_played || 0,
-      minutes: playerInput.minutes || playerInput.stats?.minutes || 0
-    } : { ppg: 0, apg: 0, rpg: 0, spg: 0, bpg: 0, tov: 0, mpg: 0, fg_pct: 0, fg3_pct: 0, ft_pct: 0, games_played: 0, minutes: 0 };
-
-    setSelectedPlayer({
-      name: playerName,
-      team: typeof playerInput === 'object' ? (playerInput.team || playerInput.TEAM_ABBREVIATION || 'NBA') : 'NBA',
-      position: typeof playerInput === 'object' ? (playerInput.position || playerInput.POSITION || 'G/F') : 'G/F',
-      age: typeof playerInput === 'object' ? (playerInput.age || playerInput.AGE || '--') : '--',
-      current_stats: fallbackStats,
-      ml_stats: null,
-      history: {}
-    });
-
-    try {
-      const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(playerName)}`));
-      if (response.ok) {
-        const data = await response.json();
-        const match = (data.players || []).find(p => samePlayerName(p.name, playerName));
-        if (match) {
-          setSelectedPlayer(match);
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching player details:', err);
-    } finally {
-      setLoadingPlayer(false);
-    }
+    const player = typeof playerInput === 'string' ? { name: playerInput } : {
+      ...playerInput,
+      name: playerInput.name || playerInput.PLAYER_NAME,
+      team: playerInput.team || playerInput.TEAM || playerInput.TEAM_ABBREVIATION,
+      position: playerInput.position || playerInput.POSITION,
+    };
+    if (!player.name) return;
+    navigate(playerPath(player), { state: { player } });
   };
 
   // 3D Court Scroll Effect
@@ -489,7 +485,7 @@ const Home = () => {
       el.style.setProperty('--cv-net-swish-y', netSwishY);
 
       // UI fades out early
-      el.style.setProperty('--cv-ui-op', Math.max(0, 1 - p / 0.12));
+      for (const [name, value] of Object.entries(heroUiVars(p))) el.style.setProperty(name, value);
     };
 
     const syncMotion = () => {
@@ -518,7 +514,7 @@ const Home = () => {
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
-        setSearchResults([]);
+        setResultsOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -529,8 +525,7 @@ const Home = () => {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
-        setSelectedPlayer(null);
-        setSearchResults([]);
+        setResultsOpen(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -560,6 +555,20 @@ const Home = () => {
 
     return () => { clearTimeout(delayDebounceFn); controller.abort(); };
   }, [searchQuery]);
+
+  const dropdown = searchDropdown({
+    query: searchQuery, isSearching, resultCount: searchResults.length, open: resultsOpen,
+  });
+  const showDropdown = dropdown !== null;
+
+  // Fit the upward results to the space above the bar whenever they open, and on resize/rotation.
+  useEffect(() => {
+    if (!showDropdown) return;
+    const fit = () => fitHeroResults(searchContainerRef.current);
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, [showDropdown]);
 
   return (
     <div className="main-wrapper">
@@ -751,65 +760,56 @@ const Home = () => {
             </svg>
           </div>
 
-          {/* Hero UI CTA buttons */}
+          {/* Hero UI: subtitle, player search, CTA buttons */}
           <div className="cv-hero-ui">
             <p className="hero-subtitle" data-enter>AI-powered basketball analytics, live stats &amp; predictions</p>
+
+            {/* The stage clips overflow and this sits near the bottom, so results open upward (Home.css). */}
+            <div className="hero-search-wrapper" data-enter style={enterDelay(1)} ref={searchContainerRef}>
+              <div className="search-bar-container">
+                <svg className="search-icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input
+                  type="text"
+                  className="search-input-field"
+                  placeholder="Search NBA player by name (e.g. Luka Dončić, Shai, Giannis)..."
+                  aria-label="Search NBA players by name"
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setResultsOpen(true); }}
+                  onFocus={() => setResultsOpen(true)}
+                />
+                {isSearching && <div className="search-spinner"></div>}
+                {searchQuery && (
+                  <button type="button" className="clear-search-btn" aria-label="Clear search" onClick={() => setSearchQuery("")}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  </button>
+                )}
+              </div>
+
+              {dropdown === 'results' && (
+                <div className="search-results-dropdown">
+                  {searchResults.map((player) => (
+                    <button type="button" key={player.name} className="search-result-item" onClick={() => { setSearchResults([]); setSearchQuery(""); handlePlayerClick(player); }}>
+                      <span className="search-result-player-info">
+                        <span className="search-result-player-name">{player.name}</span>
+                        <span className="search-result-player-meta">{player.position}{player.age != null && ` · Age ${player.age}`}</span>
+                      </span>
+                      <span className="search-result-player-team">{player.team}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {dropdown === 'no-results' && (
+                <div className="search-results-dropdown"><div className="search-dropdown-no-results">No players found matching "{searchQuery}"</div></div>
+              )}
+            </div>
+
+            {/* Enters with the search: the two controls arrive together after the subtitle. */}
             <div className="hero-cta" data-enter style={enterDelay(1)}>
               <Link to="/stats" className="cta-button primary">EXPLORE STATS</Link>
               <Link to="/recommendations" className="cta-button secondary">GET RECOMMENDATIONS</Link>
             </div>
           </div>
 
-        </div>
-      </section>
-
-      {/* ─── SEARCH SECTION (Underneath Court Vision) ─── */}
-      <section className="home-section court-search-section" aria-labelledby="home-search-title">
-        <div className="court-search-container" ref={searchContainerRef}>
-          <SectionHead
-            id="home-search-title"
-            eyebrow="PLAYER SEARCH"
-            title="Find a"
-            accent="player"
-            lead="Search any NBA player for projections, stats, and matchup analysis."
-          />
-
-          <div className="hero-search-wrapper" data-reveal style={revealDelay(1)}>
-            <div className="search-bar-container">
-              <svg className="search-icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              <input 
-                type="text" 
-                className="search-input-field" 
-                placeholder="Search NBA player by name (e.g. Luka Dončić, Shai, Giannis)..." 
-                aria-label="Search NBA players by name"
-                value={searchQuery} 
-                onChange={(e) => setSearchQuery(e.target.value)} 
-              />
-              {isSearching && <div className="search-spinner"></div>}
-              {searchQuery && (
-                <button type="button" className="clear-search-btn" aria-label="Clear search" onClick={() => setSearchQuery("")}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-              )}
-            </div>
-
-            {searchResults.length > 0 && (
-              <div className="search-results-dropdown">
-                {searchResults.map((player) => (
-                  <button type="button" key={player.name} className="search-result-item" onClick={() => { setSelectedPlayer(player); setSearchResults([]); setSearchQuery(""); }}>
-                    <span className="search-result-player-info">
-                      <span className="search-result-player-name">{player.name}</span>
-                      <span className="search-result-player-meta">{player.position}{player.age != null && ` · Age ${player.age}`}</span>
-                    </span>
-                    <span className="search-result-player-team">{player.team}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            {searchQuery.trim().length >= 2 && !isSearching && searchResults.length === 0 && (
-              <div className="search-results-dropdown"><div className="search-dropdown-no-results">No players found matching "{searchQuery}"</div></div>
-            )}
-          </div>
         </div>
       </section>
 
@@ -899,7 +899,6 @@ const Home = () => {
       </section>
 
       <ScrollReveal scanKey={`${trendingSettled}:${leadersContent}:${nextGameLoaded}`} />
-      <PlayerStatsModal player={selectedPlayer} loading={loadingPlayer} onClose={() => setSelectedPlayer(null)} />
     </div>
   );
 };

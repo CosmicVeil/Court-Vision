@@ -14,7 +14,8 @@ test('favourites render the shared PlayerCard with remove and open wired to the 
   assert.match(component, /getFavouriteCardStats\(player\)/);
   assert.match(component, /isFavorite\s+onToggleFavorite=\{\(\) => handleRemoveFavorite\(player\.id\)\}/);
   assert.match(component, /onOpen=\{\(\) => handlePlayerClick\(player\)\}/);
-  assert.match(component, /<PlayerStatsModal\b/);
+  assert.match(component, /navigate\(playerPath\(player\), \{ state: \{ player \} \}\)/);
+  assert.doesNotMatch(component, /PlayerStatsModal/);
   // The hand-built card and its click-anywhere div are gone.
   assert.doesNotMatch(component, /favourite-card|<div[^>]*onClick=/);
   assert.doesNotMatch(css, /\.favourite-card|\.favorite-btn-fav|\.stat-item-fav/);

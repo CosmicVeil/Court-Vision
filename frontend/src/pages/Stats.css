@@ -118,7 +118,8 @@
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-xl, 20px);
   padding: 0;
-  overflow: hidden;
+  /* Scrolls the wide table sideways on narrow screens (clipped to the rounded corners). */
+  overflow-x: auto;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow: var(--shadow);

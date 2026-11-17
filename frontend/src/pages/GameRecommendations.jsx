@@ -2,11 +2,10 @@ import ResultRegion from '../components/ResultRegion';
 import LockIcon from '../components/LockIcon';
 import ContentSkeleton from '../components/ContentSkeleton';
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import GameMatchup from '../components/GameMatchup';
 import InjuryBadge from '../components/InjuryBadge';
 import PillNav from '../components/PillNav';
-import PlayerStatsModal from '../components/PlayerStatsModal';
 import PredictionModeToggle from '../components/PredictionModeToggle';
 import StaleSlateNotice from '../components/StaleSlateNotice';
 import TiltCard from '../components/TiltCard';
@@ -14,7 +13,7 @@ import { GAME_PICK_KINDS, GAME_PICK_STATS, gameStat } from '../config/gamePredic
 import { buildApiUrl } from '../config/api';
 import { authHeaders, clearAuth, isAuthenticated } from '../utils/auth';
 import { formatSlateDate, formatTipoff, getDayTabs, getPickLine } from '../utils/gamePredictions';
-import { samePlayerName } from '../utils/playerNames';
+import { playerPath } from '../utils/playerPage';
 import { enterDelay } from '../utils/scrollReveal';
 import './Recommendations.css';
 import './GameRecommendations.css';
@@ -29,8 +28,7 @@ export default function GameRecommendations() {
   const [stat, setStat] = useState('pts');
   // '' = the nearest day, which the API picks; picks compare players within one night.
   const [day, setDay] = useState('');
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
-  const [loadingPlayer, setLoadingPlayer] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -56,28 +54,9 @@ export default function GameRecommendations() {
     return () => controller.abort();
   }, [day]);
 
-  const handlePlayerClick = async player => {
-    setLoadingPlayer(true);
-    try {
-      const response = await fetch(buildApiUrl(`players/search-all?query=${encodeURIComponent(player.name)}`));
-      const body = await response.json();
-      const match = (body.players || []).find(p => samePlayerName(p.name, player.name));
-      setSelectedPlayer(match || {
-        name: player.name, team: player.team, position: player.position || 'UNK',
-        current_stats: {
-          ppg: player.last10_pts || 0, rpg: player.last10_reb || 0, apg: player.last10_ast || 0,
-          spg: player.last10_stl || 0, bpg: player.last10_blk || 0, tov: player.last10_tov || 0,
-          mpg: player.last10_minutes || 0, fg_pct: 0, fg3_pct: 0, ft_pct: 0, games_played: 0,
-          minutes: player.last10_minutes || 0,
-        },
-        ml_stats: null,
-        history: {},
-      });
-    } catch (err) {
-      console.error('Error fetching player details:', err);
-    } finally {
-      setLoadingPlayer(false);
-    }
+  // playerPath uses the row's NBA id and ignores espn_id.
+  const handlePlayerClick = player => {
+    navigate(playerPath(player), { state: { player } });
   };
 
   const unit = gameStat(stat).unit;
@@ -160,7 +139,7 @@ export default function GameRecommendations() {
                                   {player.name}
                                 </button>
                                 <span className="gr-meta" data-numeric>
-                                  <GameMatchup player={player} /> · {formatTipoff(player.tipoff)}
+                                  <GameMatchup player={player} gameId={player.game_id} /> · {formatTipoff(player.tipoff)}
                                   <InjuryBadge injury={player.injury} />
                                 </span>
                               </div>
@@ -191,8 +170,6 @@ export default function GameRecommendations() {
           </>
         )}
       </div>
-
-      <PlayerStatsModal player={selectedPlayer} loading={loadingPlayer} onClose={() => setSelectedPlayer(null)} />
     </div>
   );
 }

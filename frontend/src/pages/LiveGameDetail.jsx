@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { buildApiUrl } from '../config/api';
 import { BoxScore, QuarterTable } from '../components/GameBoxScore';
 import GameScoreboard from '../components/GameScoreboard';
-import PlayerStatsModal from '../components/PlayerStatsModal';
 import ScrollReveal from '../components/ScrollReveal';
 import SyncDock from '../components/SyncDock';
 import { getGameLeaders, getPeriodBreakdown } from '../utils/gameDetail';
 import { getScoreChanges } from '../utils/liveInteractions';
 import { buildGameDetailEndpoint, LIVE_GAMES_REFRESH_MS, STATUS_FINAL, STATUS_LIVE, STATUS_SCHEDULED } from '../utils/liveGames';
-import { buildPlayerFallback, fetchPlayerDetails } from '../utils/playerDetails';
+import { playerPath } from '../utils/playerPage';
 import { getRevealDelay } from '../utils/scrollReveal';
 import './LiveGames.css';
 
@@ -52,13 +51,11 @@ export default function LiveGameDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notFound, setNotFound] = useState(false);
-  const [player, setPlayer] = useState(null);
-  const [playerLoading, setPlayerLoading] = useState(false);
   const [scoreChanges, setScoreChanges] = useState({});
   const [lastUpdated, setLastUpdated] = useState(null);
+  const navigate = useNavigate();
   const gameStatusRef = useRef(null);
   const gameRequestsRef = useRef(new Set());
-  const playerRequestRef = useRef(null);
   const previousGameRef = useRef(null);
   const heroRef = useRef(null);
 
@@ -122,32 +119,10 @@ export default function LiveGameDetail() {
     };
   }, [requestGame]);
 
-  useEffect(() => () => playerRequestRef.current?.abort(), []);
-
-  const closePlayer = useCallback(() => {
-    playerRequestRef.current?.abort();
-    playerRequestRef.current = null;
-    setPlayerLoading(false);
-    setPlayer(null);
-  }, []);
-
-  const selectPlayer = useCallback(async selected => {
-    playerRequestRef.current?.abort();
-    const controller = new AbortController();
-    playerRequestRef.current = controller;
-    setPlayer(null);
-    setPlayerLoading(true);
-    try {
-      setPlayer(await fetchPlayerDetails(selected, controller.signal));
-    } catch (reason) {
-      if (reason.name !== 'AbortError') setPlayer(buildPlayerFallback(selected));
-    } finally {
-      if (playerRequestRef.current === controller) {
-        playerRequestRef.current = null;
-        setPlayerLoading(false);
-      }
-    }
-  }, []);
+  // Box-score rows carry the NBA id as personId, which playerPath links by.
+  const selectPlayer = useCallback(selected => {
+    navigate(playerPath(selected), { state: { player: selected } });
+  }, [navigate]);
 
   const ready = !loading && !notFound && !error && game;
   const leaders = ready ? getGameLeaders(game) : [];
@@ -203,7 +178,6 @@ export default function LiveGameDetail() {
         <SyncDock watchRef={heroRef} label={isLive ? 'LIVE' : 'PRE-GAME'} live={isLive}
           lastUpdated={lastUpdated} intervalMs={LIVE_GAMES_REFRESH_MS} onRefresh={() => requestGame(true)} />
       )}
-      <PlayerStatsModal player={player} loading={playerLoading} onClose={closePlayer} />
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { injuryDescription, injuryReturnLabel, injurySummary, injuryTone } from 
 import { loadFrontendModule, renderComponent } from './render-helpers.mjs';
 
 const { default: InjuryBadge } = loadFrontendModule('src/components/InjuryBadge.jsx');
-const { default: PlayerStatsModal } = loadFrontendModule('src/components/PlayerStatsModal.jsx');
+const { default: PlayerProfile } = loadFrontendModule('src/components/PlayerProfile.jsx');
 const { Roster } = loadFrontendModule('src/pages/Team.jsx', ['Roster']);
 const { buildPlayerFallback } = loadFrontendModule('src/utils/playerDetails.js');
 
@@ -66,13 +66,14 @@ test('team roster badges only injured players', () => {
   assert.match(html, /Hurt Player<\/button><span class="injury-badge injury-badge--dtd"[^>]*>DTD<\/span>/);
 });
 
-test('player popup shows the status, injury, return date and note', () => {
+test('player page shows the status, injury, return date and note', () => {
   const player = { id: 2544, name: 'Test Player', team: 'ATL', position: 'G', age: 25, current_stats: {}, history: {}, injury: out };
-  const html = renderComponent(PlayerStatsModal, { player, loading: false, onClose: () => {} });
+  const props = { tab: 'current', onTabChange: () => {}, returnTo: '/players/2544' };
+  const html = renderComponent(PlayerProfile, { player, ...props });
   assert.match(html, />OUT<\/span>/);
   assert.match(html, /<div class="injury-summary"><strong>Out<\/strong><span>· Left Foot \(Fracture\)<\/span><span>· Expected back Dec 12<\/span><p class="injury-summary-note">Re-evaluated in four weeks\.<\/p><\/div>/);
 
-  const healthy = renderComponent(PlayerStatsModal, { player: { ...player, injury: null }, loading: false, onClose: () => {} });
+  const healthy = renderComponent(PlayerProfile, { player: { ...player, injury: null }, ...props });
   assert.doesNotMatch(healthy, /injury-/);
 });
 

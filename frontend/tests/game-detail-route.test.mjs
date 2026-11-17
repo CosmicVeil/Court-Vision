@@ -10,8 +10,9 @@ test('game cards link to a dedicated detail route', () => {
   assert.equal(getGameDetailPath('401'), '/games/401');
 });
 
-test('game detail handles refresh, player modal and terminal states', () => {
+test('game detail handles refresh, player page links and terminal states', () => {
   const detail = read('src/pages/LiveGameDetail.jsx');
-  for (const pattern of [/useParams/, /buildGameDetailEndpoint/, /LIVE_GAMES_REFRESH_MS/, /to="\/games"/, /GAME NOT FOUND/, /UNABLE TO LOAD GAME/, /BoxScore/, /PlayerStatsModal/]) assert.match(detail, pattern);
+  for (const pattern of [/useParams/, /buildGameDetailEndpoint/, /LIVE_GAMES_REFRESH_MS/, /to="\/games"/, /GAME NOT FOUND/, /UNABLE TO LOAD GAME/, /BoxScore/, /navigate\(playerPath\(selected\)/]) assert.match(detail, pattern);
+  assert.doesNotMatch(detail, /PlayerStatsModal/);
   assert.match(readRepo('backend/app/api/routes/games.py'), /attach_rosters\(\[game\], state\.nba_data\)/);
 });
