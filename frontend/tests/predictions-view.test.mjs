@@ -63,7 +63,7 @@ test('the table shows one clickable row per player with who they are', () => {
   assert.equal(html.match(/<tr class="stats-row-clickable"/g)?.length, 2);
   assert.match(html, /<table class="players-table">/);
   assert.match(html, /<div class="table-wrapper">/);
-  assert.match(html, /<button type="button" class="table-row-open">Luka Dončić<\/button>/);
+  assert.match(html, /<a class="table-row-open" href="\/players\/1629029"[^>]*>Luka Dončić<\/a>/);
   assert.match(html, /<span class="team-badge-table">LAL<\/span>/);
   assert.match(html, /<span class="position-badge-table">C<\/span>/);
   assert.match(html, /<td>26<\/td>/);
@@ -161,12 +161,15 @@ test('clicking a stat header asks to sort by that column', () => {
   assert.deepEqual(calls.open, [], 'sorting opens no player');
 });
 
-test('clicking a row, or its player name, opens that player', () => {
+// The name is a link that navigates by itself, so the row must not open the player a second time.
+test('clicking a row opens that player; its name link navigates on its own', () => {
   const { calls, byClass } = interactiveTable();
   const rows = byClass('stats-row-clickable');
   click(rows[1]);
-  click(byClass('table-row-open')[0]);
-  assert.deepEqual(calls.open, [1641705, 1629029]);
+  const event = click(byClass('table-row-open')[0]);
+  assert.equal(event.stopped, true);
+  assert.equal(byClass('table-row-open')[0].at(-1).props.to, '/players/1629029');
+  assert.deepEqual(calls.open, [1641705]);
   assert.deepEqual(calls.favorite, []);
 });
 

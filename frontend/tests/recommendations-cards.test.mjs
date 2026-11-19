@@ -12,9 +12,9 @@ test("the radar page renders its one section directly, with no single-tab bar", 
   assert.match(radar, /<div className="recommendations-section">/);
 });
 
-test("clickable player cards open from a real button, not a div onClick", () => {
+test("clickable player cards open from a real link to the player page, not a div onClick", () => {
   for (const [name, source] of [["Recommendations.jsx", radar], ["RecommendationChart.jsx", chart]]) {
-    assert.match(source, /<button\s+type="button"\s+className="card-open"[\s\S]*?onClick=\{\(\) => handlePlayerClick\(/, name);
+    assert.match(source, /<Link to=\{playerPath\(pagePlayer\)\} state=\{\{ player: pagePlayer \}\} className="card-open">/, name);
     assert.doesNotMatch(source, /<div[^>]*onClick=/, `${name} should not put click handlers on divs`);
   }
 });

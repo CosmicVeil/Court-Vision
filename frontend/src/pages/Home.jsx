@@ -762,7 +762,8 @@ const Home = () => {
 
           {/* Hero UI: subtitle, player search, CTA buttons */}
           <div className="cv-hero-ui">
-            <p className="hero-subtitle" data-enter>AI-powered basketball analytics, live stats &amp; predictions</p>
+            {/* The page's one h1 (the COURT VISION letters above are decoration): it says what the site is. */}
+            <h1 className="hero-subtitle" data-enter>NBA stats, live scores &amp; AI player predictions</h1>
 
             {/* The stage clips overflow and this sits near the bottom, so results open upward (Home.css). */}
             <div className="hero-search-wrapper" data-enter style={enterDelay(1)} ref={searchContainerRef}>

@@ -11,6 +11,23 @@ export const DEFAULT_META = {
   description: "CourtVision is a free NBA analytics dashboard: live scores, player and team stats, standings, and machine-learning predictions for every player's next game.",
 };
 
+// The link-preview card (public/og-image.png). Previews need an absolute URL.
+const SHARE_IMAGE = {
+  url: `${SITE_URL}/og-image.png`,
+  width: '1200',
+  height: '630',
+  alt: 'CourtVision: NBA stats & AI player predictions',
+};
+
+// Structured data for every page: what the site is and who runs it.
+const SITE_JSON_LD = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'WebSite', name: SITE_NAME, url: SITE_URL },
+    { '@type': 'Organization', name: SITE_NAME, url: SITE_URL, image: SHARE_IMAGE.url },
+  ],
+};
+
 // Public pages worth ranking; together with the team pages they make up the sitemap.
 const PUBLIC_PAGES = {
   '/': DEFAULT_META,
@@ -68,7 +85,8 @@ export const INDEXABLE_PATHS = [
 const withSiteName = title => (title.includes(SITE_NAME) ? title : `${title} | ${SITE_NAME}`);
 const trimSlash = pathname => (pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname);
 
-// { title, description, canonical, noindex } for a URL path. Canonical is null for noindex pages.
+// { title, description, canonical, noindex, jsonLd } for a URL path. Canonical is null for noindex pages;
+// jsonLd is the page's own structured data (team pages only), or null.
 export function getPageMeta(rawPathname) {
   const pathname = trimSlash(rawPathname || '/');
   const page = (meta, noindex = false) => ({
@@ -76,6 +94,7 @@ export function getPageMeta(rawPathname) {
     description: meta.description || DEFAULT_META.description,
     canonical: noindex ? null : `${SITE_URL}${pathname}`,
     noindex,
+    jsonLd: null,
   });
 
   if (Object.hasOwn(PUBLIC_PAGES, pathname)) return page(PUBLIC_PAGES[pathname]);
@@ -88,12 +107,21 @@ export function getPageMeta(rawPathname) {
     if (!Object.hasOwn(TEAMS, tricode)) return page({ title: 'Team Not Found' }, true);
     const { name } = TEAMS[tricode];
     // Canonical uses the upper-case tricode so /teams/lal and /teams/LAL count as one page.
+    const canonical = `${SITE_URL}/teams/${tricode}`;
     return {
       ...page({
         title: `${name} Roster, Schedule & Stats`,
         description: `The ${name} roster, season results, team leaders and player stats, plus AI predictions for every ${tricode} player.`,
       }),
-      canonical: `${SITE_URL}/teams/${tricode}`,
+      canonical,
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@type': 'SportsTeam',
+        name,
+        url: canonical,
+        sport: 'Basketball',
+        memberOf: { '@type': 'SportsOrganization', name: 'National Basketball Association', alternateName: 'NBA' },
+      },
     };
   }
 
@@ -111,6 +139,8 @@ export function getPageMeta(rawPathname) {
 }
 
 const escapeText = text => text.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+// Vite inserts script children as-is; with < escaped the JSON can never contain "</script>".
+const jsonLdText = data => JSON.stringify(data).replace(/</g, '\\u003c');
 
 // index.html's default <title> and description, as Vite tag descriptors (Vite escapes attributes).
 // Crawlers that don't run JavaScript and link previews see these. Canonical and og:url are left
@@ -124,7 +154,13 @@ export function defaultHeadTags() {
     { tag: 'meta', attrs: { property: 'og:site_name', content: SITE_NAME } },
     { tag: 'meta', attrs: { property: 'og:title', content: title } },
     { tag: 'meta', attrs: { property: 'og:description', content: description } },
-    { tag: 'meta', attrs: { name: 'twitter:card', content: 'summary' } },
+    { tag: 'meta', attrs: { property: 'og:image', content: SHARE_IMAGE.url } },
+    { tag: 'meta', attrs: { property: 'og:image:width', content: SHARE_IMAGE.width } },
+    { tag: 'meta', attrs: { property: 'og:image:height', content: SHARE_IMAGE.height } },
+    { tag: 'meta', attrs: { property: 'og:image:alt', content: SHARE_IMAGE.alt } },
+    { tag: 'meta', attrs: { name: 'twitter:card', content: 'summary_large_image' } },
+    { tag: 'meta', attrs: { name: 'twitter:image', content: SHARE_IMAGE.url } },
+    { tag: 'script', attrs: { type: 'application/ld+json' }, children: jsonLdText(SITE_JSON_LD) },
   ];
 }
 

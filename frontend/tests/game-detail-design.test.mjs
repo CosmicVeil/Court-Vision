@@ -72,7 +72,7 @@ test('column leaders mark the best value per stat, ignoring zeros', () => {
 test('the detail page adopts the scoreboard, leaders, momentum and live dock', () => {
   const page = read('src/pages/LiveGameDetail.jsx');
   for (const pattern of [/<GameScoreboard/, /getGameLeaders/, /getPeriodBreakdown/, /<SyncDock/, /<ScrollReveal/, /getScoreChanges/,
-    /data-slot="stat-strip"/, /onClick=\{\(\) => selectPlayer\(leader\.player\)\}/, /lg-detail-page/]) assert.match(page, pattern);
+    /data-slot="stat-strip"/, /<Link to=\{playerPath\(leader\.player\)\} state=\{\{ player: leader\.player \}\} className="leader-card">/, /lg-detail-page/]) assert.match(page, pattern);
   // Behaviour kept from before.
   for (const pattern of [/LIVE_GAMES_REFRESH_MS/, /GAME NOT FOUND/, /UNABLE TO LOAD GAME/, /<BoxScore/]) assert.match(page, pattern);
   // Players open the player page instead of the old popout.

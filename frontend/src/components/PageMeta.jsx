@@ -19,7 +19,7 @@ export default function PageMeta() {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    const { title, description, canonical, noindex } = getPageMeta(pathname);
+    const { title, description, canonical, noindex, jsonLd } = getPageMeta(pathname);
     document.title = title;
     headTag('meta', 'name', 'description').setAttribute('content', description);
     headTag('meta', 'property', 'og:title').setAttribute('content', title);
@@ -36,6 +36,15 @@ export default function PageMeta() {
 
     if (noindex) headTag('meta', 'name', 'robots').setAttribute('content', 'noindex');
     else document.head.querySelector('meta[name="robots"]')?.remove();
+
+    // The page's own structured data in one element of ours; index.html's site JSON-LD has no id and stays.
+    if (jsonLd) {
+      const script = headTag('script', 'id', 'page-jsonld');
+      script.setAttribute('type', 'application/ld+json');
+      script.textContent = JSON.stringify(jsonLd);
+    } else {
+      document.head.querySelector('script[id="page-jsonld"]')?.remove();
+    }
   }, [pathname]);
 
   return null;

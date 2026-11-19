@@ -67,8 +67,9 @@ const nextSortQuery = (sortBy, sortOrder, field) => (
     : { sort: field, order: field === 'name' ? 'asc' : 'desc', page: 1 }
 );
 
-// One row per player. The row opens the player page; the name is also a real button so keyboard
-// users can reach it (its click bubbles up to the row), and the star stops its own click.
+// One row per player. The row opens the player page; the name is also a real link (for keyboards,
+// crawlers and new tabs) that stops its click so the row doesn't navigate a second time, and the
+// star stops its own click.
 function PredictionsTable({ players, sortBy, sortOrder, loading, favoriteIds, onSort, onOpen, onToggleFavorite }) {
   const columns = getPredictionTableColumns(sortBy);
   const sortHeader = (field, label) => (
@@ -99,7 +100,8 @@ function PredictionsTable({ players, sortBy, sortOrder, loading, favoriteIds, on
               return (
                 <tr key={player.id || idx} className="stats-row-clickable" onClick={() => onOpen(player)}>
                   <td className="player-name-cell">
-                    <strong><button type="button" className="table-row-open">{player.name}</button></strong>
+                    <strong><Link to={playerPath(player)} state={{ player }} className="table-row-open"
+                      onClick={(event) => event.stopPropagation()}>{player.name}</Link></strong>
                   </td>
                   <td><span className="team-badge-table">{player.team}</span></td>
                   <td><span className="position-badge-table">{player.position}</span></td>
@@ -426,7 +428,8 @@ const Predictions = () => {
                   extraLabel="This Season Shooting"
                   isFavorite={favoriteIds.has(player.id)}
                   onToggleFavorite={(event) => handleFavoriteToggle(event, player)}
-                  onOpen={() => handlePlayerClick(player)}
+                  to={playerPath(player)}
+                  linkState={{ player }}
                   ctaLabel="Full projection"
                 >
                   <div className="pc-extra">

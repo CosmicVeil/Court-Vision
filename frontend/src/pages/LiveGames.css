@@ -459,6 +459,7 @@
 .pname {
   font-weight: 700;
   color: var(--text-primary);
+  text-decoration: none;
   transition: color 0.2s ease;
 }
 
@@ -1106,6 +1107,7 @@
   background: var(--surface);
   color: var(--text-primary);
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
   transition: translate var(--duration-base) var(--ease-brand), border-color var(--duration-base) var(--ease-brand), scale var(--duration-fast) var(--ease-brand);
 }

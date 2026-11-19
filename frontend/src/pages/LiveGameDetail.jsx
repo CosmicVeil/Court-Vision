@@ -119,7 +119,8 @@ export default function LiveGameDetail() {
     };
   }, [requestGame]);
 
-  // Box-score rows carry the NBA id as personId, which playerPath links by.
+  // Box-score rows carry the NBA id as personId, which playerPath links by. Rows open through this;
+  // the leader cards and the names in the rows are links.
   const selectPlayer = useCallback(selected => {
     navigate(playerPath(selected), { state: { player: selected } });
   }, [navigate]);
@@ -139,11 +140,11 @@ export default function LiveGameDetail() {
                 <div key={leader.key} data-reveal style={{ '--reveal-delay': getRevealDelay(index) }}>
                   <dt>{leader.label}</dt>
                   <dd>
-                    <button type="button" className="leader-card" onClick={() => selectPlayer(leader.player)}>
+                    <Link to={playerPath(leader.player)} state={{ player: leader.player }} className="leader-card">
                       <span className="leader-value" data-numeric><span className="stat-tick" key={leader.value}>{leader.value}</span></span>
                       <span className="leader-name">{leader.player.name}</span>
                       <span className="leader-team">{leader.tricode}</span>
-                    </button>
+                    </Link>
                   </dd>
                 </div>
               ))}

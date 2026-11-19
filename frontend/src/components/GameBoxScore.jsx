@@ -5,6 +5,7 @@ import { getScoring } from '../utils/auth';
 import { fptsTitle } from '../utils/fantasy';
 import { getColumnLeaders, nextSort, sortPlayers } from '../utils/gameDetail';
 import { formatGameTime, formatPeriod, STATUS_FINAL, STATUS_LIVE, STATUS_SCHEDULED } from '../utils/liveGames';
+import { playerPath } from '../utils/playerPage';
 import { getTeamPath } from '../utils/team';
 
 export function GameMatchup({ game, scoreChanges }) {
@@ -94,7 +95,9 @@ function PlayerRow({ player, onClick, isFuture, leaders = {}, index = 0 }) {
       style={{ '--i': Math.min(index, 12) }}>
       <td className="player-name-cell">
         {player.oncourt && <span className="live-dot" />}
-        <span className="pname">{player.name}</span>
+        {/* A real link (crawlers, keyboards, new tabs); it stops the click so the row doesn't navigate too. */}
+        <Link to={playerPath(player)} state={{ player }} className="pname"
+          onClick={event => event.stopPropagation()}>{player.name}</Link>
         <span className="ppos">{player.position}</span>
       </td>
       <td>{isFuture ? '–' : player.min}</td>
