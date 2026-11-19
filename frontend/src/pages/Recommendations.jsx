@@ -1,7 +1,7 @@
 import ContentSkeleton from '../components/ContentSkeleton';
 import LockIcon from '../components/LockIcon';
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import PredictionModeToggle from '../components/PredictionModeToggle';
 import TiltCard from '../components/TiltCard';
 import { buildApiUrl } from '../config/api';
@@ -70,13 +70,6 @@ const Recommendations = () => {
   const [spotlightLoading, setSpotlightLoading] = useState(true);
   // Recommendations need a free account; set when the API answers 401 (signed out or expired).
   const [needsAuth, setNeedsAuth] = useState(false);
-
-  const navigate = useNavigate();
-
-  // The spotlight hands over name, team and position only, so the player page is found by name.
-  const handlePlayerClick = (player) => {
-    navigate(playerPath(player), { state: { player } });
-  };
 
   useEffect(() => {
     const fetchSpotlights = async () => {
@@ -216,7 +209,9 @@ const Recommendations = () => {
                   if (!player) return null;
                   const improvement = player[`${s}_IMPROVEMENT`] || 0;
                   const fantasy = getFantasyComparison(player);
-                  
+                  // The spotlight hands over name, team and position only, so the player page is found by name.
+                  const pagePlayer = { name: player.PLAYER_NAME || player.name, team: player.TEAM || player.team, position: player.POSITION || player.position };
+
                   return (
                     <TiltCard key={s} className="spotlight-card" data-enter style={enterDelay(index + 1)} cta="Full projection">
                       <div className="spotlight-badge-row">
@@ -224,13 +219,9 @@ const Recommendations = () => {
                         <span className="spotlight-role-tag">{role}</span>
                       </div>
                       <h3 className="spotlight-player-name">
-                        <button
-                          type="button"
-                          className="card-open"
-                          onClick={() => handlePlayerClick({ name: player.PLAYER_NAME || player.name, team: player.TEAM || player.team, position: player.POSITION || player.position })}
-                        >
+                        <Link to={playerPath(pagePlayer)} state={{ player: pagePlayer }} className="card-open">
                           {player.PLAYER_NAME}
-                        </button>
+                        </Link>
                       </h3>
                       <div className="spotlight-team-badge">{player.TEAM} · {player.POSITION}</div>
                       

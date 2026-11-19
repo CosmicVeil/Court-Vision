@@ -1,13 +1,16 @@
 import ContentSkeleton from '../components/ContentSkeleton';
 import LockIcon from '../components/LockIcon';
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import TiltCard from '../components/TiltCard';
 import { FPTS_TITLE, getFantasyComparison } from '../utils/fantasy';
 import { playerPath } from '../utils/playerPage';
 import { authHeaders, clearAuth } from '../utils/auth';
 import { enterDelay } from '../utils/scrollReveal';
 import './Recommendations.css';
+
+// Recommendation rows use upper-case keys; the player page reads name, team and position.
+const toPagePlayer = (row) => ({ ...row, name: row.PLAYER_NAME || row.name, team: row.TEAM || row.team, position: row.POSITION || row.position });
 
 const RecommendationChart = () => {
     const { stat } = useParams();
@@ -16,14 +19,6 @@ const RecommendationChart = () => {
     const [error, setError] = useState(null);
     // Set when the endpoint rejects a signed-out / expired request (401).
     const [needsAuth, setNeedsAuth] = useState(false);
-
-    const navigate = useNavigate();
-
-    // Recommendation rows use upper-case keys; the player page reads name, team and position.
-    const handlePlayerClick = (row) => {
-        const player = { ...row, name: row.PLAYER_NAME || row.name, team: row.TEAM || row.team, position: row.POSITION || row.position };
-        navigate(playerPath(player), { state: { player } });
-    };
 
     const API_BASE_URL = '/api';
 
@@ -171,6 +166,7 @@ const RecommendationChart = () => {
                             const currentFill = Math.min(Math.max(lastKeyVal / maxScale, 0), 1);
                             const predictedFill = Math.min(Math.max(predictedKeyVal / maxScale, 0), 1);
                             const fantasy = getFantasyComparison(player);
+                            const pagePlayer = toPagePlayer(player);
 
                             return (
                             <TiltCard
@@ -186,9 +182,9 @@ const RecommendationChart = () => {
                                 </div>
                                 <div className="card-body">
                                     <h3 className="insight-title">
-                                        <button type="button" className="card-open" onClick={() => handlePlayerClick(player)}>
+                                        <Link to={playerPath(pagePlayer)} state={{ player: pagePlayer }} className="card-open">
                                             {player.PLAYER_NAME}
-                                        </button>
+                                        </Link>
                                     </h3>
                                     
                                     <div className="player-meta-badges">

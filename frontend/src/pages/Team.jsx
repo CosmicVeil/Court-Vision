@@ -16,6 +16,13 @@ import './Team.css';
 
 const SEASON_TYPE_TAGS = { 3: 'POST', 5: 'PLAY-IN' };
 
+// The player page shows this row until the full profile loads (and if the lookup fails), so
+// hand it every stat the row shows, under the box-score names buildPlayerFallback reads.
+const toPagePlayer = (selected, tricode) => ({
+  ...selected, team: tricode.toUpperCase(),
+  pts: selected.ppg, reb: selected.rpg, ast: selected.apg, stl: selected.spg, blk: selected.bpg,
+});
+
 const formatDate = iso => new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 const stat = value => (value === null || value === undefined ? '—' : Number(value).toFixed(1));
 const pct = value => (value === null || value === undefined ? '—' : `${Number(value).toFixed(1)}%`);
@@ -79,13 +86,13 @@ function TeamHero({ team, record, games, seasonLabel, gamesAvailable, gamesMissi
   );
 }
 
-function Leaders({ roster, onSelect }) {
+function Leaders({ roster, tricode }) {
   const leaders = getTeamLeaders(roster);
   if (!leaders.length) return null;
   return (
     <section className="tp-leaders" aria-label="Team leaders">
       {leaders.map(({ key, label, player, value }) => (
-        <button key={key} type="button" className="tp-leader" onClick={() => onSelect(player)}>
+        <Link key={key} to={playerPath(player)} state={{ player: toPagePlayer(player, tricode) }} className="tp-leader">
           <span className="tp-leader-text">
             <span className="tp-leader-label">{label} per game</span>
             <span className="tp-leader-value" data-numeric>{stat(value)}</span>
@@ -93,13 +100,13 @@ function Leaders({ roster, onSelect }) {
             <span className="tp-leader-pos">{player.position}</span>
           </span>
           <PlayerHeadshot playerId={player.id} name={player.name} className="tp-leader-photo" />
-        </button>
+        </Link>
       ))}
     </section>
   );
 }
 
-function Roster({ roster, onSelect }) {
+function Roster({ roster, tricode, onSelect }) {
   if (!roster.length) return <p className="tp-empty">No roster data for this team yet.</p>;
   return (
     <div className="tp-table-wrap">
@@ -115,12 +122,14 @@ function Roster({ roster, onSelect }) {
         </thead>
         <tbody>
           {roster.map(player => (
-            // The whole row opens the player; the name is a real button so the keyboard can too.
+            // The whole row opens the player; the name is a real link (keyboards, crawlers, new tabs)
+            // that stops its click so the row doesn't navigate a second time.
             <tr key={player.id} className="tp-player-row" onClick={() => onSelect(player)}>
               <td className="tp-left">
                 <span className="tp-player">
                   <PlayerHeadshot playerId={player.id} name={player.name} />
-                  <button type="button" className="tp-player-name">{player.name}</button>
+                  <Link to={playerPath(player)} state={{ player: toPagePlayer(player, tricode) }} className="tp-player-name"
+                    onClick={event => event.stopPropagation()}>{player.name}</Link>
                   <InjuryBadge injury={player.injury} />
                 </span>
               </td>
@@ -211,12 +220,7 @@ export default function Team() {
   }, [tricode]);
 
   const selectPlayer = useCallback(selected => {
-    // The player page shows this row until the full profile loads (and if the lookup fails), so
-    // hand it every stat the row shows, under the box-score names buildPlayerFallback reads.
-    const player = {
-      ...selected, team: tricode.toUpperCase(),
-      pts: selected.ppg, reb: selected.rpg, ast: selected.apg, stl: selected.spg, blk: selected.bpg,
-    };
+    const player = toPagePlayer(selected, tricode);
     navigate(playerPath(player), { state: { player } });
   }, [navigate, tricode]);
 
@@ -252,7 +256,7 @@ export default function Team() {
       <div className="tp-shell">
         <TeamHero team={team} record={record} games={games} seasonLabel={seasonLabel} gamesAvailable={gamesAvailable}
           gamesMissing={gamesMissing} />
-        <Leaders roster={roster} onSelect={selectPlayer} />
+        <Leaders roster={roster} tricode={tricode} />
         <PillNav className="tp-tabs" tabClassName="tp-tab" label="Team sections" idPrefix="tp" panelId="tp-panel"
           value={tab} onChange={setTab}
           items={[
@@ -261,7 +265,7 @@ export default function Team() {
           ]} />
         <section className="tp-section" id="tp-panel" role="tabpanel" aria-labelledby={`tp-tab-${tab}`}>
           {tab === 'roster'
-            ? <Roster roster={roster} onSelect={selectPlayer} />
+            ? <Roster roster={roster} tricode={tricode} onSelect={selectPlayer} />
             : <SeasonGames games={games} available={gamesAvailable} missing={gamesMissing} />}
         </section>
       </div>

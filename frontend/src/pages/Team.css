@@ -189,6 +189,7 @@
   color: inherit;
   font: inherit;
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
   transition: border-color var(--duration-base) var(--ease-brand), transform var(--duration-base) var(--ease-brand);
 }
@@ -378,6 +379,7 @@
   font-size: var(--text-sm);
   font-weight: 800;
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
 }
 

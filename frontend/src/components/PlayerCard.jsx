@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import TiltCard from './TiltCard';
 import FavouriteStar from './FavouriteStar';
 import { getChangedStatKeys, toStatValues } from '../utils/playerCard';
@@ -33,12 +34,14 @@ function StatList({ stats, label, className, changed }) {
 }
 
 // One player as a card: who they are, a few numbers, a favourite toggle, and a way in.
-// The name is the button that opens the player; its ::after stretches over the whole card,
-// so the card is clickable without nesting the favourite button inside another button.
+// The name opens the player; its ::after stretches over the whole card, so the card is clickable
+// without nesting the favourite button inside another button. Given `to`, the name is a real link
+// (crawlable, opens in a new tab with a modifier click), carrying `linkState` as router state;
+// otherwise it is a button that calls onOpen.
 // The tilt, spotlight, lift and corner arrow come from TiltCard, shared with other cards.
 export default function PlayerCard({
   player, stats, statsLabel, extraStats, extraLabel,
-  isFavorite = false, onToggleFavorite, onOpen, index = 0, ctaLabel = 'View player', children, headerAside,
+  isFavorite = false, onToggleFavorite, onOpen, to, linkState, index = 0, ctaLabel = 'View player', children, headerAside,
 }) {
   // Compare against the values from the previous render (the usePrevious pattern), so only
   // values that actually changed tick in, and nothing animates on the first render.
@@ -53,7 +56,9 @@ export default function PlayerCard({
       <header className="pc-head">
         <div className="pc-identity">
           <h3 className="pc-name">
-            <button type="button" className="pc-open" onClick={onOpen}>{player.name}</button>
+            {to
+              ? <Link className="pc-open" to={to} state={linkState}>{player.name}</Link>
+              : <button type="button" className="pc-open" onClick={onOpen}>{player.name}</button>}
           </h3>
           <div className="pc-badges">
             {player.team && <span className="pc-badge">{player.team}</span>}

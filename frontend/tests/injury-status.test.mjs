@@ -61,9 +61,9 @@ const rosterPlayer = (id, name, injury) => ({
 });
 
 test('team roster badges only injured players', () => {
-  const html = renderComponent(Roster, { roster: [rosterPlayer(1, 'Hurt Player', dtd), rosterPlayer(2, 'Healthy Player', null)], onSelect: () => {} });
+  const html = renderComponent(Roster, { roster: [rosterPlayer(1, 'Hurt Player', dtd), rosterPlayer(2, 'Healthy Player', null)], tricode: 'atl', onSelect: () => {} });
   assert.equal([...html.matchAll(/class="injury-badge /g)].length, 1);
-  assert.match(html, /Hurt Player<\/button><span class="injury-badge injury-badge--dtd"[^>]*>DTD<\/span>/);
+  assert.match(html, /Hurt Player<\/a><span class="injury-badge injury-badge--dtd"[^>]*>DTD<\/span>/);
 });
 
 test('player page shows the status, injury, return date and note', () => {

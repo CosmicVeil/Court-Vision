@@ -1,7 +1,7 @@
 import ContentSkeleton from '../components/ContentSkeleton';
 import LockIcon from '../components/LockIcon';
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import GameMatchup from '../components/GameMatchup';
 import InjuryBadge from '../components/InjuryBadge';
@@ -48,7 +48,6 @@ export default function GamePredictions() {
   const [sessionExpired, setSessionExpired] = useState(false);
   const gridRef = useRef(null);
   const resultsRef = useRef(null);
-  const navigate = useNavigate();
   useFlip(gridRef);
 
   // Each change aborts the previous request, so a slow older response never overwrites a newer one.
@@ -85,11 +84,6 @@ export default function GamePredictions() {
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [page, searchTerm, team, gameId, day, sortBy, sortOrder]);
-
-  // playerPath uses the row's NBA id and ignores espn_id.
-  const handlePlayerClick = player => {
-    navigate(playerPath(player), { state: { player } });
-  };
 
   const predictions = data?.predictions || [];
   const games = data?.games || [];
@@ -238,7 +232,9 @@ export default function GamePredictions() {
                   player={{ id: player.id ?? player.espn_id, name: player.name, position: player.position }}
                   stats={main}
                   extraStats={extra}
-                  onOpen={() => handlePlayerClick(player)}
+                  // playerPath uses the row's NBA id and ignores espn_id.
+                  to={playerPath(player)}
+                  linkState={{ player }}
                   ctaLabel="Player stats"
                   headerAside={
                   <p className="pc-matchup" data-numeric>

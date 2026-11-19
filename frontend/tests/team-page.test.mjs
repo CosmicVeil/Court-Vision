@@ -322,16 +322,16 @@ test('team banner shows archive record, splits, streak, recent form and scoring 
   assert.doesNotMatch(html, /tp-partial/);
 });
 
-test('leader cards use headshots and real buttons connected to the existing player modal', () => {
+test('leader cards use headshots and real links to the player page', () => {
   assert.match(leaders, /const leaders = getTeamLeaders\(roster\)/);
   assert.match(leaders, /if \(!leaders\.length\) return null/);
   assert.match(leaders, /<section className="tp-leaders" aria-label="Team leaders">/);
-  assert.match(leaders, /<button[^>]*type="button"[^>]*className="tp-leader"[^>]*onClick=\{\(\) => onSelect\(player\)\}/);
+  assert.match(leaders, /<Link key=\{key\} to=\{playerPath\(player\)\} state=\{\{ player: toPagePlayer\(player, tricode\) \}\} className="tp-leader">/);
   for (const content of ['{label} per game', '{stat(value)}', '{player.name}', '{player.position}']) {
     assert.ok(leaders.includes(content), content);
   }
   assert.match(leaders, /<PlayerHeadshot playerId=\{player\.id\} name=\{player\.name\} className="tp-leader-photo"/);
-  assert.match(team, /<Leaders roster=\{roster\} onSelect=\{selectPlayer\}/);
+  assert.match(team, /<Leaders roster=\{roster\} tricode=\{tricode\} \/>/);
 });
 
 test('Roster and Games use PillNav with counts and one labelled panel that switches content', () => {
@@ -341,13 +341,13 @@ test('Roster and Games use PillNav with counts and one labelled panel that switc
   assert.match(team, /id: 'games', label: <>Games <span[^>]*>\{games\.length\}/);
   assert.equal((team.match(/role="tabpanel"/g) || []).length, 1);
   assert.match(team, /<section[^>]*id="tp-panel" role="tabpanel" aria-labelledby=\{`tp-tab-\$\{tab\}`\}/);
-  assert.match(team, /tab === 'roster'\s*\? <Roster roster=\{roster\} onSelect=\{selectPlayer\} \/>\s*: <SeasonGames games=\{games\} available=\{gamesAvailable\} missing=\{gamesMissing\} \/>/);
+  assert.match(team, /tab === 'roster'\s*\? <Roster roster=\{roster\} tricode=\{tricode\} onSelect=\{selectPlayer\} \/>\s*: <SeasonGames games=\{games\} available=\{gamesAvailable\} missing=\{gamesMissing\} \/>/);
 });
 
-test('roster keeps headshots and a keyboard-accessible player button', () => {
+test('roster keeps headshots and a keyboard-accessible player link', () => {
   assert.match(team, /<PlayerHeadshot playerId=\{player\.id\} name=\{player\.name\}/);
   assert.match(team, /<tr[^>]*onClick=\{\(\) => onSelect\(player\)\}/);
-  assert.match(team, /<button type="button"[^>]*>\{player\.name\}<\/button>/);
+  assert.match(team, /<Link to=\{playerPath\(player\)\}[^>]*className="tp-player-name"\s+onClick=\{event => event\.stopPropagation\(\)\}>\{player\.name\}<\/Link>/);
   assert.match(team, /player\.age \?\? '—'/);
 });
 
@@ -356,7 +356,7 @@ const rosterPlayer = {
   ppg: 22.26, rpg: 5.14, apg: 6.78, spg: 1.26, bpg: 0.84,
   fg_pct: 45.67, fg3_pct: 37.84, ft_pct: 81.26, fpts: 42.56,
 };
-const rosterHtml = player => renderComponent(Roster, { roster: [player], onSelect: () => {} });
+const rosterHtml = player => renderComponent(Roster, { roster: [player], tricode: 'lal', onSelect: () => {} });
 const statCells = html => [...html.matchAll(/<td\b[^>]*>(.*?)<\/td>/g)].slice(4).map(match => match[1]);
 
 test('rendered roster has all nine stat headers and matching one-decimal cells', () => {
@@ -364,7 +364,7 @@ test('rendered roster has all nine stat headers and matching one-decimal cells',
   assert.deepEqual([...html.matchAll(/<th\b[^>]*>(.*?)<\/th>/g)].map(match => match[1]),
     ['Player', 'Pos', 'Age', 'GP', 'PPG', 'RPG', 'APG', 'SPG', 'BPG', 'FG%', '3P%', 'FT%', 'FPTS']);
   assert.deepEqual(statCells(html), ['22.3', '5.1', '6.8', '1.3', '0.8', '45.7%', '37.8%', '81.3%', '42.6']);
-  assert.match(html, /<button[^>]*type="button"[^>]*>Test Player<\/button>/);
+  assert.match(html, /<a[^>]*href="\/players\/2544"[^>]*>Test Player<\/a>/);
 });
 
 test('rendered roster distinguishes missing stats from zero, including shooting and FPTS', () => {
@@ -400,8 +400,8 @@ test('FPTS header describes the saved scoring while displaying the API total unc
 
 // The detail fetch, its fallbacks and aborting now live on the player page (player-page.test.mjs).
 test('roster selection opens the player page with the roster row as its placeholder', () => {
-  assert.match(team, /<Roster roster=\{roster\} onSelect=\{selectPlayer\}/);
-  assert.match(team, /<Leaders roster=\{roster\} onSelect=\{selectPlayer\}/);
+  assert.match(team, /<Roster roster=\{roster\} tricode=\{tricode\} onSelect=\{selectPlayer\}/);
+  assert.match(team, /<Leaders roster=\{roster\} tricode=\{tricode\}/);
   assert.match(team, /pts: selected\.ppg, reb: selected\.rpg, ast: selected\.apg/);
   assert.match(team, /navigate\(playerPath\(player\), \{ state: \{ player \} \}\)/);
   assert.doesNotMatch(team, /PlayerStatsModal|fetchPlayerDetails|closePlayer/);
@@ -580,7 +580,7 @@ test('listed player renders zero games and nine unavailable stats', () => {
   const html = rosterHtml(player);
   assert.deepEqual(statCells(html), Array(9).fill('—'));
   assert.match(html, /<td>F<\/td><td>—<\/td><td>0<\/td>/);
-  assert.match(html, /<button[^>]*>Inactive Rookie<\/button>/);
+  assert.match(html, /<a[^>]*>Inactive Rookie<\/a>/);
 });
 
 // Capture callbacks from the actual page with inert hooks; no effects, DOM or network run.

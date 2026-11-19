@@ -2,7 +2,7 @@ import ResultRegion from '../components/ResultRegion';
 import LockIcon from '../components/LockIcon';
 import ContentSkeleton from '../components/ContentSkeleton';
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import GameMatchup from '../components/GameMatchup';
 import InjuryBadge from '../components/InjuryBadge';
 import PillNav from '../components/PillNav';
@@ -28,7 +28,6 @@ export default function GameRecommendations() {
   const [stat, setStat] = useState('pts');
   // '' = the nearest day, which the API picks; picks compare players within one night.
   const [day, setDay] = useState('');
-  const navigate = useNavigate();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -53,11 +52,6 @@ export default function GameRecommendations() {
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [day]);
-
-  // playerPath uses the row's NBA id and ignores espn_id.
-  const handlePlayerClick = player => {
-    navigate(playerPath(player), { state: { player } });
-  };
 
   const unit = gameStat(stat).unit;
   const showPicks = !loading && Boolean(data) && !needsAuth && !unavailable;
@@ -135,9 +129,10 @@ export default function GameRecommendations() {
                             <li key={`${player.game_id}-${player.espn_id}`} className="gr-row">
                               <span className="gr-rank" data-numeric>{rank + 1}</span>
                               <div className="gr-who">
-                                <button type="button" className="gr-name" onClick={() => handlePlayerClick(player)}>
+                                {/* playerPath uses the row's NBA id and ignores espn_id. */}
+                                <Link to={playerPath(player)} state={{ player }} className="gr-name">
                                   {player.name}
-                                </button>
+                                </Link>
                                 <span className="gr-meta" data-numeric>
                                   <GameMatchup player={player} gameId={player.game_id} /> · {formatTipoff(player.tipoff)}
                                   <InjuryBadge injury={player.injury} />

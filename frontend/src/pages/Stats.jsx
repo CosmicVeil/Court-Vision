@@ -85,7 +85,8 @@ const Stats = () => {
     setFavorites(newFavorites);
   };
 
-  // A row or card opens the player page; the row is its placeholder while the full profile loads.
+  // A row opens the player page (its name and the cards are links); the row is its placeholder while
+  // the full profile loads.
   const handlePlayerClick = (player) => {
     if (!player) return;
     navigate(playerPath(player), { state: { player } });
@@ -370,8 +371,10 @@ const Stats = () => {
               <tbody>
                 {sortedPlayers.map((player, index) => (
                   <tr key={player.id || index} className="stats-row-clickable" onClick={() => handlePlayerClick(player)}>
+                    {/* A real link for crawlers, keyboards and new tabs; it stops the click so the row doesn't navigate too. */}
                     <td className="player-name-cell">
-                      <strong>{player.name}</strong>
+                      <strong><Link to={playerPath(player)} state={{ player }} className="player-name-link"
+                        onClick={event => event.stopPropagation()}>{player.name}</Link></strong>
                     </td>
                     <td>
                       <span className="team-badge-table">{player.team}</span>
@@ -424,7 +427,8 @@ const Stats = () => {
                 extraStats={extra}
                 isFavorite={favorites.has(player.id)}
                 onToggleFavorite={() => handleFavoriteToggle(player)}
-                onOpen={() => handlePlayerClick(player)}
+                to={playerPath(player)}
+                linkState={{ player }}
                 ctaLabel="Full profile"
               >
                 <div className="player-trends">

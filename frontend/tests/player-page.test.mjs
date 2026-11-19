@@ -498,12 +498,16 @@ test('Game projections receives the same return path', () => {
 const CALL_SITES = ['Home', 'Stats', 'Predictions', 'Recommendations', 'RecommendationChart', 'Favourites',
   'GameRecommendations', 'GamePredictions', 'Team', 'LiveGameDetail'];
 
+// A page reaches the player page either by navigate() or by a real <Link> (or a PlayerCard given `to`),
+// in both cases handing over the row as router state.
 test('every page that opened the popout now navigates to the player page', () => {
   for (const page of CALL_SITES) {
     const source = readFrontend(`src/pages/${page}.jsx`);
     assert.doesNotMatch(source, /PlayerStatsModal|selectedPlayer|loadingPlayer|playerLoading|closePlayer/, page);
     assert.match(source, /import \{ playerPath \} from (['"])\.\.\/utils\/playerPage\1;/, page);
-    assert.match(source, /navigate\(playerPath\((\w+)\), \{ state: \{ player(?:: \1)? \} \}\)/, page);
+    assert.match(source,
+      /navigate\(playerPath\((\w+)\), \{ state: \{ player(?:: \1)? \} \}\)|to=\{playerPath\(([\w.]+)\)\}\s+(?:state|linkState)=\{\{ player(?:: [\w.]+(?:\([\w., ]+\))?)? \}\}/,
+      page);
   }
   assert.equal(existsSync(new URL('../src/components/PlayerStatsModal.jsx', import.meta.url)), false);
 });
