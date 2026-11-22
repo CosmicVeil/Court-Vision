@@ -30,14 +30,27 @@ test("Privacy page prominently disclaims legal review before its sections", () =
 test("Privacy page explains cookies, data use, choices and future updates", () => {
   const page = readPrivacy();
   assert.match(page, /does not set any cookies of its own/);
-  assert.match(page, /no analytics, advertising or tracking scripts/);
-  assert.match(page, /do not sell or share your data, or use it for advertising/);
+  assert.match(page, /runs no advertising scripts/);
+  assert.match(page, /do not sell your data or use it for advertising/);
   assert.match(page, /log out, clear site data/);
   // Contact page is temporarily hidden, so Privacy must not link to it.
   assert.match(page, /ask us to delete your account\./);
   assert.doesNotMatch(page, /to="\/contact"/);
   assert.match(page, /update this page and the "Last updated" date if anything changes/);
   assert.equal((page.match(/<section className="privacy-card" aria-labelledby=/g) || []).length, 7);
+});
+
+test("Privacy page discloses Google Analytics to match the tracking code in main.jsx", () => {
+  const page = readPrivacy();
+  const main = readFrontend("src/main.jsx");
+  // If GA is ever removed from main.jsx, this disclosure should be removed too (and vice versa).
+  assert.match(main, /ReactGA\.initialize\(/);
+  assert.doesNotMatch(page, /no analytics|no trackers/);
+  assert.match(page, /<strong>Google Analytics<\/strong>/);
+  assert.match(page, /<code>_ga<\/code>/);
+  assert.match(page, /does not receive your\s+name, email or anything from your account/);
+  assert.match(page, /href="https:\/\/policies\.google\.com\/privacy"/);
+  assert.match(page, /href="https:\/\/tools\.google\.com\/dlpage\/gaoptout"/);
 });
 
 test("Privacy page documents localStorage keys and distinguishes logout from clearing site data", () => {
@@ -84,7 +97,7 @@ test("Privacy page uses the Contact theme with readable prose and narrow-screen 
   // PageHero renders the cv-section-badge eyebrow, the h1 with its ember accent, and the lead.
   assert.match(page, /<PageHero\s+eyebrow="PRIVACY & COOKIES"\s+title="Privacy &"\s+accent="Cookies"/);
   assert.match(page, /lead="A plain-English summary/);
-  assert.match(page, /Last updated: October 18, 2026/);
+  assert.match(page, /Last updated: November 21, 2026/);
   assert.match(page, /privacy-ambient-one/);
   assert.match(page, /privacy-ambient-two/);
   assert.match(page, /<footer className="privacy-footer"[^>]*>/);
