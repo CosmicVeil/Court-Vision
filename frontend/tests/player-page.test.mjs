@@ -463,7 +463,7 @@ test('tab labels stay readable (4.5:1) on and off the accent pill in both themes
   const pill = varOf(/\.pp-page \[data-slot="pill-indicator"\] \{[^}]*background: var\((--[\w-]+)\)/);
   const onPill = varOf(/\.pp-tabs\[data-indicator-ready\] \.pp-tab\[data-indicator-target\] \{ color: var\((--[\w-]+)\); \}/);
   const active = varOf(/\.pp-tab\.active \{ color: var\((--[\w-]+)\);/);
-  const idle = varOf(/\.pp-tab \{[^}]*\n  color: var\((--[\w-]+)\);/);
+  const idle = varOf(/\.pp-tab \{[^}]*\n {2}color: var\((--[\w-]+)\);/);
   const track = varOf(/\.pp-tabs \{[^}]*background: var\((--[\w-]+)\)/);
   assert.ok(pill && onPill && active && idle && track, 'tab colours are theme variables');
   for (const [theme, color] of Object.entries(themeColors())) {
