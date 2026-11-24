@@ -18,6 +18,8 @@ const EMPTY_PREDICTIONS = {
 };
 
 const toCardPlayer = (player) => ({
+  // NBA.com ID from the API, for the headshot; left undefined (no photo slot) if a row lacks it.
+  id: player.PLAYER_ID,
   name: player.PLAYER_NAME,
   team: player.TEAM,
   position: player.POSITION,

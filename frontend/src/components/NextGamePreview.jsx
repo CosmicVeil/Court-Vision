@@ -57,6 +57,8 @@ export default function NextGamePreview({ onPlayerClick, onLoaded }) {
             key={`${player.game_id}-${player.espn_id}`}
             index={index}
             player={{ id: player.id ?? player.espn_id, name: player.name, position: player.position }}
+            // The photo needs the NBA.com ID; an ESPN-only row gets the silhouette, never an ESPN ID.
+            headshotId={player.id ?? null}
             stats={getGameCardStats(player).main}
             statsLabel="Predicted · change vs last 10 games"
             onOpen={() => onPlayerClick({ id: player.id, name: player.name, team: player.team, position: player.position })}

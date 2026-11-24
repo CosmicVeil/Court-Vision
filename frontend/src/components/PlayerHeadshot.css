@@ -40,3 +40,14 @@
 @media (max-width: 560px) {
   .stats-modal-photo { --headshot-size: 64px; }
 }
+
+/* In table rows and pick lists: a small photo before the player's name. The wrapper is inside the
+   cell, so the <td> keeps its table-cell display. */
+.player-name-with-photo {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--space) * 2.5);
+  vertical-align: middle;
+}
+
+.player-row-photo { --headshot-size: 32px; }

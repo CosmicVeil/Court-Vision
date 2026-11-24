@@ -13,6 +13,7 @@ import FilterBar from '../components/FilterBar';
 import PageHero from '../components/PageHero';
 import Pagination from '../components/Pagination';
 import PlayerCard from '../components/PlayerCard';
+import PlayerHeadshot from '../components/PlayerHeadshot';
 import useFlip from '../hooks/useFlip';
 import useListQuery from '../hooks/useListQuery';
 import ScrollReveal from '../components/ScrollReveal';
@@ -384,8 +385,11 @@ const Stats = () => {
                   <tr key={player.id || index} className="stats-row-clickable" onClick={() => handlePlayerClick(player)}>
                     {/* A real link for crawlers, keyboards and new tabs; it stops the click so the row doesn't navigate too. */}
                     <td className="player-name-cell">
-                      <strong><Link to={playerPath(player)} state={{ player }} className="player-name-link"
-                        onClick={event => event.stopPropagation()}>{player.name}</Link></strong>
+                      <span className="player-name-with-photo">
+                        <PlayerHeadshot playerId={player.id} name={player.name} className="player-row-photo" />
+                        <strong><Link to={playerPath(player)} state={{ player }} className="player-name-link"
+                          onClick={event => event.stopPropagation()}>{player.name}</Link></strong>
+                      </span>
                     </td>
                     <td>
                       <span className="team-badge-table">{player.team}</span>
