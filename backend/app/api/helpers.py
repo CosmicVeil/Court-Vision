@@ -1,5 +1,6 @@
 """Request parsing and response-shaping helpers shared by the routes."""
 import hashlib
+import math
 
 from flask import request
 
@@ -136,16 +137,25 @@ def _deterministic_consistency(name, ppg):
     return round(min(1.0, base * 0.7 + ppg_bonus + 0.15), 2)
 
 
+def _known(player_data, key, default):
+    """player_data[key], or `default` when it is missing or NaN (some pickle seasons store NaN
+    trends, and NaN is not valid JSON, so it would break the whole response)."""
+    value = player_data.get(key)
+    if value is None or (isinstance(value, float) and math.isnan(value)):
+        return default
+    return value
+
+
 def get_player_stats_summary(player_data, weights=None):
     ppg_current = player_data.get('PPG_LAST', player_data.get('ppg_last', 0))
     apg_current = player_data.get('APG_LAST', player_data.get('apg_last', 0))
     rpg_current = player_data.get('RPG_LAST', player_data.get('rpg_last', 0))
     name = player_data.get('PLAYER_NAME', player_data.get('player_name', 'Unknown'))
 
-    ppg_trend = player_data.get('PPG_TREND', _deterministic_trend(name, 'ppg', scale=min(ppg_current * 0.25, 4.0)))
-    apg_trend = player_data.get('APG_TREND', _deterministic_trend(name, 'apg', scale=min(apg_current * 0.3, 2.0)))
-    rpg_trend = player_data.get('RPG_TREND', _deterministic_trend(name, 'rpg', scale=min(rpg_current * 0.25, 2.0)))
-    consistency = player_data.get('CONSISTENCY_SCORE', _deterministic_consistency(name, ppg_current))
+    ppg_trend = _known(player_data, 'PPG_TREND', _deterministic_trend(name, 'ppg', scale=min(ppg_current * 0.25, 4.0)))
+    apg_trend = _known(player_data, 'APG_TREND', _deterministic_trend(name, 'apg', scale=min(apg_current * 0.3, 2.0)))
+    rpg_trend = _known(player_data, 'RPG_TREND', _deterministic_trend(name, 'rpg', scale=min(rpg_current * 0.25, 2.0)))
+    consistency = _known(player_data, 'CONSISTENCY_SCORE', _deterministic_consistency(name, ppg_current))
 
     return {
         'id': player_data.get('PLAYER_ID') or player_id_for(name),
