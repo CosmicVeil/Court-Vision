@@ -58,4 +58,5 @@ export const API_ENDPOINTS = {
   positions: buildApiUrl('positions'),
   aiPredictions: buildApiUrl('ai-predictions'),
   health: buildApiUrl('health'),
+  deleteAccount: buildApiUrl('auth/account'),
 };

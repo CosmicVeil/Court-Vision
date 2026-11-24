@@ -2,7 +2,10 @@ from flask import Blueprint, jsonify, request
 
 from app.auth import create_token, invalidate_token, require_auth
 from app.config import LOGIN_RATE_LIMIT, SIGNUP_RATE_LIMIT
-from app.db import authenticate_user_from_json, create_user_from_json, get_user_by_id, parse_signup_json
+from app.db import (
+    authenticate_user_from_json, check_password_for_user, create_user_from_json, delete_user, get_user_by_id,
+    parse_signup_json,
+)
 from app.utils.fantasy import describe_setting
 from app.utils.rate_limit import RateLimiter, rate_limit
 
@@ -13,6 +16,8 @@ bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 # which would otherwise let anyone probe which emails are registered), but not invalid input.
 login_limiter = RateLimiter(*LOGIN_RATE_LIMIT)
 signup_limiter = RateLimiter(*SIGNUP_RATE_LIMIT)
+# Account deletion re-checks the password, so wrong guesses there are limited like failed logins.
+delete_limiter = RateLimiter(*LOGIN_RATE_LIMIT)
 
 
 def _public_user(user):
@@ -68,3 +73,22 @@ def verify():
     if user:
         return jsonify({'authenticated': True, 'user': _public_user(user)}), 200
     return jsonify({'authenticated': False, 'message': 'User not found'}), 401
+
+
+@bp.route('/account', methods=['DELETE'])
+@require_auth
+@rate_limit(delete_limiter, counts=lambda status: status == 403)
+def delete_account():
+    """Permanently delete the signed-in user's account and everything stored with it.
+
+    The token proves who is asking; the password re-confirms it's really them, so a leaked or
+    stolen token (it lives in localStorage) can't erase an account on its own.
+    """
+    password = (request.get_json(silent=True) or {}).get('password')
+    if not isinstance(password, str) or not password:
+        return jsonify({'success': False, 'message': 'Enter your password to delete your account'}), 400
+    if not check_password_for_user(request.user_id, password):
+        return jsonify({'success': False, 'message': 'Incorrect password'}), 403
+    if not delete_user(request.user_id):
+        return jsonify({'success': False, 'message': 'Could not delete your account'}), 500
+    return jsonify({'success': True, 'message': 'Your account has been deleted'}), 200

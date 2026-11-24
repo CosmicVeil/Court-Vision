@@ -142,6 +142,45 @@ def set_fantasy_scoring(user_id: int, setting: Dict) -> bool:
         if conn:
             conn.close()
 
+def check_password_for_user(user_id: int, password: str) -> bool:
+    """True when `password` matches the stored hash for this account (re-confirming a risky action)."""
+    conn = None
+    try:
+        conn = get_db()
+        row = conn.execute('SELECT password FROM users WHERE id = %s', (user_id,)).fetchone()
+        return bool(row) and isinstance(password, str) and check_password_hash(row['password'], password)
+    except Exception as e:
+        print(f"Error in check_password_for_user: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+def delete_user(user_id: int) -> bool:
+    """Permanently delete an account: saved players, sign-in tokens, then the user row (which holds
+    the fantasy scoring setting). One transaction, so a failure part-way leaves everything in place.
+
+    The foreign keys also cascade, but the explicit deletes keep this correct on a database whose
+    tables predate those constraints (CREATE TABLE IF NOT EXISTS never alters an existing table).
+    """
+    conn = None
+    try:
+        conn = get_db()
+        conn.execute('DELETE FROM saved_players WHERE user_id = %s', (user_id,))
+        conn.execute('DELETE FROM auth_tokens WHERE user_id = %s', (user_id,))
+        cursor = conn.execute('DELETE FROM users WHERE id = %s', (user_id,))
+        if cursor.rowcount != 1:
+            conn.rollback()
+            return False
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error in delete_user: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
 # ── JSON parsers (reused by app.py routes) ──────────────────────────────────
 
 def parse_signup_json() -> Tuple[bool, Optional[Dict], str]:

@@ -60,7 +60,7 @@ test('the profile form only renders (and saves) once the saved setting has loade
 
 test('an expired session on the profile page signs out instead of showing a load error', () => {
   const profile = readSource('Profile.jsx');
-  assert.equal(profile.match(/if \(response\.status === 401\) return endSession\(\);/g)?.length, 2);
+  assert.equal(profile.match(/if \(response\.status === 401\) return endSession\(\);/g)?.length, 3);  // load, save, delete account
   assert.match(profile, /const endSession = \(\) => \{\s*clearAuth\(\);/);
   assert.match(profile, /useState\(isAuthenticated\)/);
 });
