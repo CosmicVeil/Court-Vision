@@ -176,3 +176,68 @@
 .profile-status { font-size: var(--text-sm); color: var(--color-stone, var(--text-secondary)); }
 .profile-status.saved { color: var(--positive); }
 .profile-status.error { color: var(--negative); }
+
+/* Delete account: same card with a red edge, and outlined red/neutral buttons so it reads as
+   destructive. Standalone classes (not .profile-button), because theme.css restyles every
+   .profile-button with the accent fill and, in dark mode, dark text. */
+.profile-card.profile-danger {
+  border-color: color-mix(in srgb, var(--negative) 35%, var(--border-glass));
+}
+
+.profile-button-danger,
+.profile-button-ghost {
+  display: inline-block;
+  padding: 10px 20px;
+  border-radius: 6px;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.profile-button-danger {
+  color: var(--negative);
+  border: 1px solid var(--negative);
+}
+
+.profile-button-ghost {
+  color: inherit;
+  border: 1px solid rgb(var(--ink-rgb) / 0.2);
+}
+
+.profile-button-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.profile-delete-confirm {
+  display: grid;
+  gap: 10px;
+}
+
+.profile-delete-label {
+  font-size: var(--text-sm);
+  color: var(--color-silver-mist, #dcd9e0);
+}
+
+.profile-delete-input {
+  max-width: 320px;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgb(var(--ink-rgb) / 0.12);
+  border-radius: var(--radius-sm, 6px);
+  color: inherit;
+  font: inherit;
+}
+
+.profile-delete-input:focus-visible {
+  outline: 2px solid var(--negative);
+  outline-offset: 1px;
+}
+
+/* The global .error rule (full-page error states) adds 80px padding; keep this message inline. */
+.profile-delete-confirm .profile-status.error {
+  padding: 0;
+  font-family: inherit;
+  text-align: left;
+}

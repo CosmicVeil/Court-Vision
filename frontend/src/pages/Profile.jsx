@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import PageHero from '../components/PageHero';
-import { buildApiUrl } from '../config/api';
+import { API_ENDPOINTS, buildApiUrl } from '../config/api';
 import { clearAuth, getUser, isAuthenticated, setScoring } from '../utils/auth';
 import { SCORING_STATS, scoringFormula } from '../utils/fantasy';
 import { enterDelay } from '../utils/scrollReveal';
@@ -20,6 +20,12 @@ function Profile() {
   const [choice, setChoice] = useState('fanduel');
   const [weights, setWeights] = useState({});
   const [status, setStatus] = useState({ kind: 'loading', message: '' });
+  // Account deletion: a two-step control (reveal, then confirm with the password) so one stray
+  // click can't erase an account. The server re-checks the password too.
+  const navigate = useNavigate();
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteStatus, setDeleteStatus] = useState({ kind: 'idle', message: '' });
 
   // isAuthenticated() only sees a token in localStorage, not whether the server still accepts it
   // (tokens expire after 24 hours). On 401, drop the stale token and show the sign-in prompt.
@@ -91,6 +97,31 @@ function Profile() {
       setStatus({ kind: 'saved', message: `Saved. Fantasy points now use ${data.scoring.label} scoring.` });
     } catch (err) {
       setStatus({ kind: 'error', message: err.message || 'Could not save your settings.' });
+    }
+  };
+
+  const cancelDelete = () => {
+    setConfirmingDelete(false);
+    setDeletePassword('');
+    setDeleteStatus({ kind: 'idle', message: '' });
+  };
+
+  const deleteAccount = async (event) => {
+    event.preventDefault();
+    setDeleteStatus({ kind: 'saving', message: 'Deleting…' });
+    try {
+      const response = await fetch(API_ENDPOINTS.deleteAccount, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: deletePassword }),
+      });
+      if (response.status === 401) return endSession();
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) throw new Error(data.message || 'Could not delete your account.');
+      clearAuth();
+      navigate('/', { replace: true });
+    } catch (err) {
+      setDeleteStatus({ kind: 'error', message: err.message || 'Could not delete your account.' });
     }
   };
 
@@ -195,6 +226,50 @@ function Profile() {
                 )}
               </div>
             </>
+          )}
+        </section>
+
+        <section className="profile-card profile-danger" aria-labelledby="profile-delete-title" data-enter style={enterDelay(2)}>
+          <p className="profile-eyebrow">ACCOUNT</p>
+          <h2 id="profile-delete-title">Delete account</h2>
+          <p className="profile-note">
+            Permanently deletes your account: your name, email and password, the players you've saved, your fantasy
+            scoring setting and every sign-in. This can't be undone.
+          </p>
+          {confirmingDelete ? (
+            <form className="profile-delete-confirm" onSubmit={deleteAccount}>
+              <label className="profile-delete-label" htmlFor="profile-delete-password">
+                Enter your password to confirm
+              </label>
+              <input
+                id="profile-delete-password"
+                className="profile-delete-input"
+                type="password"
+                autoComplete="current-password"
+                value={deletePassword}
+                onChange={event => setDeletePassword(event.target.value)}
+                autoFocus
+              />
+              <div className="profile-actions">
+                <button
+                  type="submit"
+                  className="profile-button-danger"
+                  disabled={!deletePassword || deleteStatus.kind === 'saving'}
+                >
+                  Delete my account permanently
+                </button>
+                <button type="button" className="profile-button-ghost" onClick={cancelDelete}>
+                  Cancel
+                </button>
+                {deleteStatus.message && (
+                  <span className={`profile-status ${deleteStatus.kind}`} role="status">{deleteStatus.message}</span>
+                )}
+              </div>
+            </form>
+          ) : (
+            <button type="button" className="profile-button-danger" onClick={() => setConfirmingDelete(true)}>
+              Delete account
+            </button>
           )}
         </section>
       </div>
