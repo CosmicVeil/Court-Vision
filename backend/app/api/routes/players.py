@@ -15,6 +15,27 @@ bp = Blueprint('players', __name__, url_prefix='/api')
 MAX_GAME_LOG_LIMIT = 200
 
 
+def former_players():
+    """Players missing from the current season (retired, or out of the league), each as their
+    most recent season's row with LAST_SEASON set to that season's end year.
+
+    "Current" means this season's archive; without a database it falls back to the newest pickle season."""
+    active = state.current_season_data or state.nba_data or []
+    active_ids = {p.get('PLAYER_ID') for p in active if p.get('PLAYER_ID')}
+    active_names = {normalize_player_name(p.get('PLAYER_NAME')) for p in active}
+    seasons = state.multi_season_data or {}
+    latest = {}
+    for season in sorted(seasons, reverse=True):
+        for player in seasons[season]:
+            name_key = normalize_player_name(player.get('PLAYER_NAME'))
+            if not name_key or name_key in latest:
+                continue
+            if name_key in active_names or player.get('PLAYER_ID') in active_ids:
+                continue
+            latest[name_key] = dict(player, LAST_SEASON=season)
+    return list(latest.values())
+
+
 @bp.route('/players', methods=['GET'])
 def get_all_players():
     if not state.nba_data:
@@ -30,9 +51,13 @@ def get_all_players():
     sort_by = request.args.get('sort_by', 'name')
     sort_order = request.args.get('sort_order', 'asc')
     year_param = request.args.get('year', '')
+    status = 'former' if request.args.get('status') == 'former' else ''
 
     year = request.args.get('year', type=int)
-    if not year_param or year == state.current_season_year:
+    if status == 'former':
+        # Each former player once, at their final season; a year filter doesn't apply.
+        filtered_players = former_players()
+    elif not year_param or year == state.current_season_year:
         current_teams = state.current_player_teams()
         filtered_players = [
             dict(player, TEAM=current_teams[player['PLAYER_ID']])
@@ -69,7 +94,12 @@ def get_all_players():
     end_idx = start_idx + limit
     page_players = filtered_players[start_idx:end_idx]
 
-    players_summary = [get_player_stats_summary(player, weights) for player in page_players]
+    players_summary = []
+    for player in page_players:
+        summary = get_player_stats_summary(player, weights)
+        if 'LAST_SEASON' in player:
+            summary['last_season'] = player['LAST_SEASON']
+        players_summary.append(summary)
 
     return jsonify({
         'players': players_summary,
@@ -82,7 +112,8 @@ def get_all_players():
         'filters': {
             'search': search,
             'team': team,
-            'position': position
+            'position': position,
+            'status': status
         }
     })
 

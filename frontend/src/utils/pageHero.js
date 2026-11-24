@@ -38,10 +38,11 @@ function build(ready, rows) {
   return rows.map(([key, label, value]) => ({ key, label, value: ready ? value : PLACEHOLDER }));
 }
 
-export function getStatsHeroStats({ ready, total, year, sort, order, page, totalPages } = {}) {
+// `former`: the list is former players, each at their own final season, so no single season applies.
+export function getStatsHeroStats({ ready, total, year, former = false, sort, order, page, totalPages } = {}) {
   return build(ready, [
     ['players', 'Players', countValue(total)],
-    ['season', 'Season', formatSeason(year)],
+    ['season', 'Season', former ? 'Past seasons' : formatSeason(year)],
     ['sort', 'Sorted by', sortValue(STATS_SORT_LABELS, sort, order)],
     ['page', 'Page', pageValue(page, totalPages)],
   ]);

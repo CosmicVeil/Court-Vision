@@ -16,27 +16,30 @@ import PlayerCard from '../components/PlayerCard';
 import useFlip from '../hooks/useFlip';
 import useListQuery from '../hooks/useListQuery';
 import ScrollReveal from '../components/ScrollReveal';
-import { getStatsHeroStats } from '../utils/pageHero';
+import { formatSeason, getStatsHeroStats } from '../utils/pageHero';
 import { getSeasonCardStats } from '../utils/playerCard';
 import './Stats.css';
 
 // Everything the URL may carry for this list, with its default (only non-defaults show up).
-const LIST_DEFAULTS = { q: '', team: '', position: '', season: '', sort: 'name', order: 'asc', page: 1, view: 'table' };
+const LIST_DEFAULTS = { q: '', team: '', position: '', season: '', status: '', sort: 'name', order: 'asc', page: 1, view: 'table' };
 const LIST_ALLOWED = {
   sort: ['name', 'team', 'position', 'ppg', 'apg', 'rpg', 'spg', 'bpg', 'fg_pct', 'fg3_pct', 'ft_pct', 'fantasy', 'games'],
   order: ['asc', 'desc'],
   season: ['2020', '2021', '2022', '2023', '2024', '2025', '2026', '2027'],
+  status: ['former'],
   view: ['table', 'cards'],
 };
 const STATS_PAGE_SIZE = 100;
 // Newest first; the label shows the NBA season each year ends.
 const SEASON_OPTIONS = ['2027', '2026', '2025', '2024', '2023', '2022', '2021', '2020']
   .map(year => ({ value: year, label: `${year - 1}-${year.slice(2)} (${year})` }));
+// Former players are those missing from this season, each shown at their final season (issue #146).
+const STATUS_OPTIONS = [{ value: 'former', label: 'Former Players' }];
 
 const Stats = () => {
   const [query, updateQuery] = useListQuery(LIST_DEFAULTS, LIST_ALLOWED);
   const { q: searchTerm, team: selectedTeam, position: selectedPosition, season: selectedYear,
-    sort: sortBy, order: sortOrder, page: currentPage, view: viewMode } = query;
+    status: selectedStatus, sort: sortBy, order: sortOrder, page: currentPage, view: viewMode } = query;
   // The search box keeps its own draft so typing never waits on a router update.
   const [searchDraft, setSearchDraft] = useState(searchTerm);
   const [players, setPlayers] = useState([]);
@@ -103,7 +106,7 @@ const Stats = () => {
     const controller = new AbortController();
     fetchPlayers(controller.signal);
     return () => controller.abort();
-  }, [currentPage, searchTerm, selectedTeam, selectedPosition, selectedYear, sortBy, sortOrder]);
+  }, [currentPage, searchTerm, selectedTeam, selectedPosition, selectedYear, selectedStatus, sortBy, sortOrder]);
 
   const fetchPlayers = async (signal) => {
     try {
@@ -119,7 +122,8 @@ const Stats = () => {
       if (searchTerm) params.append('search', searchTerm);
       if (selectedTeam) params.append('team', selectedTeam);
       if (selectedPosition) params.append('position', selectedPosition);
-      if (selectedYear) params.append('year', selectedYear);
+      if (selectedStatus) params.append('status', selectedStatus);
+      else if (selectedYear) params.append('year', selectedYear);
 
       const response = await fetch(buildApiUrl(`players?${params}`), { signal });
       if (!response.ok) throw new Error('Failed to fetch players');
@@ -175,12 +179,17 @@ const Stats = () => {
   };
 
   const handleYearFilter = (e) => {
-    updateQuery({ season: e.target.value, page: 1 });
+    updateQuery({ season: e.target.value, status: '', page: 1 });
+  };
+
+  // Former players span every past season, so picking a status clears the season and vice versa.
+  const handleStatusFilter = (e) => {
+    updateQuery({ status: e.target.value, season: '', page: 1 });
   };
 
   const clearFilters = () => {
     setSearchDraft('');
-    updateQuery({ q: '', team: '', position: '', season: '', page: 1 });
+    updateQuery({ q: '', team: '', position: '', season: '', status: '', page: 1 });
   };
 
   // Players arrive pre-sorted from the backend
@@ -206,7 +215,7 @@ const Stats = () => {
       lead="Browse and analyze comprehensive player performance metrics, season averages, and AI projections"
       stats={getStatsHeroStats({
         ready: !error && (!loading || players.length > 0),
-        total: totalPlayers, year: selectedYear, sort: sortBy, order: sortOrder, page: currentPage, totalPages,
+        total: totalPlayers, year: selectedYear, former: selectedStatus === 'former', sort: sortBy, order: sortOrder, page: currentPage, totalPages,
       })}
     />
   );
@@ -222,6 +231,7 @@ const Stats = () => {
         filters={[
           { key: 'team', label: 'Team', allLabel: 'All Teams', value: selectedTeam, onChange: handleTeamFilter, options: teams },
           { key: 'position', label: 'Position', allLabel: 'All Positions', value: selectedPosition, onChange: handlePositionFilter, options: positions },
+          { key: 'status', label: 'Status', allLabel: 'Active Players', value: selectedStatus, onChange: handleStatusFilter, options: STATUS_OPTIONS },
           { key: 'season', label: 'Season', allLabel: 'All Seasons', value: selectedYear, onChange: handleYearFilter, options: SEASON_OPTIONS },
         ]}
         onClear={clearFilters}
@@ -335,6 +345,7 @@ const Stats = () => {
                     Position {sortBy === 'position' && (sortOrder === 'asc' ? '↑' : '↓')}
                   </th>
                   <th>Age</th>
+                  {selectedStatus === 'former' && <th>Last Season</th>}
                   <th onClick={() => handleSort('ppg')} className="sortable">
                     PPG {sortBy === 'ppg' && (sortOrder === 'asc' ? '↑' : '↓')}
                   </th>
@@ -383,6 +394,7 @@ const Stats = () => {
                       <span className="position-badge-table">{player.position}</span>
                     </td>
                     <td>{player.age}</td>
+                    {selectedStatus === 'former' && <td>{player.last_season ? formatSeason(player.last_season) : '—'}</td>}
                     <td className="stat-cell">{player.stats?.ppg_last?.toFixed(1) || '0.0'}</td>
                     <td className="stat-cell">{player.stats?.apg_last?.toFixed(1) || '0.0'}</td>
                     <td className="stat-cell">{player.stats?.rpg_last?.toFixed(1) || '0.0'}</td>
@@ -423,7 +435,7 @@ const Stats = () => {
                 index={index}
                 player={player}
                 stats={main}
-                statsLabel="Current Season Stats"
+                statsLabel={player.last_season ? `Final Season Stats (${formatSeason(player.last_season)})` : 'Current Season Stats'}
                 extraStats={extra}
                 isFavorite={favorites.has(player.id)}
                 onToggleFavorite={() => handleFavoriteToggle(player)}
