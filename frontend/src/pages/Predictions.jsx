@@ -7,6 +7,7 @@ import FilterBar from '../components/FilterBar';
 import PageHero from '../components/PageHero';
 import Pagination from '../components/Pagination';
 import PlayerCard from '../components/PlayerCard';
+import PlayerHeadshot from '../components/PlayerHeadshot';
 import PredictionModeToggle from '../components/PredictionModeToggle';
 import useFlip from '../hooks/useFlip';
 import useListQuery from '../hooks/useListQuery';
@@ -100,8 +101,11 @@ function PredictionsTable({ players, sortBy, sortOrder, loading, favoriteIds, on
               return (
                 <tr key={player.id || idx} className="stats-row-clickable" onClick={() => onOpen(player)}>
                   <td className="player-name-cell">
-                    <strong><Link to={playerPath(player)} state={{ player }} className="table-row-open"
-                      onClick={(event) => event.stopPropagation()}>{player.name}</Link></strong>
+                    <span className="player-name-with-photo">
+                      <PlayerHeadshot playerId={player.id} name={player.name} className="player-row-photo" />
+                      <strong><Link to={playerPath(player)} state={{ player }} className="table-row-open"
+                        onClick={(event) => event.stopPropagation()}>{player.name}</Link></strong>
+                    </span>
                   </td>
                   <td><span className="team-badge-table">{player.team}</span></td>
                   <td><span className="position-badge-table">{player.position}</span></td>

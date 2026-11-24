@@ -156,6 +156,21 @@
   text-transform: none;
 }
 
+/* Photo beside the player's name on the spotlight and top-20 cards. The name's margins stay as
+   they were; min-width: 0 lets a long name wrap next to the photo. */
+.rec-who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rec-who-text { min-width: 0; }
+.rec-photo { --headshot-size: 52px; }
+
+@media (max-width: 560px) {
+  .rec-photo { --headshot-size: 44px; }
+}
+
 .spotlight-team-badge {
   font-family: var(--font-mono, monospace);
   font-size: 11px;

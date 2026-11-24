@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import TiltCard from './TiltCard';
 import FavouriteStar from './FavouriteStar';
+import PlayerHeadshot from './PlayerHeadshot';
 import { getChangedStatKeys, toStatValues } from '../utils/playerCard';
 import { getRevealDelay } from '../utils/scrollReveal';
 import './PlayerCard.css';
@@ -39,9 +40,13 @@ function StatList({ stats, label, className, changed }) {
 // (crawlable, opens in a new tab with a modifier click), carrying `linkState` as router state;
 // otherwise it is a button that calls onOpen.
 // The tilt, spotlight, lift and corner arrow come from TiltCard, shared with other cards.
+// headshotId is the NBA.com person ID for the photo, player.id by default. Pass it when player.id
+// may be something else (an ESPN ID); null shows the silhouette. A card with no ID at all (some
+// payloads carry only a name) shows no photo slot rather than a row of silhouettes.
 export default function PlayerCard({
   player, stats, statsLabel, extraStats, extraLabel,
   isFavorite = false, onToggleFavorite, onOpen, to, linkState, index = 0, ctaLabel = 'View player', children, headerAside,
+  headshotId = player.id,
 }) {
   // Compare against the values from the previous render (the usePrevious pattern), so only
   // values that actually changed tick in, and nothing animates on the first render.
@@ -54,18 +59,21 @@ export default function PlayerCard({
     <TiltCard as="article" className="pc-card" cta={ctaLabel}
       data-flip={player.id} data-reveal data-defer style={{ '--reveal-delay': getRevealDelay(index) }}>
       <header className="pc-head">
-        <div className="pc-identity">
-          <h3 className="pc-name">
-            {to
-              ? <Link className="pc-open" to={to} state={linkState}>{player.name}</Link>
-              : <button type="button" className="pc-open" onClick={onOpen}>{player.name}</button>}
-          </h3>
-          <div className="pc-badges">
-            {player.team && <span className="pc-badge">{player.team}</span>}
-            {player.position && <span className="pc-badge is-accent">{player.position}</span>}
-            {player.age !== null && player.age !== undefined && player.age !== '' && (
-              <span className="pc-badge is-muted" data-numeric>Age {player.age}</span>
-            )}
+        <div className="pc-who">
+          {headshotId !== undefined && <PlayerHeadshot playerId={headshotId} name={player.name} className="pc-photo" />}
+          <div className="pc-identity">
+            <h3 className="pc-name">
+              {to
+                ? <Link className="pc-open" to={to} state={linkState}>{player.name}</Link>
+                : <button type="button" className="pc-open" onClick={onOpen}>{player.name}</button>}
+            </h3>
+            <div className="pc-badges">
+              {player.team && <span className="pc-badge">{player.team}</span>}
+              {player.position && <span className="pc-badge is-accent">{player.position}</span>}
+              {player.age !== null && player.age !== undefined && player.age !== '' && (
+                <span className="pc-badge is-muted" data-numeric>Age {player.age}</span>
+              )}
+            </div>
           </div>
         </div>
         {headerAside}

@@ -33,6 +33,21 @@
 
 .pc-identity { min-width: 0; }
 
+/* Photo and identity side by side. min-width: 0 lets a long name wrap instead of pushing the
+   favourite button or the matchup column off the card; the photo itself never shrinks. */
+.pc-who {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space) * 3);
+  min-width: 0;
+}
+
+.pc-photo { --headshot-size: 52px; }
+
+@media (max-width: 560px) {
+  .pc-photo { --headshot-size: 44px; }
+}
+
 .pc-name {
   margin: 0 0 calc(var(--space) * 2);
   font-family: var(--font-heading);

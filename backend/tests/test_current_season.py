@@ -10,6 +10,7 @@ from app import create_app, db, state
 from app.api.helpers import get_player_stats_summary
 from app.api.routes.players import _season_line
 from app.services import game_archive
+from app.utils.player_ids import FALLBACK_ID_BASE, player_id_for
 
 
 def grouped_row(**changes):
@@ -1016,6 +1017,10 @@ class PredictionsSoFarTests(SeasonRouteTestCase):
             {key: None for key in SO_FAR_ROW_KEYS},
         ]
         rows_with_stats = [{**original, **extra} for original, extra in zip(originals, expected)]
+        # Name-only rows (bundle, recommendations) also get their NBA.com ID for the headshot.
+        for row in rows_with_stats:
+            if 'PLAYER_NAME' in row:
+                row['PLAYER_ID'] = player_id_for(row['PLAYER_NAME'])
         team_key = 'TEAM' if 'PLAYER_NAME' in originals[0] else 'team'
         rows_with_stats[0][team_key] = 'DAL'
         self.assertEqual(rows, rows_with_stats)
@@ -1053,6 +1058,16 @@ class PredictionsSoFarTests(SeasonRouteTestCase):
             self.assert_enriched(self.get_json('/api/recommendations/PPG'), self.named_rows)
             service.assert_called_once_with('PPG')
         self.assertNotIn('so_far_ppg', self.named_rows[0])
+
+    def test_name_only_rows_get_nba_id_and_existing_id_is_kept(self):
+        with patch('app.api.routes.predictions.player_id_for', side_effect=lambda name: {'Tést Player': 2544}.get(name, FALLBACK_ID_BASE + 7)):
+            rows = self.get_json('/api/recommendations/PPG')
+            self.assertEqual([row['PLAYER_ID'] for row in rows], [2544, FALLBACK_ID_BASE + 7])
+            state.predictions_cache['bundle']['top_scorers'][0]['PLAYER_ID'] = 1629029
+            bundle = self.get_json('/api/ai-predictions')['predictions']
+            self.assertEqual(bundle['top_scorers'][0]['PLAYER_ID'], 1629029, 'an ID already on the row wins')
+            self.assertEqual(bundle['top_assists'][0]['PLAYER_ID'], 2544)
+        self.assertNotIn('PLAYER_ID', state.predictions_cache['recommendations']['PPG'][0], 'the cache is not mutated')
 
     def test_model_predictions_and_bundle_paths(self):
         state.is_render = False

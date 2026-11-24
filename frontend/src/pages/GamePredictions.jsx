@@ -230,6 +230,8 @@ export default function GamePredictions() {
                   key={`${player.game_id}-${player.espn_id}`}
                   index={index}
                   player={{ id: player.id ?? player.espn_id, name: player.name, position: player.position }}
+                  // The photo needs the NBA.com ID; an ESPN-only row gets the silhouette, never an ESPN ID.
+                  headshotId={player.id ?? null}
                   stats={main}
                   extraStats={extra}
                   // playerPath uses the row's NBA id and ignores espn_id.

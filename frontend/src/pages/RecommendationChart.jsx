@@ -1,5 +1,6 @@
 import ContentSkeleton from '../components/ContentSkeleton';
 import LockIcon from '../components/LockIcon';
+import PlayerHeadshot from '../components/PlayerHeadshot';
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import TiltCard from '../components/TiltCard';
@@ -181,11 +182,14 @@ const RecommendationChart = () => {
                                     <span className="category-badge team-code">{player.TEAM}</span>
                                 </div>
                                 <div className="card-body">
-                                    <h3 className="insight-title">
-                                        <Link to={playerPath(pagePlayer)} state={{ player: pagePlayer }} className="card-open">
-                                            {player.PLAYER_NAME}
-                                        </Link>
-                                    </h3>
+                                    <div className="rec-who">
+                                        <PlayerHeadshot playerId={player.PLAYER_ID} name={player.PLAYER_NAME} className="rec-photo" />
+                                        <h3 className="insight-title">
+                                            <Link to={playerPath(pagePlayer)} state={{ player: pagePlayer }} className="card-open">
+                                                {player.PLAYER_NAME}
+                                            </Link>
+                                        </h3>
+                                    </div>
                                     
                                     <div className="player-meta-badges">
                                         <span className="meta-badge-item age">AGE {player.AGE}</span>

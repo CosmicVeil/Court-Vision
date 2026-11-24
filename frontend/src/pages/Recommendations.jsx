@@ -2,6 +2,7 @@ import ContentSkeleton from '../components/ContentSkeleton';
 import LockIcon from '../components/LockIcon';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import PlayerHeadshot from '../components/PlayerHeadshot';
 import PredictionModeToggle from '../components/PredictionModeToggle';
 import TiltCard from '../components/TiltCard';
 import { buildApiUrl } from '../config/api';
@@ -218,12 +219,20 @@ const Recommendations = () => {
                         <span className="spotlight-stat-tag">{name} Spotlight</span>
                         <span className="spotlight-role-tag">{role}</span>
                       </div>
-                      <h3 className="spotlight-player-name">
-                        <Link to={playerPath(pagePlayer)} state={{ player: pagePlayer }} className="card-open">
-                          {player.PLAYER_NAME}
-                        </Link>
-                      </h3>
-                      <div className="spotlight-team-badge">{player.TEAM} · {player.POSITION}</div>
+                      <div className="rec-who">
+                        {/* The built-in fallback players have no ID, so they get no photo slot. */}
+                        {player.PLAYER_ID !== undefined && (
+                          <PlayerHeadshot playerId={player.PLAYER_ID} name={player.PLAYER_NAME} className="rec-photo" />
+                        )}
+                        <div className="rec-who-text">
+                          <h3 className="spotlight-player-name">
+                            <Link to={playerPath(pagePlayer)} state={{ player: pagePlayer }} className="card-open">
+                              {player.PLAYER_NAME}
+                            </Link>
+                          </h3>
+                          <div className="spotlight-team-badge">{player.TEAM} · {player.POSITION}</div>
+                        </div>
+                      </div>
                       
                       <div className={`spotlight-growth-badge ${improvement >= 0 ? 'positive' : 'negative'}`}>
                         {improvement >= 0 ? '+' : ''}{improvement.toFixed(1)}% {name} Breakout

@@ -38,6 +38,13 @@ def _with_so_far(row, lookup, weights=None):
     return {**row, **{f'so_far_{key}': stats.get(key) for key in SO_FAR_KEYS}}
 
 
+def _with_player_id(row):
+    """Add the NBA.com ID (PLAYER_ID) to a name-only row, so the frontend can show the headshot."""
+    if 'PLAYER_ID' in row or not row.get('PLAYER_NAME'):
+        return row
+    return {**row, 'PLAYER_ID': player_id_for(row['PLAYER_NAME'])}
+
+
 def _with_current_team(row, teams):
     player_id = row.get('id') or row.get('PLAYER_ID')
     team = teams.get(player_id)
@@ -72,7 +79,8 @@ def get_ai_predictions():
         lookup, weights = _so_far_lookup(), request_weights()
         teams = state.current_player_teams()
         predictions = {
-            key: [_with_so_far(_with_current_team(rescore_prediction_row(row, weights), teams), lookup, weights)
+            key: [_with_player_id(_with_so_far(_with_current_team(rescore_prediction_row(row, weights), teams),
+                                               lookup, weights))
                   for row in rows]
             for key, rows in predictions.items()
         }
@@ -275,7 +283,7 @@ def recommendations(stat):
         # improvement, so rescoring the rows would show numbers that disagree with their order.
         lookup = _so_far_lookup()
         teams = state.current_player_teams()
-        data = [_with_so_far(_with_current_team(row, teams), lookup) for row in data]
+        data = [_with_player_id(_with_so_far(_with_current_team(row, teams), lookup)) for row in data]
         return jsonify(data), 200
     except Exception as e:
         print(f"Error in recommendations: {e}")

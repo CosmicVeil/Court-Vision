@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import GameMatchup from '../components/GameMatchup';
 import InjuryBadge from '../components/InjuryBadge';
+import PlayerHeadshot from '../components/PlayerHeadshot';
 import PillNav from '../components/PillNav';
 import PredictionModeToggle from '../components/PredictionModeToggle';
 import StaleSlateNotice from '../components/StaleSlateNotice';
@@ -128,6 +129,7 @@ export default function GameRecommendations() {
                           return (
                             <li key={`${player.game_id}-${player.espn_id}`} className="gr-row">
                               <span className="gr-rank" data-numeric>{rank + 1}</span>
+                              <PlayerHeadshot playerId={player.id ?? null} name={player.name} className="player-row-photo" />
                               <div className="gr-who">
                                 {/* playerPath uses the row's NBA id and ignores espn_id. */}
                                 <Link to={playerPath(player)} state={{ player }} className="gr-name">
