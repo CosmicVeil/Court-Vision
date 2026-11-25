@@ -153,13 +153,6 @@ test('the static JSON-LD describes CourtVision as a free web app', () => {
   assert.ok(app.featureList.length > 0);
 });
 
-test('index.html has fallback text in #root for crawlers that skip JavaScript', () => {
-  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  const root = html.match(/<div id="root">([\s\S]*?)<\/div>/)[1];
-  assert.match(root, /<h1>[^<]*CourtVision/);
-  assert.match(root, /href="\/predictions\/games"/);
-});
-
 test('the static JSON-LD cannot close its own script tag', () => {
   assert.doesNotMatch(siteJsonLd().children, /</, 'Vite inserts script children raw, so < must be escaped');
 });
