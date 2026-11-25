@@ -10,7 +10,7 @@ test('structural token defaults preserve existing theme values regardless of eag
   assert.match(main, /import '.\/styles\/tokens.css'\s*\nimport '.\/pages\/Home.css'/);
   assert.ok(existsSync(new URL('../src/styles/tokens.css', import.meta.url)), 'Tokens exist');
   const css = read('src/styles/tokens.css');
-  assert.match(css, /@layer[^\{]*\{\s*:root\s*\{/);
+  assert.match(css, /@layer[^{]*\{\s*:root\s*\{/);
   for (const token of ['space', 'text-xs', 'text-sm', 'text-base', 'text-lg', 'text-xl', 'text-2xl',
     'text-display-sm', 'text-display-md', 'tracking-display', 'leading-display', 'leading-snug',
     'radius-sm', 'radius-md', 'radius-lg', 'radius-xl', 'duration-fast', 'duration-base', 'duration-slow',

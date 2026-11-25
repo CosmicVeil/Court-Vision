@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 import { PRODUCTION_API_URL } from './src/config/apiUrl.js'
 import { apiOriginFrom, injectCsp } from './src/config/csp.js'
 import { buildSitemap, defaultHeadTags } from './src/config/seo.js'
+import { ROUTES } from './scripts/prerender.mjs'
 
 // SEO from one source (src/config/seo.js): default head tags into index.html, sitemap.xml into dist/.
 const seo = () => ({
@@ -11,6 +12,18 @@ const seo = () => ({
   transformIndexHtml: () => defaultHeadTags().map(tag => ({ ...tag, injectTo: 'head' })),
   generateBundle() {
     this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: buildSitemap() })
+  },
+  // `vite preview` only: route URLs as netlify.toml does. Prerendered routes get their own file, and
+  // every other app URL gets spa.html. Without this, /predictions (no trailing slash) and /stats
+  // would fall back to index.html, which is now the prerendered home page.
+  configurePreviewServer(server) {
+    server.middlewares.use((req, _res, next) => {
+      const [path, query = ''] = req.url.split('?')
+      const route = path.replace(/\/+$/, '') || '/'
+      const file = ROUTES[route] || (/\.[a-z0-9]+$/i.test(route) ? null : 'spa.html')
+      if (file && route !== '/') req.url = `/${file}${query ? `?${query}` : ''}`
+      next()
+    })
   },
 })
 

@@ -1,8 +1,12 @@
 {
   "rewrites": [
+    { "source": "/predictions", "destination": "/predictions/index.html" },
+    { "source": "/predictions/games", "destination": "/predictions/games/index.html" },
+    { "source": "/games", "destination": "/games/index.html" },
+    { "source": "/recommendations/games", "destination": "/recommendations/games/index.html" },
     {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "/spa.html"
     }
   ]
 }

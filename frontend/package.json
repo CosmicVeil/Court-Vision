@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "test": "node --test tests/*.test.mjs",
-    "build": "vite build",
+    "build": "vite build && node scripts/prerender.mjs",
+    "check:crawlable": "node scripts/check-crawlable.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },

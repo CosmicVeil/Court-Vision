@@ -71,5 +71,8 @@ jobs:
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git add backend/data/nba_2025_26_data.pkl backend/data/predictions_cache.json
         git add backend/data/game_predictions_cache.json 2>/dev/null || true
-        git commit -m "chore: Auto-update NBA season stats and AI predictions [skip ci]"
+        # No [skip ci]: Netlify skips builds for it, and the frontend build prerenders today's
+        # projections from these caches (frontend/scripts/prerender.mjs), so this commit must deploy.
+        # Pushes made with GITHUB_TOKEN don't start new workflow runs, so this can't loop.
+        git commit -m "chore: Auto-update NBA season stats and AI predictions"
         git push origin HEAD:${{ github.ref_name }} || git push

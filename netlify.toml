@@ -7,15 +7,72 @@
   command = "npm run build"
   # Output directory where Vite builds the production files
   publish = "dist"
+  # Skip a build only when nothing it reads has changed. By default Netlify looks only inside the base
+  # directory, but the build also prerenders from ../backend/data (frontend/scripts/prerender.mjs),
+  # which the daily stats job updates. Exit 0 skips, anything else builds. A build without cache
+  # (both refs equal) or a failing diff (e.g. an unknown ref) always builds.
+  ignore = "[ \"$CACHED_COMMIT_REF\" != \"$COMMIT_REF\" ] && git diff --quiet \"$CACHED_COMMIT_REF\" \"$COMMIT_REF\" -- . ../backend/data ../netlify.toml"
 
 # Environment variables (set these in Netlify dashboard)
 # VITE_API_URL should be set to your backend URL (e.g., https://nba-api-xxxx.onrender.com/api)
 # Go to: Site settings → Environment variables → Add variable
 
-# Redirect all routes to index.html for React Router
+# Prerendered routes (frontend/scripts/prerender.mjs writes <route>/index.html after the Vite
+# build). Forced rewrites, listed before the catch-all, serve each one at its canonical URL, without a
+# trailing slash, so Netlify's pretty URLs never 301 /predictions to /predictions/.
+[[redirects]]
+  from = "/predictions"
+  to = "/predictions/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/predictions/"
+  to = "/predictions/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/predictions/games"
+  to = "/predictions/games/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/predictions/games/"
+  to = "/predictions/games/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/games"
+  to = "/games/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/games/"
+  to = "/games/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/recommendations/games"
+  to = "/recommendations/games/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/recommendations/games/"
+  to = "/recommendations/games/index.html"
+  status = 200
+  force = true
+
+# Every other route gets the app shell for React Router. index.html is the prerendered home page
+# (home title, canonical and summary), so other URLs get spa.html: the same build without them.
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to = "/spa.html"
   status = 200
 
 # Headers for security and CORS

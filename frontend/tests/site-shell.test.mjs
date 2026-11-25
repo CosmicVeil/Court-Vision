@@ -123,7 +123,7 @@ for (const failure of ['offline', 'server error']) {
 
 test('logout without a token clears stale user data without contacting the server', async t => {
   const fetchMock = logoutSession(t, () => { throw new Error('unexpected request'); });
-  localStorage.removeItem('authToken');
+  globalThis.localStorage.removeItem('authToken');
   await logout();
   assert.equal(getUser(), null);
   assert.equal(isAuthenticated(), false);
@@ -139,7 +139,7 @@ test('a background logout response cannot clear a newly signed-in session', asyn
   setAuth('new-token', nextUser);
   resolveRequest({ ok: true });
   await pending;
-  assert.equal(localStorage.getItem('authToken'), 'new-token');
+  assert.equal(globalThis.localStorage.getItem('authToken'), 'new-token');
   assert.deepEqual(getUser(), nextUser);
 });
 
