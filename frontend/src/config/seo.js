@@ -23,8 +23,24 @@ const SHARE_IMAGE = {
 const SITE_JSON_LD = {
   '@context': 'https://schema.org',
   '@graph': [
-    { '@type': 'WebSite', name: SITE_NAME, url: SITE_URL },
+    { '@type': 'WebSite', name: SITE_NAME, url: SITE_URL, description: DEFAULT_META.description },
     { '@type': 'Organization', name: SITE_NAME, url: SITE_URL, image: SHARE_IMAGE.url },
+    // What the site does, so search engines and AI answers can list it among NBA stats and prediction tools.
+    {
+      '@type': 'WebApplication',
+      name: SITE_NAME,
+      url: SITE_URL,
+      description: DEFAULT_META.description,
+      applicationCategory: 'SportsApplication',
+      operatingSystem: 'Any (web browser)',
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      featureList: [
+        'Live NBA scores and box scores',
+        'NBA player and team stats, standings and leaders',
+        "Machine-learning (XGBoost) predictions of each NBA player's next-game points, rebounds and assists",
+        'Daily AI player picks for the NBA slate',
+      ],
+    },
   ],
 };
 

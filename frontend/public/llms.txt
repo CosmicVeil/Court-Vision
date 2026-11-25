@@ -1,0 +1,14 @@
+# CourtVision
+
+> CourtVision (https://courtvision.works) is a free NBA stats and AI predictions website: live scores, player and team stats, standings, and machine-learning projections of every NBA player's next game.
+
+CourtVision trains an XGBoost model on multiple NBA seasons of game logs (recent form, matchups, rest) and validates it walk-forward on held-out games. It projects points, rebounds, assists and fantasy points, and ranks the players most likely to beat their averages on the next slate. No account is needed to view stats or predictions.
+
+## Main pages
+
+- [Next-game player predictions](https://courtvision.works/predictions/games): projected box score for each player's next NBA game
+- [AI player picks](https://courtvision.works/recommendations/games): the strongest projected performances on tonight's slate
+- [Season stat projections](https://courtvision.works/predictions): model projections for every player
+- [Live scores](https://courtvision.works/games): today's NBA games and box scores
+- [Player stats](https://courtvision.works/stats): sortable season averages and leaders
+- [Standings](https://courtvision.works/standings): Eastern and Western Conference
