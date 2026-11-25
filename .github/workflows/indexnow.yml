@@ -1,0 +1,31 @@
+name: Notify search engines (IndexNow)
+
+on:
+  # Daily at 10:00 UTC: two hours after update_stats.yml (08:00), so the refreshed
+  # predictions have been deployed by Netlify before Bing is told to re-crawl them.
+  schedule:
+    - cron: '0 10 * * *'
+  # Allow manual triggering from the GitHub Actions tab, e.g. right after a deploy
+  workflow_dispatch:
+
+jobs:
+  indexnow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
+    # No npm install: the script only imports plain modules from src/config and src/utils.
+    # It exits non-zero (and the run shows red) if the key file isn't live or IndexNow rejects it.
+    - name: Submit sitemap URLs to IndexNow
+      working-directory: frontend
+      run: node scripts/indexnow.mjs

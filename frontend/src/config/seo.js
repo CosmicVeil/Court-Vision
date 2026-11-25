@@ -185,3 +185,17 @@ export function buildSitemap() {
   const urls = INDEXABLE_PATHS.map(path => `  <url><loc>${SITE_URL}${path}</loc></url>`).join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
 }
+
+// IndexNow (https://www.indexnow.org): tells Bing and other engines which URLs changed instead of
+// waiting for a crawl. The key is public by design: it is served at /<key>.txt (vite.config.js) to
+// prove we control the site. scripts/indexnow.mjs sends the payload after a deploy.
+export const INDEXNOW_KEY = '741c96731c916e352a86da2c8fb79f02';
+
+export function buildIndexNowPayload() {
+  return {
+    host: new URL(SITE_URL).host,
+    key: INDEXNOW_KEY,
+    keyLocation: `${SITE_URL}/${INDEXNOW_KEY}.txt`,
+    urlList: INDEXABLE_PATHS.map(path => `${SITE_URL}${path}`),
+  };
+}

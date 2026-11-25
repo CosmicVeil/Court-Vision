@@ -5,7 +5,7 @@ import React, { Children, isValidElement } from 'react';
 import * as Router from 'react-router-dom';
 import { readFrontend as read, readSource } from './helpers.mjs';
 import { loadFrontendModule, renderComponent } from './render-helpers.mjs';
-import { buildSitemap, DEFAULT_META, defaultHeadTags, getPageMeta, INDEXABLE_PATHS, SITE_URL } from '../src/config/seo.js';
+import { buildIndexNowPayload, buildSitemap, DEFAULT_META, defaultHeadTags, getPageMeta, INDEXABLE_PATHS, INDEXNOW_KEY, SITE_URL } from '../src/config/seo.js';
 import { getTeamColor, TEAMS } from '../src/utils/team.js';
 
 // Home and the box score read the login state from localStorage while rendering.
@@ -70,6 +70,15 @@ test('every team has a name and its own colour', () => {
     assert.ok(team.name, tricode);
     assert.equal(getTeamColor(tricode.toLowerCase()), team.color);
   }
+});
+
+test('the IndexNow payload submits every sitemap URL with a key served from our own host', () => {
+  const payload = buildIndexNowPayload();
+  assert.match(INDEXNOW_KEY, /^[a-f0-9]{32}$/, 'IndexNow keys are 8-128 hex characters');
+  assert.equal(payload.host, 'courtvision.works');
+  assert.equal(payload.key, INDEXNOW_KEY);
+  assert.equal(payload.keyLocation, `${SITE_URL}/${INDEXNOW_KEY}.txt`);
+  assert.deepEqual(payload.urlList, INDEXABLE_PATHS.map(path => `${SITE_URL}${path}`));
 });
 
 test('the sitemap lists exactly the indexable pages, and robots.txt points to it', () => {
