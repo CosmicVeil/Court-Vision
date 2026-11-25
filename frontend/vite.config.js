@@ -3,15 +3,17 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { PRODUCTION_API_URL } from './src/config/apiUrl.js'
 import { apiOriginFrom, injectCsp } from './src/config/csp.js'
-import { buildSitemap, defaultHeadTags } from './src/config/seo.js'
+import { buildSitemap, defaultHeadTags, INDEXNOW_KEY } from './src/config/seo.js'
 import { ROUTES } from './scripts/prerender.mjs'
 
-// SEO from one source (src/config/seo.js): default head tags into index.html, sitemap.xml into dist/.
+// SEO from one source (src/config/seo.js): default head tags into index.html, sitemap.xml and the
+// IndexNow key file into dist/.
 const seo = () => ({
   name: 'courtvision-seo',
   transformIndexHtml: () => defaultHeadTags().map(tag => ({ ...tag, injectTo: 'head' })),
   generateBundle() {
     this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: buildSitemap() })
+    this.emitFile({ type: 'asset', fileName: `${INDEXNOW_KEY}.txt`, source: INDEXNOW_KEY })
   },
   // `vite preview` only: route URLs as netlify.toml does. Prerendered routes get their own file, and
   // every other app URL gets spa.html. Without this, /predictions (no trailing slash) and /stats
