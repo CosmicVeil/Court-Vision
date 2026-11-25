@@ -17,7 +17,24 @@
     <!-- Title, description and Open Graph defaults are injected from src/config/seo.js (vite.config.js). -->
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Shown only to crawlers and AI fetchers that don't run JavaScript: React replaces it on load. -->
+    <div id="root">
+      <main>
+        <h1>CourtVision – free NBA stats and AI predictions</h1>
+        <p>CourtVision is a free NBA analytics website with live scores, player and team stats, standings,
+          and machine-learning predictions of every NBA player's next game. An XGBoost model trained on
+          multiple seasons of game logs projects points, rebounds, assists and more, and picks the players
+          most likely to outperform their averages on tonight's slate.</p>
+        <ul>
+          <li><a href="/predictions/games">NBA next-game player predictions</a></li>
+          <li><a href="/recommendations/games">Tonight's AI player picks</a></li>
+          <li><a href="/predictions">NBA player stat projections</a></li>
+          <li><a href="/games">Live NBA scores and box scores</a></li>
+          <li><a href="/stats">NBA player stats and leaders</a></li>
+          <li><a href="/standings">NBA standings</a></li>
+        </ul>
+      </main>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

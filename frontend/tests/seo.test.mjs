@@ -144,6 +144,22 @@ test('index.html carries WebSite and Organization JSON-LD for crawlers that skip
   assert.equal(byType.Organization.image, 'https://courtvision.works/og-image.png');
 });
 
+test('the static JSON-LD describes CourtVision as a free web app', () => {
+  const data = JSON.parse(siteJsonLd().children);
+  const app = data['@graph'].find(node => node['@type'] === 'WebApplication');
+  assert.ok(app, 'a WebApplication node');
+  assert.equal(app.url, 'https://courtvision.works');
+  assert.equal(app.offers.price, '0');
+  assert.ok(app.featureList.length > 0);
+});
+
+test('index.html has fallback text in #root for crawlers that skip JavaScript', () => {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const root = html.match(/<div id="root">([\s\S]*?)<\/div>/)[1];
+  assert.match(root, /<h1>[^<]*CourtVision/);
+  assert.match(root, /href="\/predictions\/games"/);
+});
+
 test('the static JSON-LD cannot close its own script tag', () => {
   assert.doesNotMatch(siteJsonLd().children, /</, 'Vite inserts script children raw, so < must be escaped');
 });
