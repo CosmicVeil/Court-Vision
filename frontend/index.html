@@ -10,8 +10,15 @@
         if (theme !== 'light' && theme !== 'dark') theme = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
         document.documentElement.dataset.theme = theme;
         document.documentElement.style.colorScheme = theme;
+        document.documentElement.dataset.appBoot = 'pending';
       })();
     </script>
+    <style>
+      html { background: #111317; }
+      html[data-theme="light"] { background: #f6f4ef; }
+      /* Keep the static fallback available without JavaScript, without flashing it during boot. */
+      html[data-app-boot="pending"] .cv-prerender { display: none; }
+    </style>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- Title, description and Open Graph defaults are injected from src/config/seo.js (vite.config.js). -->

@@ -12,6 +12,7 @@
   --color-ember-orange: #f27c45;
   --accent-primary: var(--color-ember-orange);
   --accent-fill: #f27c45;
+  --text-on-accent: #111317;
   --accent-glow: transparent;
   --border-focus: var(--color-ember-orange);
   --positive: #72d894;
@@ -50,6 +51,7 @@
   --border-glass: #d8d6ce;
   --color-ember-orange: #b94925;
   --accent-fill: #b94925;
+  --text-on-accent: #ffffff;
   --positive: #187940;
   --negative: #bb3038;
   --warning: #856016;
@@ -139,6 +141,24 @@ input::placeholder, textarea::placeholder { color: var(--text-secondary); opacit
 .appearance-preview--dark i { background: #30343b; }
 .profile-presets { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .profile-button, .cta-button.primary, .empty-cta, .auth-submit, .view-btn.active, .sort-btn.active { background: var(--accent-fill); color: #fff; box-shadow: none; }
+/* Auth prompts share one palette, including the outlined Create Account action. */
+.predictions-locked .empty-cta,
+.prediction-auth-actions .empty-cta {
+  color: var(--text-on-accent);
+  background: var(--accent-fill);
+  border: 1px solid var(--accent-fill);
+}
+:root .empty-cta.prediction-auth-secondary {
+  color: var(--text-primary);
+  background: var(--surface);
+  border-color: var(--border-glass);
+}
+:root .empty-cta.prediction-auth-secondary:hover {
+  background: var(--surface-subtle);
+  border-color: var(--accent-fill);
+}
+.predictions-locked-title { color: var(--text-primary); }
+.predictions-locked-desc { color: var(--text-secondary); }
 .profile-button { border-radius: 6px; }
 
 /* Preserve the full basketball choreography, recolor its stage and props. */

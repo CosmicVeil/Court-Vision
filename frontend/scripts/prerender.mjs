@@ -246,8 +246,9 @@ function fallbackSummary(route) {
   return `<h1>${escapeHtml(title)}</h1>\n<p>${escapeHtml(FALLBACK_TEXT[route])} The latest numbers load when the page opens in your browser.</p>`;
 }
 
-// Plain styles for the moment before the app replaces #root. style-src allows inline styles
-// (src/config/csp.js); colours come from the theme variables in the built CSS, with fallbacks.
+// Readable fallback for visitors without JavaScript. The early bootstrap in index.html hides
+// this summary while the client app loads, so visitors never see a different page flash first.
+// style-src allows inline styles (src/config/csp.js).
 const PRERENDER_STYLE = `<style>
 .cv-prerender{max-width:64rem;margin:0 auto;padding:96px 16px 48px;color:var(--text-primary,#eee);font:16px/1.5 system-ui,sans-serif}
 .cv-prerender a{color:var(--accent-primary,#f97316)}

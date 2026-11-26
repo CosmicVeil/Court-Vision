@@ -29,6 +29,7 @@ test('bootstrap matches module preference resolution before rendering', () => {
       const document = { documentElement: { dataset: {}, style: {} } };
       vm.runInNewContext(script, { document, localStorage: storage(saved), matchMedia: () => ({ matches: prefersLight }) });
       assert.equal(document.documentElement.dataset.theme, readTheme(storage(saved), prefersLight));
+      assert.equal(document.documentElement.dataset.appBoot, 'pending', 'hide the static summary before the app loads');
     }
   }
 });
