@@ -134,7 +134,7 @@ function Profile() {
           <AppearancePreferences />
           <section className="profile-card profile-signin" data-enter style={enterDelay(1)}>
             <p>Your fantasy scoring is saved to your account, so it follows you to every device.</p>
-            <Link to="/login" className="profile-button">Log in</Link>
+            <Link to="/login" state={{ from: '/profile' }} className="profile-button">Log in</Link>
           </section>
         </div>
       </main>

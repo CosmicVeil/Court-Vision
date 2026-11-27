@@ -504,8 +504,8 @@ const Predictions = () => {
               You must create an account or log in to save your favorite NBA players and customize your analytics tracking!
             </p>
             <div className="prediction-auth-actions">
-              <Link to="/login" className="empty-cta">Log In</Link>
-              <Link to="/create-account" className="empty-cta prediction-auth-secondary">Create Account</Link>
+              <Link to="/login" state={{ from: '/predictions' }} className="empty-cta">Log In</Link>
+              <Link to="/create-account" state={{ from: '/predictions' }} className="empty-cta prediction-auth-secondary">Create Account</Link>
             </div>
           </div>
         </div>
