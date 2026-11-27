@@ -4,7 +4,7 @@ import { readdirSync } from 'node:fs';
 import { readFrontend as read, readSource } from './helpers.mjs';
 import { getUser, isAuthenticated, logout, setAuth } from '../src/utils/auth.js';
 
-const { NAV_LINKS, getInitials } = await import('../src/utils/siteNav.js').catch(() => ({}));
+const { NAV_LINKS, getAuthReturnTo, getInitials } = await import('../src/utils/siteNav.js').catch(() => ({}));
 
 test('every nav link points at a route the app defines', () => {
   assert.ok(Array.isArray(NAV_LINKS) && NAV_LINKS.length > 0);
@@ -26,6 +26,32 @@ test('initials come from the first and last name, upper-cased', () => {
   assert.equal(getInitials({ first_name: 'Varun' }), 'V');
   assert.equal(getInitials({}), '');
   assert.equal(getInitials(null), '');
+});
+
+// Issue #145: signing in from the header returns you to the page you were on.
+test('header auth links return to the current page, keeping the query string', () => {
+  assert.equal(getAuthReturnTo({ pathname: '/players/1627936', search: '?tab=next-game' }), '/players/1627936?tab=next-game');
+  assert.equal(getAuthReturnTo({ pathname: '/stats', search: '' }), '/stats');
+});
+
+test('from an auth page, header auth links keep the original destination instead of looping', () => {
+  assert.equal(getAuthReturnTo({ pathname: '/login', state: { from: '/players/1627936' } }), '/players/1627936');
+  assert.equal(getAuthReturnTo({ pathname: '/create-account', state: null }), '/');
+  assert.equal(getAuthReturnTo(undefined), '/');
+});
+
+test('auth pages are recognised however the router reached them (case, trailing slash)', () => {
+  for (const pathname of ['/login/', '/LOGIN', '/Create-Account//']) {
+    assert.equal(getAuthReturnTo({ pathname, state: { from: '/stats' } }), '/stats', pathname);
+  }
+});
+
+test('every login and create-account link outside Home says where to return', () => {
+  for (const file of ['SiteHeader.jsx', 'Stats.jsx', 'Predictions.jsx', 'Favourites.jsx', 'Profile.jsx']) {
+    const links = [...readSource(file).matchAll(/<Link to="\/(?:login|create-account)"[^>]*>/g)].map(match => match[0]);
+    assert.ok(links.length > 0, `${file} has no auth links`);
+    for (const link of links) assert.match(link, /state=\{\{ from: /, `${file}: ${link}`);
+  }
 });
 
 test('all routes render inside the shared shell (a layout route)', () => {

@@ -73,8 +73,8 @@ const Favourites = () => {
             Create a free account or log in to track your favorite NBA players and save customized analytics.
           </p>
           <div className="empty-actions">
-            <Link to="/login" className="empty-cta">LOG IN</Link>
-            <Link to="/create-account" className="empty-cta is-secondary">CREATE ACCOUNT</Link>
+            <Link to="/login" state={{ from: '/favourites' }} className="empty-cta">LOG IN</Link>
+            <Link to="/create-account" state={{ from: '/favourites' }} className="empty-cta is-secondary">CREATE ACCOUNT</Link>
           </div>
         </div>
       </div>

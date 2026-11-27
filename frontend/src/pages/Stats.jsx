@@ -501,8 +501,8 @@ const Stats = () => {
               You must create an account or log in to save your favorite NBA players and customize your analytics tracking!
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <Link to="/login" className="empty-cta" style={{ textDecoration: 'none', padding: '0.8rem 2rem', fontSize: '1rem', textAlign: 'center' }}>Log In</Link>
-              <Link to="/create-account" className="empty-cta" style={{ textDecoration: 'none', padding: '0.8rem 2rem', fontSize: '1rem', background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)', color: 'var(--text-primary)', boxShadow: 'none', textAlign: 'center' }}>Create Account</Link>
+              <Link to="/login" state={{ from: '/stats' }} className="empty-cta" style={{ textDecoration: 'none', padding: '0.8rem 2rem', fontSize: '1rem', textAlign: 'center' }}>Log In</Link>
+              <Link to="/create-account" state={{ from: '/stats' }} className="empty-cta" style={{ textDecoration: 'none', padding: '0.8rem 2rem', fontSize: '1rem', background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)', color: 'var(--text-primary)', boxShadow: 'none', textAlign: 'center' }}>Create Account</Link>
             </div>
           </div>
         </div>

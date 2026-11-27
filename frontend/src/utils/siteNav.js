@@ -15,3 +15,14 @@ export function getInitials(user) {
   const initial = name => (typeof name === 'string' ? name.trim().charAt(0).toUpperCase() : '');
   return `${initial(user?.first_name)}${initial(user?.last_name)}`;
 }
+
+const AUTH_PATHS = new Set(['/login', '/create-account']);
+
+// Where Login / Create Account should send the user afterwards: the page they are on now.
+// From an auth page itself, keep the destination it was opened with instead of looping back to it.
+// Matched like React Router matches routes: case-insensitive, trailing slashes ignored (/LOGIN/ is Login).
+export function getAuthReturnTo(location) {
+  const route = (location?.pathname || '').toLowerCase().replace(/\/+$/, '');
+  if (AUTH_PATHS.has(route)) return location.state?.from || '/';
+  return `${location?.pathname || '/'}${location?.search || ''}`;
+}

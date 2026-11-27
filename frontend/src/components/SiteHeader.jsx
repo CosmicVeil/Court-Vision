@@ -2,14 +2,17 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import './SiteHeader.css';
 import { getUser, isAuthenticated, logout } from '../utils/auth';
-import { NAV_LINKS, getInitials } from '../utils/siteNav';
+import { NAV_LINKS, getAuthReturnTo, getInitials } from '../utils/siteNav';
 
 const readUser = () => (isAuthenticated() ? getUser() : null);
 
 // The one header every page shares. It lives in AppShell, so it stays mounted across routes.
 export default function SiteHeader() {
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const { pathname } = location;
+  // Signing in from the header returns the user to this page (issue #145).
+  const authReturnTo = getAuthReturnTo(location);
   const [user, setUser] = useState(readUser);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   // Keep the open panel's content unchanged while it fades closed after logout.
@@ -103,8 +106,8 @@ export default function SiteHeader() {
               ) : (
                 <>
                   <Link to="/profile" className="dropdown-item" onClick={closeAll}>User preferences</Link>
-                  <Link to="/login" className="dropdown-item" onClick={closeAll}>Login</Link>
-                  <Link to="/create-account" className="dropdown-item" onClick={closeAll}>Create Account</Link>
+                  <Link to="/login" state={{ from: authReturnTo }} className="dropdown-item" onClick={closeAll}>Login</Link>
+                  <Link to="/create-account" state={{ from: authReturnTo }} className="dropdown-item" onClick={closeAll}>Create Account</Link>
                 </>
               )}
             </div>
