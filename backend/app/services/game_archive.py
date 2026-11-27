@@ -1016,6 +1016,44 @@ def player_game_log(conn, player_id: int, limit: int = 10, season: Optional[str]
     }
 
 
+def head_to_head(conn, player_id: int, opponent: str, limit: int = 5,
+                 weights: Optional[Dict] = None) -> Dict:
+    """A player's most recent played games against one team, across seasons, with their average.
+
+    Preseason and DNPs are left out: they say little about how he matches up with that team.
+    Reads only the archive, so the history goes back as far as the archive does.
+    """
+    rows = conn.execute(
+        """
+        SELECT p.*, g.season_label, g.home_score, g.away_score
+        FROM player_game_stats p JOIN games g USING (game_id)
+        WHERE p.nba_player_id = %s AND p.opponent = %s
+          AND p.season_type <> 1 AND NOT p.did_not_play AND p.minutes > 0
+        ORDER BY p.game_date DESC, g.tipoff DESC
+        LIMIT %s
+        """,
+        (player_id, opponent, limit),
+    ).fetchall()
+    games = []
+    for row in rows:
+        team_score, opp_score = (row["home_score"], row["away_score"]) if row["is_home"] else \
+            (row["away_score"], row["home_score"])
+        game = {
+            "game_id": row["game_id"], "date": row["game_date"].isoformat(),
+            "season": row["season_label"], "team": row.get("team") or "UNK",
+            "season_type": row["season_type"], "opponent": row["opponent"], "is_home": row["is_home"],
+            "result": "W" if team_score > opp_score else "L", "score": f"{team_score}-{opp_score}",
+            **{key: row[key] for key in _LOG_FIELDS},
+        }
+        games.append({**game, "fpts": fantasy_points(game, weights=weights)})
+    return {
+        "player_id": player_id,
+        "opponent": opponent,
+        "games": games,
+        "averages": _averages(games, weights),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Reads for the Games page (past games)
 # ---------------------------------------------------------------------------
