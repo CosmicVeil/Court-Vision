@@ -198,6 +198,80 @@ class GameLogFantasyTests(unittest.TestCase):
         self.assertNotIn("fpts", espn_game)
 
 
+class HeadToHeadTests(unittest.TestCase):
+    """A player's recent games against one team, across seasons, with their average."""
+
+    @staticmethod
+    def row(game_id, day, season_label="2025-26", is_home=True, **stats):
+        return {**dict.fromkeys(game_archive._LOG_FIELDS), "game_id": game_id, "game_date": date(2026, 1, day),
+                "season_label": season_label, "team": "DEN", "opponent": "UTA", "is_home": is_home,
+                "home_score": 120, "away_score": 100, "season_type": 2, "did_not_play": False,
+                "minutes": 34, "fgm": 0, "fga": 0, "fg3m": 0, "fg3a": 0, "ftm": 0, "fta": 0, **stats}
+
+    def connection(self, rows):
+        calls = []
+
+        class Connection(EmptyConnection):
+            def execute(self, sql, params=()):
+                calls.append((sql, params))
+                return self
+
+            def fetchall(self):
+                return rows
+
+        return Connection(), calls
+
+    def test_games_and_average_from_the_players_side(self):
+        rows = [self.row("402", 9, pts=43, reb=9, ast=0, fgm=16, fga=25),
+                # Away game: the player's team is the away side, so 100-120 is a loss.
+                self.row("401", 2, season_label="2024-25", is_home=False, pts=30, reb=10, ast=10, fgm=11, fga=25)]
+        conn, calls = self.connection(rows)
+        result = game_archive.head_to_head(conn, 1627750, "UTA", limit=5)
+
+        self.assertEqual(result["opponent"], "UTA")
+        self.assertEqual([g["game_id"] for g in result["games"]], ["402", "401"])
+        self.assertEqual([g["season"] for g in result["games"]], ["2025-26", "2024-25"])
+        self.assertEqual([(g["result"], g["score"]) for g in result["games"]], [("W", "120-100"), ("L", "100-120")])
+        self.assertEqual(result["games"][0]["fpts"], 43 + 1.2 * 9)
+        avg = result["averages"]
+        self.assertEqual((avg["games"], avg["pts"], avg["reb"], avg["ast"]), (2, 36.5, 9.5, 5.0))
+        self.assertEqual(avg["fg_pct"], 54.0)  # 27 of 50
+
+    def test_query_filters_player_team_and_played_games_with_the_limit(self):
+        conn, calls = self.connection([])
+        game_archive.head_to_head(conn, 1627750, "UTA", limit=3)
+        sql, params = calls[0]
+        self.assertEqual(params, (1627750, "UTA", 3))
+        self.assertIn("p.opponent = %s", sql)
+        self.assertIn("season_type <> 1", sql)  # no preseason
+        self.assertIn("NOT p.did_not_play", sql)
+        self.assertIn("LIMIT %s", sql)
+
+    def test_no_meetings_returns_empty_games_and_no_average(self):
+        conn, _ = self.connection([])
+        result = game_archive.head_to_head(conn, 1627750, "UTA")
+        self.assertEqual(result["games"], [])
+        self.assertIsNone(result["averages"])
+
+    def test_route_uppercases_team_clamps_limit_and_rejects_unknown_teams(self):
+        client = create_app(load_data=False).test_client()
+        with patch.object(players_routes.db, "get_db", return_value=EmptyConnection()), \
+             patch.object(game_archive, "head_to_head", wraps=game_archive.head_to_head) as h2h:
+            response = client.get("/api/players/1627750/vs/uta?limit=999")
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.get_json()["opponent"], "UTA")
+            self.assertEqual(h2h.call_args.args[1:4], (1627750, "UTA", players_routes.MAX_H2H_LIMIT))
+
+            self.assertEqual(client.get("/api/players/1627750/vs/XYZ").status_code, 400)
+
+    def test_route_returns_503_when_the_database_is_down(self):
+        client = create_app(load_data=False).test_client()
+        with patch.object(players_routes.db, "get_db", side_effect=RuntimeError("no db")):
+            response = client.get("/api/players/1627750/vs/UTA")
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.get_json()["games"], [])
+
+
 class PastGamesTests(unittest.TestCase):
     """Archived games are rebuilt in the live-games shape, so the Games page renders both alike."""
 

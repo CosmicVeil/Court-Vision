@@ -7,12 +7,14 @@ from app.api.helpers import (
 )
 from app.auth import optional_auth
 from app.services import game_archive, injuries
+from app.services.live_games import TEAM_NAMES
 from app.utils.player_ids import player_id_for
 from app.utils.player_names import normalize_player_name
 
 bp = Blueprint('players', __name__, url_prefix='/api')
 
 MAX_GAME_LOG_LIMIT = 200
+MAX_H2H_LIMIT = 20
 
 
 def former_players():
@@ -165,6 +167,25 @@ def get_player_games(player_id):
     except Exception as e:
         print(f"Error loading game log for {player_id}: {e}")
         return jsonify({'error': 'Game log unavailable', 'games': []}), 503
+    finally:
+        if conn:
+            conn.close()
+
+
+@bp.route('/players/<int:player_id>/vs/<team>', methods=['GET'])
+def get_player_head_to_head(player_id, team):
+    """A player's recent games against one team, for the head-to-head panel."""
+    team = sanitize_string(team, 10).upper()
+    if team not in TEAM_NAMES:
+        return jsonify({'error': 'Unknown team'}), 400
+    limit = min(max(request.args.get('limit', 5, type=int), 1), MAX_H2H_LIMIT)
+    conn = None
+    try:
+        conn = db.get_db()
+        return jsonify(game_archive.head_to_head(conn, player_id, team, limit, weights=request_weights()))
+    except Exception as e:
+        print(f"Error loading head-to-head for {player_id} vs {team}: {e}")
+        return jsonify({'error': 'Head-to-head unavailable', 'games': []}), 503
     finally:
         if conn:
             conn.close()

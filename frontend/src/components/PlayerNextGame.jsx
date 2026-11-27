@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import GameMatchup from './GameMatchup';
 import PillNav from './PillNav';
+import PlayerHeadToHead from './PlayerHeadToHead';
 import PlayerPredictionGrid from './PlayerPredictionGrid';
 import { GAME_PREDICTION_GROUPS } from '../config/gamePredictionStats';
 import { buildApiUrl } from '../config/api';
@@ -79,6 +80,7 @@ export default function PlayerNextGame({ player, returnTo }) {
           {isLater && ' · a later game: predicted from form as of today, updated each morning'}
         </p>
         <PlayerPredictionGrid currentStats={currentStats} predictionStats={predictionStats} groups={GAME_PREDICTION_GROUPS} />
+        <PlayerHeadToHead playerId={Number(player.id) || 0} opponent={prediction.opponent} />
       </div>
     </>
   );
